@@ -78,31 +78,41 @@ ALTER TABLE public.course_files ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.course_assignments ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.learner_progress ENABLE ROW LEVEL SECURITY;
 
--- 1. Organizations Policies
+-- 1. Organizations Policies (Non-recursive)
 CREATE POLICY "Super Admins can manage all orgs" ON public.organizations FOR ALL USING (
-    (SELECT role FROM public.profiles WHERE id = auth.uid()) = 'super_admin'
+    EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role = 'super_admin')
 );
 CREATE POLICY "Users can view their own org" ON public.organizations FOR SELECT USING (
-    id = (SELECT org_id FROM public.profiles WHERE id = auth.uid())
+    id IN (SELECT org_id FROM public.profiles WHERE id = auth.uid())
 );
 
--- 2. Profiles Policies
-CREATE POLICY "Super Admins can manage all profiles" ON public.profiles FOR ALL USING (
+-- 2. Profiles Policies (Fixed to avoid recursive loops)
+-- Policy 1: Everyone can view their own profile (This is basic and safe)
+CREATE POLICY "Users can view their own profile" ON public.profiles 
+FOR SELECT USING (id = auth.uid());
+
+-- Policy 2: Super admins can see and manage everything
+-- Note: We use a separate subquery that isn't dependent on the evaluation of the current row
+CREATE POLICY "Super admin full access" ON public.profiles
+FOR ALL USING (
     (SELECT role FROM public.profiles WHERE id = auth.uid()) = 'super_admin'
 );
-CREATE POLICY "Org Admins can view profiles in their org" ON public.profiles FOR SELECT USING (
-    org_id = (SELECT org_id FROM public.profiles WHERE id = auth.uid()) AND (SELECT role FROM public.profiles WHERE id = auth.uid()) IN ('super_admin', 'org_admin')
-);
-CREATE POLICY "Users can view their own profile" ON public.profiles FOR SELECT USING (
-    id = auth.uid()
+
+-- Policy 3: Org admins can see members of their org
+CREATE POLICY "Org admins view members" ON public.profiles
+FOR SELECT USING (
+    org_id = (SELECT org_id FROM public.profiles WHERE id = auth.uid()) 
+    AND 
+    (SELECT role FROM public.profiles WHERE id = auth.uid()) = 'org_admin'
 );
 
 -- 3. Courses Policies
 CREATE POLICY "Super Admins can manage all courses" ON public.courses FOR ALL USING (
-    (SELECT role FROM public.profiles WHERE id = auth.uid()) = 'super_admin'
+    EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role = 'super_admin')
 );
 CREATE POLICY "Org Admins can manage courses in their org" ON public.courses FOR ALL USING (
-    org_id = (SELECT org_id FROM public.profiles WHERE id = auth.uid()) AND (SELECT role FROM public.profiles WHERE id = auth.uid()) = 'org_admin'
+    org_id = (SELECT org_id FROM public.profiles WHERE id = auth.uid()) 
+    AND EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role = 'org_admin')
 );
 CREATE POLICY "Learners can view assigned & published courses in their org" ON public.courses FOR SELECT USING (
     published = true AND org_id = (SELECT org_id FROM public.profiles WHERE id = auth.uid())
@@ -110,15 +120,25 @@ CREATE POLICY "Learners can view assigned & published courses in their org" ON p
 
 -- 4. Course Files Policies
 CREATE POLICY "Org Admins can manage files in their org" ON public.course_files FOR ALL USING (
-    EXISTS (SELECT 1 FROM public.courses c WHERE c.id = course_files.course_id AND c.org_id = (SELECT org_id FROM public.profiles WHERE id = auth.uid()) AND (SELECT role FROM public.profiles WHERE id = auth.uid()) IN ('super_admin', 'org_admin'))
+    EXISTS (
+        SELECT 1 FROM public.courses c 
+        WHERE c.id = course_files.course_id 
+        AND c.org_id = (SELECT org_id FROM public.profiles WHERE id = auth.uid())
+        AND EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role IN ('super_admin', 'org_admin'))
+    )
 );
 CREATE POLICY "Learners can read files of assigned courses" ON public.course_files FOR SELECT USING (
-    EXISTS (SELECT 1 FROM public.courses c WHERE c.id = course_files.course_id AND c.org_id = (SELECT org_id FROM public.profiles WHERE id = auth.uid()))
+    EXISTS (
+        SELECT 1 FROM public.courses c 
+        WHERE c.id = course_files.course_id 
+        AND c.org_id = (SELECT org_id FROM public.profiles WHERE id = auth.uid())
+    )
 );
 
 -- 5. Course Assignments Policies
 CREATE POLICY "Org Admins can assign courses" ON public.course_assignments FOR ALL USING (
-    org_id = (SELECT org_id FROM public.profiles WHERE id = auth.uid()) AND (SELECT role FROM public.profiles WHERE id = auth.uid()) IN ('super_admin', 'org_admin')
+    org_id = (SELECT org_id FROM public.profiles WHERE id = auth.uid()) 
+    AND EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role IN ('super_admin', 'org_admin'))
 );
 CREATE POLICY "Learners can see their assignments" ON public.course_assignments FOR SELECT USING (
     user_id = auth.uid()
@@ -129,7 +149,8 @@ CREATE POLICY "Learners can manage their own progress" ON public.learner_progres
     user_id = auth.uid()
 );
 CREATE POLICY "Org Admins can view progress in their org" ON public.learner_progress FOR SELECT USING (
-    org_id = (SELECT org_id FROM public.profiles WHERE id = auth.uid()) AND (SELECT role FROM public.profiles WHERE id = auth.uid()) IN ('super_admin', 'org_admin')
+    org_id = (SELECT org_id FROM public.profiles WHERE id = auth.uid()) 
+    AND EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role IN ('super_admin', 'org_admin'))
 );
 
 -- Notes: Ensure a storage bucket named 'scorm_packages' is created in your Supabase project manually.

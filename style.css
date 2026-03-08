@@ -177,6 +177,32 @@ h1, h2, h3, h4, h5, h6 {
   box-shadow: 0 0 0 3px hsl(var(--color-primary) / 0.15);
 }
 
+.password-input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.password-toggle-btn {
+  position: absolute;
+  left: 10px; /* Positioned on the left for LTR input in RTL page */
+  top: 50%;
+  transform: translateY(-50%);
+  color: hsl(var(--text-muted));
+  font-size: 1.25rem;
+  padding: 5px;
+  line-height: 0;
+  z-index: 5;
+}
+
+.password-toggle-btn:hover {
+  color: hsl(var(--color-primary));
+}
+
+[dir="ltr"] .form-control {
+  padding-left: 2.5rem; /* Make room for the eye icon on the left */
+}
+
 /* Badges */
 .badge {
   display: inline-flex;

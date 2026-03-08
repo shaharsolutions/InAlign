@@ -1,4 +1,4 @@
-import { fetchOrganizations, createOrganization } from '../api/orgApi.js'
+import { fetchOrganizations, createOrganization, updateOrganization } from '../api/orgApi.js'
 
 export default async function renderSuperAdminOrgs(container) {
   container.innerHTML = `
@@ -21,8 +21,12 @@ export default async function renderSuperAdminOrgs(container) {
                <input class="form-control" type="color" id="org-color" value="#0066FF" style="height: 45px;">
             </div>
             
-            <button type="submit" class="btn btn-primary w-full justify-center mt-4">
+            <input type="hidden" id="edit-org-id" value="">
+            <button id="org-submit-btn" type="submit" class="btn btn-primary w-full justify-center mt-4">
               <i class='bx bx-plus-circle'></i> פתח סביבת הדרכה
+            </button>
+            <button type="button" id="org-cancel-edit" class="btn btn-outline w-full justify-center mt-2" style="display: none;">
+              בטל עריכה
             </button>
             <div id="org-msg" style="margin-top: 10px; text-align: center; font-weight: 500; min-height: 20px;" class="text-sm"></div>
          </form>
@@ -67,12 +71,42 @@ export default async function renderSuperAdminOrgs(container) {
            <td>${o.created_at ? new Date(o.created_at).toLocaleDateString('he-IL') : '-'}</td>
            <td>
              <div class="flex gap-2">
-               <button class="btn btn-outline text-sm" title="עריכת White Label"><i class='bx bx-edit'></i></button>
-               <button class="btn btn-outline text-sm" title="נהל משתמשים"><i class='bx bx-group'></i></button>
+               <button class="btn btn-outline text-sm edit-org-btn" data-id="${o.id}" data-name="${o.name}" data-color="${o.primary_color || '#0066FF'}" title="עריכת White Label"><i class='bx bx-edit'></i></button>
+               <button class="btn btn-primary text-sm enter-org-btn" data-id="${o.id}" data-name="${o.name}" title="כניסה לסביבת הארגון"><i class='bx bx-door-open'></i> למערכת</button>
              </div>
            </td>
         </tr>
       `).join('')
+
+      // Event Listeners for action buttons
+      tableBody.querySelectorAll('.edit-org-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          document.getElementById('edit-org-id').value = btn.dataset.id;
+          document.getElementById('org-name').value = btn.dataset.name;
+          document.getElementById('org-color').value = btn.dataset.color || '#0066FF';
+          
+          document.getElementById('org-submit-btn').innerHTML = `<i class='bx bx-save'></i> שמור שינויים`;
+          document.querySelector('h3').innerText = 'עריכת ארגון קיים';
+          document.getElementById('org-cancel-edit').style.display = 'flex';
+        });
+      });
+
+      tableBody.querySelectorAll('.enter-org-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const orgId = btn.dataset.id;
+          const orgName = btn.dataset.name;
+          // Impersonate
+          window.__APP_STATE.user.originalRole = window.__APP_STATE.user.role;
+          window.__APP_STATE.user.originalOrgId = window.__APP_STATE.user.orgId;
+          window.__APP_STATE.user.role = 'org_admin';
+          window.__APP_STATE.user.orgId = orgId;
+          window.__APP_STATE.user.orgName = orgName;
+          
+          // Redirect to admin dashboard
+          window.location.hash = '#/admin';
+        });
+      });
+
     } catch (err) {
       tableBody.innerHTML = `<tr><td colspan="5" style="color: hsl(var(--color-danger)); text-align: center;">שגיאה בטעינת הארגונים: ${err.message}</td></tr>`
     }
@@ -81,7 +115,16 @@ export default async function renderSuperAdminOrgs(container) {
   // Initial render
   await renderTable()
 
-  // Handle org creation
+  // Cancel Edit reset
+  container.querySelector('#org-cancel-edit').addEventListener('click', () => {
+    form.reset();
+    document.getElementById('edit-org-id').value = '';
+    document.getElementById('org-submit-btn').innerHTML = `<i class='bx bx-plus-circle'></i> פתח סביבת הדרכה`;
+    document.querySelector('h3').innerText = 'יצירת ארגון חדש';
+    document.getElementById('org-cancel-edit').style.display = 'none';
+  });
+
+  // Handle org creation/update
   const form = container.querySelector('#org-create-form')
   form.addEventListener('submit', async (e) => {
     e.preventDefault()
@@ -89,24 +132,34 @@ export default async function renderSuperAdminOrgs(container) {
     const submitBtn = form.querySelector('button[type="submit"]')
     
     // Values
-    const orgName = document.getElementById('org-name').value
-    const orgColor = document.getElementById('org-color').value
+    const orgId = document.getElementById('edit-org-id').value;
+    const orgName = document.getElementById('org-name').value;
+    const orgColor = document.getElementById('org-color').value;
 
-    submitBtn.disabled = true
-    submitBtn.innerHTML = `<i class='bx bx-loader-alt bx-spin'></i> פותח סביבת Tenant...`
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = `<i class='bx bx-loader-alt bx-spin'></i> שומר...`;
     
     try {
-      await createOrganization(orgName, orgColor);
+      if (orgId) {
+        await updateOrganization(orgId, orgName, orgColor);
+        msg.innerHTML = 'הארגון עודכן בהצלחה!';
+      } else {
+        await createOrganization(orgName, orgColor);
+        msg.innerHTML = 'הארגון נוצר בהצלחה!';
+      }
       await renderTable();
       form.reset();
+      document.getElementById('edit-org-id').value = '';
+      submitBtn.innerHTML = `<i class='bx bx-plus-circle'></i> פתח סביבת הדרכה`;
+      document.querySelector('h3').innerText = 'יצירת ארגון חדש';
+      document.getElementById('org-cancel-edit').style.display = 'none';
       msg.style.color = 'hsl(var(--color-success))';
-      msg.innerHTML = 'הארגון נוצר בהצלחה!';
     } catch (err) {
       msg.style.color = 'hsl(var(--color-danger))';
       msg.innerHTML = 'שגיאה: ' + err.message;
+      submitBtn.innerHTML = orgId ? `<i class='bx bx-save'></i> שמור שינויים` : `<i class='bx bx-plus-circle'></i> פתח סביבת הדרכה`;
     } finally {
-      submitBtn.disabled = false
-      submitBtn.innerHTML = `<i class='bx bx-plus-circle'></i> פתח סביבת הדרכה`
+      submitBtn.disabled = false;
       setTimeout(() => { msg.innerHTML = '' }, 3000)
     }
   })

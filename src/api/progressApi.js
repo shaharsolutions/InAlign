@@ -43,26 +43,48 @@ export async function fetchLearnerAssignments() {
   if (!user) throw new Error("לא מחובר");
 
   if (supabase) {
-    const { data: assignments, error } = await supabase
+    // Fetch assignments for this user
+    const { data: assignments, error: assignError } = await supabase
       .from('course_assignments')
-      .select(`
-        course_id,
-        courses (title, description, category, published),
-        learner_progress (status, progress_percent, score)
-      `)
+      .select('course_id')
       .eq('user_id', user.id);
       
-    if (error) throw new Error(error.message);
-    
-    return assignments.filter(a => a.courses.published).map(a => ({
-      id: a.course_id,
-      title: a.courses.title,
-      desc: a.courses.description,
-      status: a.learner_progress?.[0]?.status || 'not_started',
-      progress: a.learner_progress?.[0]?.progress_percent || 0,
-      score: a.learner_progress?.[0]?.score || null,
-      image: 'bx-book'
-    }));
+    if (assignError) throw new Error(assignError.message);
+    if (!assignments || assignments.length === 0) return [];
+
+    const courseIds = assignments.map(a => a.course_id);
+
+    // Fetch the courses details
+    const { data: courses, error: coursesError } = await supabase
+      .from('courses')
+      .select('id, title, description, category, published')
+      .in('id', courseIds)
+      .eq('published', true);
+
+    if (coursesError) throw new Error(coursesError.message);
+
+    // Fetch the user's progress for these courses
+    const { data: progresses, error: progressError } = await supabase
+      .from('learner_progress')
+      .select('course_id, status, progress_percent, score')
+      .eq('user_id', user.id)
+      .in('course_id', courseIds);
+
+    if (progressError) throw new Error(progressError.message);
+
+    // Combine the data in JS
+    return courses.map(course => {
+      const prog = progresses?.find(p => p.course_id === course.id);
+      return {
+        id: course.id,
+        title: course.title,
+        desc: course.description,
+        status: prog?.status || 'not_started',
+        progress: prog?.progress_percent || 0,
+        score: prog?.score || null,
+        image: 'bx-book'
+      };
+    });
   } else {
     // Fallback: Use Courses list and mock assigned view
     const { fetchCourses } = await import('./coursesApi.js')

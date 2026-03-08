@@ -37,3 +37,22 @@ export async function createOrganization(name, color = '#0066FF') {
     return newOrg;
   }
 }
+
+export async function updateOrganization(id, name, color) {
+  if (supabase) {
+    const { data, error } = await supabase
+      .from('organizations')
+      .update({ name, primary_color: color })
+      .eq('id', id)
+      .select()
+      .single();
+    if (error) throw new Error(error.message);
+    return data;
+  } else {
+    const org = mockOrgs.find(o => o.id === id);
+    if (org) {
+      org.name = name;
+    }
+    return org;
+  }
+}

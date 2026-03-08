@@ -7,7 +7,7 @@ export function renderNavbar(user) {
   // Decide links based on role
   let linksStr = ''
   if (user.role === 'super_admin') {
-    linksStr += `<a href="#/superadmin/orgs" class="nav-link"><i class='bx bx-building-house'></i> ניהול סביבות וארגונים</a>`
+    linksStr += `<a href="#/superadmin/orgs" class="nav-link"><i class='bx bx-building-house'></i> ניהול ארגונים</a>`
   } else if (user.role === 'admin' || user.role === 'org_admin') {
     linksStr += `<a href="#/admin" class="nav-link"><i class='bx bx-pie-chart-alt'></i> דשבורד מנהל</a>`
     linksStr += `<a href="#/admin/scorm" class="nav-link"><i class='bx bx-upload'></i> ניהול לומדות</a>`
@@ -27,7 +27,11 @@ export function renderNavbar(user) {
       <div class="navbar-nav">
         ${linksStr}
         <div class="user-menu flex items-center gap-2">
-          <span class="text-sm text-muted">שלום, ${user.fullName} <strong style="color: hsl(var(--color-primary))">(${user.orgName || 'מנהל ראשי'})</strong></span>
+          ${user.originalRole === 'super_admin' ? `<button id="exit-impersonation-btn" class="btn btn-warning text-sm" style="background: hsl(var(--color-warning)); color: black;" title="חזור לניהול הראשי"><i class='bx bx-exit'></i> חזור לניהול הראשי</button>` : ''}
+          <div class="text-sm text-muted" style="line-height: 1.2;">
+            שלום, ${user.fullName}<br>
+            <strong style="color: hsl(var(--color-primary))">(${user.orgName || 'מנהל ראשי'})</strong>
+          </div>
           <button id="logout-btn" class="btn btn-outline text-sm" title="התנתק"><i class='bx bx-log-out'></i></button>
         </div>
       </div>
@@ -35,7 +39,17 @@ export function renderNavbar(user) {
   `
 
   setTimeout(() => {
-    document.getElementById('logout-btn').addEventListener('click', logout)
+    document.getElementById('logout-btn').addEventListener('click', logout);
+    
+    if (user.originalRole === 'super_admin') {
+      document.getElementById('exit-impersonation-btn').addEventListener('click', () => {
+        window.__APP_STATE.user.role = 'super_admin';
+        window.__APP_STATE.user.originalRole = null;
+        window.__APP_STATE.user.orgId = window.__APP_STATE.user.originalOrgId || null;
+        window.__APP_STATE.user.orgName = 'ניהול ראשי';
+        window.location.hash = '#/superadmin/orgs';
+      });
+    }
   }, 0)
 
   return nav

@@ -57,19 +57,36 @@ export async function logout() {
 }
 
 async function fetchUserProfile(userId) {
-  const { data, error } = await supabase
+  // 1. Fetch the basic profile
+  const { data: profile, error: profileError } = await supabase
     .from('profiles')
-    .select('id, full_name, role, org_id, organizations(name)')
+    .select('id, full_name, role, org_id')
     .eq('id', userId)
     .single();
 
-  if (error || !data) throw new Error('שגיאה בטעינת פרופיל משתמש');
+  if (profileError || !profile) {
+    console.error("Supabase Profile Fetch Error:", profileError);
+    throw new Error('שגיאה בטעינת פרופיל משתמש');
+  }
+
+  // 2. Separately fetch organization name to avoid RLS join recursion issues (common cause for 500)
+  let orgName = null;
+  if (profile.org_id) {
+    const { data: orgData } = await supabase
+      .from('organizations')
+      .select('name')
+      .eq('id', profile.org_id)
+      .single();
+    
+    if (orgData) orgName = orgData.name;
+  }
+
   return {
-    id: data.id,
-    fullName: data.full_name,
-    role: data.role,
-    orgId: data.org_id,
-    orgName: data.organizations?.name
+    id: profile.id,
+    fullName: profile.full_name,
+    role: profile.role,
+    orgId: profile.org_id,
+    orgName: orgName
   };
 }
 

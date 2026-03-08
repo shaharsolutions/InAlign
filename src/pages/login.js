@@ -16,7 +16,12 @@ export default function renderLogin(container) {
         </div>
         <div class="form-group" style="text-align: right;">
           <label class="form-label" for="password">סיסמה</label>
-          <input class="form-control" type="password" id="password" required placeholder="123456" dir="ltr" value="123456">
+          <div class="password-input-wrapper">
+            <input class="form-control" type="password" id="password" required placeholder="123456" dir="ltr" value="123456">
+            <button type="button" id="toggle-password" class="password-toggle-btn">
+              <i class='bx bx-show'></i>
+            </button>
+          </div>
         </div>
         <div class="flex justify-between items-center mb-4">
           <label class="flex items-center gap-2 text-sm text-muted">
@@ -36,6 +41,15 @@ export default function renderLogin(container) {
       </div>
     </div>
   `
+
+  const passwordInput = document.getElementById('password')
+  const toggleBtn = document.getElementById('toggle-password')
+  
+  toggleBtn.addEventListener('click', () => {
+    const isPassword = passwordInput.type === 'password'
+    passwordInput.type = isPassword ? 'text' : 'password'
+    toggleBtn.innerHTML = isPassword ? `<i class='bx bx-hide'></i>` : `<i class='bx bx-show'></i>`
+  })
 
   const form = document.getElementById('login-form')
   form.addEventListener('submit', async (e) => {
