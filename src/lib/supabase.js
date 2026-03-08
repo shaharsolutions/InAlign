@@ -9,3 +9,9 @@ const supabaseAnonKey = env.VITE_SUPABASE_ANON_KEY || ''
 export const supabase = (supabaseUrl && supabaseAnonKey) 
   ? createClient(supabaseUrl, supabaseAnonKey) 
   : null;
+
+if (supabase) {
+  console.log("✅ Supabase Connected Successfully");
+} else {
+  console.warn("⚠️ Supabase Client is NULL - Running in Mock Mode. Please restart Vite server.");
+}
