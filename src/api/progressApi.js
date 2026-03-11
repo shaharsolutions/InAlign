@@ -79,7 +79,7 @@ export async function fetchLearnerAssignments() {
         // 1. Super Admin sees ALL published courses
         const { data, error } = await supabase
             .from('courses')
-            .select('id, title, description, category, published, image')
+            .select('id, title, description, category, published')
             .eq('published', true);
         if (error) throw new Error(error.message);
         courses = data;
@@ -119,7 +119,7 @@ export async function fetchLearnerAssignments() {
         // 3. Fetch course details
         const { data: cDetails, error: coursesError } = await supabase
             .from('courses')
-            .select('id, title, description, category, published, image')
+            .select('id, title, description, category, published')
             .in('id', courseIds)
             .eq('published', true);
 
