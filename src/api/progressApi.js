@@ -72,54 +72,62 @@ export async function fetchLearnerAssignments() {
   if (!user) throw new Error("לא מחובר");
 
   if (supabase) {
-    if (!user.orgId) return [];
+    let courses = [];
+    let courseIds = [];
 
-    // 1. Get courses assigned to the groups the user belongs to
-    const { data: memberships, error: memberError } = await supabase
-      .from('group_members')
-      .select('group_id')
-      .eq('user_id', user.id);
-      
-    if (memberError) throw new Error(memberError.message);
-    
-    const groupIds = memberships?.map(m => m.group_id) || [];
-    
-    let groupCourseIds = [];
-    if (groupIds.length > 0) {
-        const { data: gAssigns, error: gError } = await supabase
-            .from('group_assignments')
-            .select('course_id')
-            .in('group_id', groupIds);
-        if (!gError && gAssigns) {
-            groupCourseIds = gAssigns.map(ga => ga.course_id);
+    if (user.role === 'super_admin') {
+        // 1. Super Admin sees ALL published courses
+        const { data, error } = await supabase
+            .from('courses')
+            .select('id, title, description, category, published, image')
+            .eq('published', true);
+        if (error) throw new Error(error.message);
+        courses = data;
+        courseIds = courses.map(c => c.id);
+    } else {
+        // 1. Regular user gets courses assigned to their groups
+        const { data: memberships, error: memberError } = await supabase
+            .from('group_members')
+            .select('group_id')
+            .eq('user_id', user.id);
+        
+        if (memberError) throw new Error(memberError.message);
+        const groupIds = memberships?.map(m => m.group_id) || [];
+        
+        let assignedIds = [];
+        if (groupIds.length > 0) {
+            const { data: gAssigns, error: gError } = await supabase
+                .from('group_assignments')
+                .select('course_id')
+                .in('group_id', groupIds);
+            if (!gError && gAssigns) {
+                assignedIds = gAssigns.map(ga => ga.course_id);
+            }
         }
+
+        // 2. Add courses with individual progress
+        const { data: directProgress, error: indError } = await supabase
+            .from('learner_progress')
+            .select('course_id')
+            .eq('user_id', user.id);
+        
+        const individualIds = directProgress?.map(ia => ia.course_id) || [];
+        courseIds = [...new Set([...assignedIds, ...individualIds])];
+
+        if (courseIds.length === 0) return [];
+
+        // 3. Fetch course details
+        const { data: cDetails, error: coursesError } = await supabase
+            .from('courses')
+            .select('id, title, description, category, published, image')
+            .in('id', courseIds)
+            .eq('published', true);
+
+        if (coursesError) throw new Error(coursesError.message);
+        courses = cDetails;
     }
 
-    // 2. Get courses assigned directly to this specific user (via learner_progress)
-    // Even if not in a group, if they have progress, they should still see it
-    const { data: directProgress, error: indError } = await supabase
-      .from('learner_progress')
-      .select('course_id')
-      .eq('user_id', user.id);
-      
-    if (indError) {
-        console.warn("[LMS] Error fetching individual progress:", indError.message);
-    }
-    const individualCourseIds = directProgress?.map(ia => ia.course_id) || [];
-
-    // Combine IDs and remove duplicates
-    const courseIds = [...new Set([...groupCourseIds, ...individualCourseIds])];
-
-    if (courseIds.length === 0) return [];
-
-    // 3. Fetch details for these specific courses
-    const { data: courses, error: coursesError } = await supabase
-      .from('courses')
-      .select('id, title, description, category, published')
-      .in('id', courseIds)
-      .eq('published', true);
-
-    if (coursesError) throw new Error(coursesError.message);
+    if (courses.length === 0) return [];
 
     // 4. Fetch progress for these courses
     const { data: progresses, error: progressError } = await supabase
@@ -142,7 +150,7 @@ export async function fetchLearnerAssignments() {
         status: status,
         progress: prog?.progress_percent || 0,
         score: prog?.score || null,
-        image: 'bx-book'
+        image: course.image || 'bx-book'
       };
     });
   } else {
