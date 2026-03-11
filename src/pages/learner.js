@@ -70,7 +70,7 @@ export default async function renderLearnerDashboard(container) {
               <i class='bx ${course.image}'></i>
             </div>
             <div>
-              <h3 style="margin: 0; font-size: 1.1rem; max-width: 170px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${course.title}">${course.title}</h3>
+              <h3 style="margin: 0; font-size: ${course.title.length > 20 ? '0.95rem' : '1.1rem'}; line-height: 1.2; font-weight: 700;" title="${course.title}">${course.title}</h3>
               <p class="text-sm text-muted" style="max-height: 2.8em; overflow: hidden;">${course.desc || 'קורס העשרה לעובדים'}</p>
             </div>
           </div>
