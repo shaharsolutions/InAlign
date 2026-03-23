@@ -179,6 +179,9 @@ export async function fetchCourseById(id) {
         .from('scorm_packages')
         .getPublicUrl(entryPath);
       data.fileUrl = urlData.publicUrl;
+      console.log(`[LMS] Course file URL generated: ${data.fileUrl}`);
+    } else {
+      console.warn(`[LMS] No course_files found for course ${id}. Relation data:`, data.course_files);
     }
     
     return data;

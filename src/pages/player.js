@@ -240,6 +240,11 @@ export default async function renderPlayer(container) {
     `;
 
     const iframe = document.getElementById('scorm-iframe');
+    
+    if (!course.fileUrl) {
+        throw new Error("לא נמצאו קבצי לומדה עבור קורס זה. ייתכן שההעלאה נכשלה או שהקבצים נמחקו.");
+    }
+
     const baseDir = course.fileUrl.substring(0, course.fileUrl.lastIndexOf('/') + 1);
 
     const response = await fetch(course.fileUrl);
