@@ -1,15 +1,14 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.7.1"
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2"
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-region',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 }
 
-serve(async (req) => {
+Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders, status: 200 })
+    return new Response('ok', { headers: corsHeaders })
   }
 
   try {
@@ -18,14 +17,15 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     )
 
-    const { userId, callerId } = await req.json()
+    const body = await req.json();
+    const { userId, callerId } = body;
 
     if (!userId) {
       throw new Error('UserId is required')
     }
 
     if (!callerId) {
-        throw new Error('Caller ID is required for verification.');
+      throw new Error('Caller ID is required for verification.')
     }
 
     // 1. Verify caller permissions
@@ -33,31 +33,31 @@ serve(async (req) => {
       .from('profiles')
       .select('role, org_id')
       .eq('id', callerId)
-      .single();
+      .single()
 
     if (callerError || !callerProfile) {
-        throw new Error('Could not verify caller identity.');
+      throw new Error('Could not verify caller identity.')
     }
 
     if (callerProfile.role !== 'super_admin' && callerProfile.role !== 'org_admin') {
-        throw new Error('Unauthorized: Only admins can delete users.');
+      throw new Error('Unauthorized: Only admins can delete users.')
     }
 
     // Optional: If org_admin, verify user belongs to same org
     if (callerProfile.role === 'org_admin') {
-        const { data: targetUser, error: targetError } = await supabaseClient
-            .from('profiles')
-            .select('org_id')
-            .eq('id', userId)
-            .single();
-        
-        if (targetError || !targetUser) {
-            throw new Error('Target user not found.');
-        }
+      const { data: targetUser, error: targetError } = await supabaseClient
+        .from('profiles')
+        .select('org_id')
+        .eq('id', userId)
+        .single()
+      
+      if (targetError || !targetUser) {
+        throw new Error('Target user not found.')
+      }
 
-        if (targetUser.org_id !== callerProfile.org_id) {
-            throw new Error('Unauthorized: Cannot delete user from different organization.');
-        }
+      if (targetUser.org_id !== callerProfile.org_id) {
+        throw new Error('Unauthorized: Cannot delete user from different organization.')
+      }
     }
 
     // 2. Delete from Auth
@@ -71,7 +71,8 @@ serve(async (req) => {
   } catch (error: any) {
     return new Response(JSON.stringify({ error: error.message || String(error) }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      status: 400, // Return 400 for errors
+      status: 400,
     })
   }
 })
+
