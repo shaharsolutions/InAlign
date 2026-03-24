@@ -385,15 +385,15 @@ s3_secret_key = "env(S3_SECRET_KEY)"
 
 [functions.create-user]
 enabled = true
-verify_jwt = true
+verify_jwt = false
 entrypoint = "./functions/create-user/index.ts"
 
 [functions.update-user]
 enabled = true
-verify_jwt = true
+verify_jwt = false
 entrypoint = "./functions/update-user/index.ts"
 
 [functions.delete-user]
 enabled = true
-verify_jwt = true
+verify_jwt = false
 entrypoint = "./functions/delete-user/index.ts"
