@@ -1,6 +1,6 @@
 import { fetchUsers, createUser, deleteUser, updateUser, bulkUpdateUsersOrg } from '../api/usersApi.js'
 import { resetUserProgress, resetOrgProgress } from '../api/progressApi.js'
-import { fetchGroups, assignUsersToGroup } from '../api/groupsApi.js'
+import { fetchGroups, assignUsersToGroup, createGroup } from '../api/groupsApi.js'
 import { getCurrentUserSync } from '../api/authApi.js'
 import { showConfirmModal, showToast, showBulkGroupModal, showBulkOrgModal } from '../lib/ui.js'
 import { fetchOrganizations } from '../api/orgApi.js'
@@ -546,7 +546,7 @@ export default async function renderAdminUsers(container) {
   const bulkMsg = container.querySelector('#bulk-msg');
 
   container.querySelector('#download-template-btn').addEventListener('click', () => {
-    const headers = [['שם מלא', 'אימייל', 'טלפון', 'סיסמה', 'תפקיד (learner/org_admin)']];
+    const headers = [['שם מלא', 'אימייל', 'טלפון', 'סיסמה', 'תפקיד (learner/org_admin)', 'שיוך לקבוצה']];
     if (isSuperAdmin) {
       headers[0].push('מזהה ארגון (Org ID)');
     }
@@ -588,21 +588,25 @@ export default async function renderAdminUsers(container) {
         let failCount = 0;
         let errors = [];
 
+        // Pre-fetch groups to minimize individual lookups
+        let groupsCache = await fetchGroups();
+
         for (const row of data) {
           try {
             // Map Hebrew headers to keys
             const fullName = row['שם מלא'] || row['Full Name'];
             const email = row['אימייל'] || row['Email'];
             const phone = row['טלפון'] || row['Phone'];
-            const password = row['סיסמה'] || row['Password'] || 'Lms123456'; // Default password if empty
+            const password = row['סיסמה'] || row['Password'] || 'Lms123456'; 
             const role = row['תפקיד (learner/org_admin)'] || row['Role'] || 'learner';
             const orgId = row['מזהה ארגון (Org ID)'] || row['Org ID'];
+            const groupName = row['שיוך לקבוצה'] || row['Group Name'];
 
             if (!fullName || !email) {
               throw new Error(`חסר שם או אימייל עבור השורה: ${JSON.stringify(row)}`);
             }
 
-            await createUser({
+            const newUser = await createUser({
               fullName,
               email,
               phone: phone ? phone.toString() : '',
@@ -610,6 +614,31 @@ export default async function renderAdminUsers(container) {
               role,
               orgId: isSuperAdmin ? orgId : currentUser.orgId
             });
+
+            // Handle Group Association
+            if (groupName && newUser?.id) {
+              let trimmedGroupName = groupName.toString().trim();
+              let group = groupsCache.find(g => g.name === trimmedGroupName);
+              let groupId;
+
+              if (!group) {
+                // Create group if it doesn't exist
+                try {
+                  const newGroup = await createGroup(trimmedGroupName);
+                  groupsCache.push(newGroup);
+                  groupId = newGroup.id;
+                } catch (gErr) {
+                  console.warn(`Could not create group '${trimmedGroupName}':`, gErr);
+                }
+              } else {
+                groupId = group.id;
+              }
+
+              if (groupId) {
+                await assignUsersToGroup(groupId, [newUser.id]);
+              }
+            }
+
             successCount++;
             bulkMsg.innerHTML = `<i class='bx bx-loader-alt bx-spin'></i> מעבד... (${successCount}/${data.length})`;
           } catch (err) {
