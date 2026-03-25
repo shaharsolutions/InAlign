@@ -18,17 +18,12 @@ Deno.serve(async (req) => {
     )
 
     const body = await req.json();
-    const { userId, callerId } = body;
-
-    if (!userId) {
-      throw new Error('UserId is required')
-    }
+    const { userId, userIds, callerId } = body;
 
     if (!callerId) {
       throw new Error('Caller ID is required for verification.')
     }
 
-    // 1. Verify caller permissions
     const { data: callerProfile, error: callerError } = await supabaseClient
       .from('profiles')
       .select('role, org_id')
@@ -43,36 +38,52 @@ Deno.serve(async (req) => {
       throw new Error('Unauthorized: Only admins can delete users.')
     }
 
-    // Optional: If org_admin, verify user belongs to same org
-    if (callerProfile.role === 'org_admin') {
-      const { data: targetUser, error: targetError } = await supabaseClient
-        .from('profiles')
-        .select('org_id')
-        .eq('id', userId)
-        .single()
-      
-      if (targetError || !targetUser) {
-        throw new Error('Target user not found.')
-      }
+    const usersToProcess = userIds && Array.isArray(userIds) ? userIds : (userId ? [userId] : []);
+    
+    if (usersToProcess.length === 0) {
+      throw new Error('UserId or UserIds is required')
+    }
 
-      if (targetUser.org_id !== callerProfile.org_id) {
-        throw new Error('Unauthorized: Cannot delete user from different organization.')
+    const results = [];
+
+    for (const uid of usersToProcess) {
+      try {
+        // Optional: If org_admin, verify user belongs to same org
+        if (callerProfile.role === 'org_admin') {
+          const { data: targetUser, error: targetError } = await supabaseClient
+            .from('profiles')
+            .select('org_id')
+            .eq('id', uid)
+            .single()
+          
+          if (targetError || !targetUser) {
+            throw new Error(`Target user ${uid} not found.`)
+          }
+
+          if (targetUser.org_id !== callerProfile.org_id) {
+            throw new Error(`Unauthorized: Cannot delete user ${uid} from different organization.`)
+          }
+        }
+
+        const { error: authError } = await supabaseClient.auth.admin.deleteUser(uid)
+        if (authError) throw authError
+        
+        results.push({ userId: uid, status: 'success' });
+      } catch (err: any) {
+        results.push({ userId: uid, status: 'error', error: err.message });
       }
     }
 
-    // 2. Delete from Auth
-    const { error: authError } = await supabaseClient.auth.admin.deleteUser(userId)
-    if (authError) throw authError
-
-    return new Response(JSON.stringify({ success: true }), {
+    return new Response(JSON.stringify({ success: true, results }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 200,
     })
   } catch (error: any) {
     return new Response(JSON.stringify({ error: error.message || String(error) }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      status: 400,
+      status: 200, // Return 200 even on error to avoid CORS preflight issues on 4xx if not handled
     })
   }
 })
+
 

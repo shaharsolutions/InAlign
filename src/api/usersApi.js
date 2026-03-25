@@ -244,7 +244,36 @@ export async function updateUser(userId, userData) {
   }
 }
 
+export async function bulkDeleteUsers(userIds) {
+  const currentUser = getCurrentUserSync();
+  if (!currentUser || (currentUser.role !== 'org_admin' && currentUser.role !== 'super_admin')) throw new Error("אין הרשאה");
+
+  if (supabase) {
+    const { data, error } = await supabase.functions.invoke('delete-user', {
+      body: {
+        userIds: userIds,
+        callerId: currentUser.id
+      }
+    });
+
+    if (error) {
+      console.error("[LMS] bulkDeleteUsers Functions Error:", error);
+      throw new Error("שגיאה במחיקת קבוצת משתמשים.");
+    }
+
+    if (data && data.error) {
+      throw new Error(data.error);
+    }
+
+    return data.results;
+  } else {
+    MOCK_USERS = MOCK_USERS.filter(u => !userIds.includes(u.id));
+    return userIds.map(uid => ({ userId: uid, status: 'success' }));
+  }
+}
+
 export async function deleteUser(userId) {
+
   const currentUser = getCurrentUserSync();
   if (!currentUser || (currentUser.role !== 'org_admin' && currentUser.role !== 'super_admin')) throw new Error("אין הרשאה");
 

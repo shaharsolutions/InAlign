@@ -72,7 +72,9 @@ export default async function renderSuperAdminOrgs(container) {
         <tr data-id="${o.id}">
            <td>
               <div style="font-weight: 500;">${o.name}</div>
+              <div class="text-xs text-muted font-mono" style="user-select: all; cursor: pointer;" title="לחץ להעתקה" onclick="navigator.clipboard.writeText('${o.id}'); showToast('המזהה הועתק')">${o.id}</div>
            </td>
+
            <td>
               <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; background: hsl(var(--color-success)/0.1); color: hsl(var(--color-success)); border-radius: 500px; width: 65px; height: 65px; font-weight: bold; line-height: 1.1; margin: 0 auto;">
                 <span style="font-size: 1.2rem;">${o.total_users || 0}</span>

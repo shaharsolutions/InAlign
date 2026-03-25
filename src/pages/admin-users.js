@@ -1,4 +1,4 @@
-import { fetchUsers, createUser, bulkCreateUsers, deleteUser, updateUser, bulkUpdateUsersOrg } from '../api/usersApi.js'
+import { fetchUsers, createUser, bulkCreateUsers, deleteUser, updateUser, bulkUpdateUsersOrg, bulkDeleteUsers } from '../api/usersApi.js'
 import { resetUserProgress, resetOrgProgress } from '../api/progressApi.js'
 import { fetchGroups, assignUsersToGroup, createGroup } from '../api/groupsApi.js'
 import { getCurrentUserSync } from '../api/authApi.js'
@@ -10,6 +10,7 @@ export default async function renderAdminUsers(container) {
   const currentUser = getCurrentUserSync();
   const isSuperAdmin = currentUser?.role === 'super_admin';
   let organizations = [];
+  let allUsers = []; // Store all fetched users for filtering
 
   if (isSuperAdmin) {
     try {
@@ -147,6 +148,36 @@ export default async function renderAdminUsers(container) {
              </button>
              ` : ''}
           </div>
+
+          <!-- Search & Filters -->
+          <div class="flex flex-wrap gap-4 mb-6 items-center bg-muted/20 p-4 rounded-lg" style="background: hsla(var(--text-main), 0.03); border: 1px solid hsla(var(--text-main), 0.05);">
+            <div class="form-group mb-0" style="flex: 2; min-width: 200px;">
+              <div class="relative">
+                <i class='bx bx-search absolute' style="right: 12px; top: 50%; transform: translateY(-50%); color: hsla(var(--text-main), 0.4); z-index: 10;"></i>
+                <input type="text" id="user-search" class="form-control" placeholder="חיפוש לפי שם, אימייל או טלפון..." style="padding-right: 40px; height: 42px; width: 100%;">
+              </div>
+            </div>
+            <div class="form-group mb-0" style="flex: 1; min-width: 150px;">
+              <select id="filter-role" class="form-control" style="height: 42px;">
+                <option value="">כל התפקידים</option>
+                <option value="learner">עובד / לומד</option>
+                <option value="org_admin">מנהל הדרכה</option>
+                ${isSuperAdmin ? '<option value="super_admin">מנהל על</option>' : ''}
+              </select>
+            </div>
+            ${isSuperAdmin ? `
+            <div class="form-group mb-0" style="flex: 1; min-width: 180px;">
+              <select id="filter-org" class="form-control" style="height: 42px;">
+                <option value="">כל הארגונים</option>
+                ${organizations.map(o => `<option value="${o.id}">${o.name}</option>`).join('')}
+              </select>
+            </div>
+            ` : ''}
+            <div id="results-count" class="text-xs text-muted font-medium ml-auto">
+              מציג 0 משתמשים
+            </div>
+          </div>
+
          <div style="overflow-x: auto;">
            <table class="table" id="users-table">
               <thead>
@@ -188,12 +219,12 @@ export default async function renderAdminUsers(container) {
     </div>
   `
 
-  const tableBody = container.querySelector('#users-table tbody')
+  const tableBody = container.querySelector('#users-table tbody');
 
   async function renderTable() {
     try {
-      const users = await fetchUsers()
-      console.log(`[LMS] renderTable - Users:`, users);
+      allUsers = await fetchUsers();
+      console.log(`[LMS] renderTable - Users fetched:`, allUsers.length);
       
       const checkUser = getCurrentUserSync();
       if (!checkUser) {
@@ -201,154 +232,201 @@ export default async function renderAdminUsers(container) {
           return;
       }
 
-      if (users.length === 0) {
-        console.log(`[LMS] renderTable - No users found for role ${checkUser.role} in org ${checkUser.orgId}`);
-        tableBody.innerHTML = `<tr><td colspan="${isSuperAdmin ? 7 : 6}" style="text-align: center;" class="text-muted">אין משתמשים במערכת</td></tr>`
-        return
-      }
-
-      console.log(`[LMS] renderTable - Generating HTML for ${users.length} users`);
-      const html = users.map(u => {
-        try {
-          return `
-            <tr data-user-id="${u.id}">
-               <td><input type="checkbox" class="user-checkbox" data-id="${u.id}" data-name="${u.full_name}" ${selectedUserIds.has(u.id) ? 'checked' : ''}></td>
-               <td>
-                  <div style="font-weight: 500;">${u.full_name}</div>
-                  <div class="user-groups-list flex gap-1 mt-1 flex-wrap">
-                    ${u.groups?.length > 0 
-                      ? u.groups.map(g => `<span class="badge" style="font-size: 0.65rem; background: hsla(var(--color-primary), 0.1); color: hsl(var(--color-primary)); border: 1px solid hsla(var(--color-primary), 0.2);">${g.name}</span>`).join('') 
-                      : '<span class="badge" style="font-size: 0.65rem; background: hsla(var(--color-primary), 0.1); color: hsl(var(--color-primary)); border: 1px solid hsla(var(--color-primary), 0.2);">לא משויך לקבוצה</span>'}
-                  </div>
-               </td>
-               <td>
-                  ${u.email || '-'} <br>
-                  <span class="text-xs text-muted">
-                    ${u.phone || 'אין טלפון'} • 
-                    ${u.role === 'org_admin' ? 'מנהל הדרכה' : u.role === 'super_admin' ? 'מנהל על' : 'עובד / לומד'}
-                  </span>
-               </td>
-               ${isSuperAdmin ? `<td><span class="text-sm">${u.org_name || '-'}</span></td>` : ''}
-               <td><span class="badge ${u.status === 'פעיל' ? 'badge-success' : 'badge-warning'}">${u.status || 'פעיל'}</span></td>
-               <td>${u.created_at ? new Date(u.created_at).toLocaleDateString('he-IL') : '-'}</td>
-               <td>
-                 <div class="flex gap-2">
-                   <button class="btn btn-outline text-sm edit-btn" 
-                     data-id="${u.id}" 
-                     data-name="${u.full_name}" 
-                     data-phone="${u.phone || ''}" 
-                     data-email="${u.email || ''}" 
-                     data-role="${u.role}" 
-                     data-org="${u.org_id || ''}"
-                     title="עריכת משתמש"><i class='bx bx-edit'></i></button>
-                   <button class="btn btn-outline text-sm reset-user-btn" data-id="${u.id}" data-name="${u.full_name}" title="איפוס נתוני למידה"><i class='bx bx-refresh' style="color: hsl(var(--color-warning));"></i></button>
-                   <button class="btn btn-outline text-sm delete-btn" data-id="${u.id}" data-name="${u.full_name}" title="מחיקת חשבון"><i class='bx bx-trash' style="color: hsl(var(--color-danger));"></i></button>
-                 </div>
-               </td>
-            </tr>
-          `;
-        } catch (e) {
-          console.error(`[LMS] Error rendering user ${u.id}:`, e);
-          return '';
-        }
-      }).join('');
-      
-      console.log(`[LMS] renderTable - HTML generated, length: ${html.length}`);
-      tableBody.innerHTML = html;
-
-      // Setup edit buttons
-      container.querySelectorAll('.edit-btn').forEach(btn => {
-        btn.addEventListener('click', (e) => {
-          const btnEl = e.currentTarget;
-          const form = document.getElementById('user-create-form');
-          
-          document.getElementById('form-title').innerText = 'עריכת משתמש';
-          document.getElementById('user-name').value = btnEl.getAttribute('data-name');
-          document.getElementById('user-phone').value = btnEl.getAttribute('data-phone');
-          document.getElementById('user-email').value = btnEl.getAttribute('data-email') !== '---' && btnEl.getAttribute('data-email') ? btnEl.getAttribute('data-email') : '';
-          document.getElementById('user-email').disabled = false; 
-          document.getElementById('user-role').value = btnEl.getAttribute('data-role');
-          
-          if (isSuperAdmin) {
-            document.getElementById('user-org').value = btnEl.getAttribute('data-org');
-          }
-
-          const pwField = document.getElementById('user-password');
-          pwField.required = false;
-          pwField.placeholder = 'אופציונלי: השאר ריק עבור סיסמה נוכחית';
-          pwField.value = '';
-
-          form.dataset.editId = btnEl.getAttribute('data-id');
-          
-          const submitBtn = document.getElementById('submit-btn');
-          submitBtn.querySelector('i').className = 'bx bx-save';
-          submitBtn.querySelector('span').innerText = 'שמור שינויים';
-          
-          document.getElementById('cancel-edit-btn').classList.remove('hidden');
-          document.getElementById('form-title').scrollIntoView({ behavior: 'smooth' });
-        });
-      });
-
-      // Setup delete buttons
-      container.querySelectorAll('.delete-btn').forEach(btn => {
-        btn.addEventListener('click', async (e) => {
-          const id = e.currentTarget.getAttribute('data-id');
-          const name = e.currentTarget.getAttribute('data-name');
-          
-          await showConfirmModal({
-            title: 'מחיקת משתמש',
-            message: `האם אתה בטוח שברצונך למחוק את <strong>${name}</strong>? פעולה זו תסיר את הגישה שלו לצמיתות.`,
-            confirmText: 'מחק חשבון',
-            onConfirm: async () => {
-                await deleteUser(id);
-                showToast('המשתמש נמחק בהצלחה');
-                renderTable();
-            }
-          });
-        });
-      });
-
-      // Setup individual reset buttons
-      container.querySelectorAll('.reset-user-btn').forEach(btn => {
-        btn.addEventListener('click', async (e) => {
-          const id = e.currentTarget.getAttribute('data-id');
-          const name = e.currentTarget.getAttribute('data-name');
-          
-          await showConfirmModal({
-            title: 'אישור איפוס נתונים',
-            message: `האם אתה בטוח שברצונך לאפס את כל נתוני הלמידה עבור <strong>${name}</strong>? פעולה זו תמחוק את כל ציוני הלומדות שלו לצמיתות.`,
-            confirmText: 'אפס נתונים',
-            onConfirm: async () => {
-                await resetUserProgress(id);
-                showToast(`נתוני הלמידה של ${name} אופסו`);
-                renderTable();
-            }
-          });
-        })
-      })
-
-      // Setup Org-wide reset button
-      const resetAllBtn = container.querySelector('#reset-all-org-progress');
-      if (resetAllBtn) {
-        resetAllBtn.addEventListener('click', async () => {
-          await showConfirmModal({
-            title: 'אזהרה קריטית!',
-            message: 'אתה עומד לאפס את <strong>כל נתוני הלמידה</strong> של כל העובדים בארגון. פעולה זו אינה הפיכה! האם להמשיך?',
-            confirmText: 'אפס הכל (קריטי)',
-            onConfirm: async () => {
-                await resetOrgProgress(currentUser.orgId);
-                showToast('כל נתוני הלמידה בארגון אופסו');
-                renderTable();
-            }
-          });
-        })
-      }
+      applyFilters();
     } catch (err) {
-      tableBody.innerHTML = `<tr><td colspan="${isSuperAdmin ? 7 : 6}" style="color: hsl(var(--color-danger)); text-align: center;">שגיאה: ${err.message}</td></tr>`
+      if (tableBody) {
+        tableBody.innerHTML = `<tr><td colspan="${isSuperAdmin ? 7 : 6}" style="color: hsl(var(--color-danger)); text-align: center;">שגיאה: ${err.message}</td></tr>`;
+      }
     }
   }
 
-  await renderTable()
+  function applyFilters() {
+    const searchTerm = container.querySelector('#user-search')?.value.toLowerCase() || '';
+    const roleFilter = container.querySelector('#filter-role')?.value || '';
+    const orgFilter = container.querySelector('#filter-org')?.value || '';
+
+    const filteredUsers = allUsers.filter(u => {
+      const matchesSearch = 
+        u.full_name?.toLowerCase().includes(searchTerm) || 
+        u.email?.toLowerCase().includes(searchTerm) || 
+        u.phone?.includes(searchTerm);
+      
+      const matchesRole = !roleFilter || u.role === roleFilter;
+      const matchesOrg = !orgFilter || u.org_id === orgFilter;
+
+      return matchesSearch && matchesRole && matchesOrg;
+    });
+
+    const countLabel = container.querySelector('#results-count');
+    if (countLabel) {
+      countLabel.innerText = `מציג ${filteredUsers.length} מתוך ${allUsers.length} משתמשים`;
+    }
+
+    if (!tableBody) return;
+
+    if (filteredUsers.length === 0) {
+      tableBody.innerHTML = `<tr><td colspan="${isSuperAdmin ? 7 : 6}" style="text-align: center;" class="text-muted">לא נמצאו משתמשים תואמים לחיפוש</td></tr>`
+      return;
+    }
+
+    const html = filteredUsers.map(u => {
+      try {
+        return `
+          <tr data-user-id="${u.id}">
+             <td><input type="checkbox" class="user-checkbox" data-id="${u.id}" data-name="${u.full_name}" ${selectedUserIds.has(u.id) ? 'checked' : ''}></td>
+             <td>
+                <div style="font-weight: 500;">${u.full_name}</div>
+                <div class="user-groups-list flex gap-1 mt-1 flex-wrap">
+                  ${u.groups?.length > 0 
+                    ? u.groups.map(g => `<span class="badge" style="font-size: 0.65rem; background: hsla(var(--color-primary), 0.1); color: hsl(var(--color-primary)); border: 1px solid hsla(var(--color-primary), 0.2);">${g.name}</span>`).join('') 
+                    : '<span class="badge" style="font-size: 0.65rem; background: hsla(var(--color-primary), 0.1); color: hsl(var(--color-primary)); border: 1px solid hsla(var(--color-primary), 0.2);">לא משויך לקבוצה</span>'}
+                </div>
+             </td>
+             <td>
+                ${u.email || '-'} <br>
+                <span class="text-xs text-muted">
+                  ${u.phone || 'אין טלפון'} • 
+                  ${u.role === 'org_admin' ? 'מנהל הדרכה' : u.role === 'super_admin' ? 'מנהל על' : 'עובד / לומד'}
+                </span>
+             </td>
+             ${isSuperAdmin ? `<td><span class="text-sm">${u.org_name || '-'}</span></td>` : ''}
+             <td><span class="badge ${u.status === 'פעיל' ? 'badge-success' : 'badge-warning'}">${u.status || 'פעיל'}</span></td>
+             <td>${u.created_at ? new Date(u.created_at).toLocaleDateString('he-IL') : '-'}</td>
+             <td>
+               <div class="flex gap-2">
+                 <button class="btn btn-outline text-sm edit-btn" 
+                   data-id="${u.id}" 
+                   data-name="${u.full_name}" 
+                   data-phone="${u.phone || ''}" 
+                   data-email="${u.email || ''}" 
+                   data-role="${u.role}" 
+                   data-org="${u.org_id || ''}"
+                   title="עריכת משתמש"><i class='bx bx-edit'></i></button>
+                 <button class="btn btn-outline text-sm reset-user-btn" data-id="${u.id}" data-name="${u.full_name}" title="איפוס נתוני למידה"><i class='bx bx-refresh' style="color: hsl(var(--color-warning));"></i></button>
+                 <button class="btn btn-outline text-sm delete-btn" data-id="${u.id}" data-name="${u.full_name}" title="מחיקת חשבון"><i class='bx bx-trash' style="color: hsl(var(--color-danger));"></i></button>
+               </div>
+             </td>
+          </tr>
+        `;
+      } catch (e) {
+        console.error(`[LMS] Error rendering user ${u.id}:`, e);
+        return '';
+      }
+    }).join('');
+    
+    tableBody.innerHTML = html;
+    setupTableInteractions();
+  }
+
+  function setupTableInteractions() {
+    // Setup edit buttons
+    container.querySelectorAll('.edit-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const btnEl = e.currentTarget;
+        const form = document.getElementById('user-create-form');
+        
+        document.getElementById('form-title').innerText = 'עריכת משתמש';
+        document.getElementById('user-name').value = btnEl.getAttribute('data-name');
+        document.getElementById('user-phone').value = btnEl.getAttribute('data-phone');
+        document.getElementById('user-email').value = (btnEl.getAttribute('data-email') !== '---' && btnEl.getAttribute('data-email')) ? btnEl.getAttribute('data-email') : '';
+        document.getElementById('user-email').disabled = false; 
+        document.getElementById('user-role').value = btnEl.getAttribute('data-role');
+        
+        if (isSuperAdmin) {
+          document.getElementById('user-org').value = btnEl.getAttribute('data-org');
+        }
+
+        const pwField = document.getElementById('user-password');
+        pwField.required = false;
+        pwField.placeholder = 'אופציונלי: השאר ריק עבור סיסמה נוכחית';
+        pwField.value = '';
+
+        form.dataset.editId = btnEl.getAttribute('data-id');
+        
+        const submitBtn = document.getElementById('submit-btn');
+        submitBtn.querySelector('i').className = 'bx bx-save';
+        submitBtn.querySelector('span').innerText = 'שמור שינויים';
+        
+        document.getElementById('cancel-edit-btn').classList.remove('hidden');
+        document.getElementById('form-title').scrollIntoView({ behavior: 'smooth' });
+      });
+    });
+
+    // Setup delete buttons
+    container.querySelectorAll('.delete-btn').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        const id = e.currentTarget.getAttribute('data-id');
+        const name = e.currentTarget.getAttribute('data-name');
+        
+        await showConfirmModal({
+          title: 'מחיקת משתמש',
+          message: `האם אתה בטוח שברצונך למחוק את <strong>${name}</strong>? פעולה זו תסיר את הגישה שלו לצמיתות.`,
+          confirmText: 'מחק חשבון',
+          onConfirm: async () => {
+              await deleteUser(id);
+              showToast('המשתמש נמחק בהצלחה');
+              renderTable();
+          }
+        });
+      });
+    });
+
+    // Setup individual reset buttons
+    container.querySelectorAll('.reset-user-btn').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        const id = e.currentTarget.getAttribute('data-id');
+        const name = e.currentTarget.getAttribute('data-name');
+        
+        await showConfirmModal({
+          title: 'אישור איפוס נתונים',
+          message: `האם אתה בטוח שברצונך לאפס את כל נתוני הלמידה עבור <strong>${name}</strong>? פעולה זו תמחוק את כל ציוני הלומדות שלו לצמיתות.`,
+          confirmText: 'אפס נתונים',
+          onConfirm: async () => {
+              await resetUserProgress(id);
+              showToast(`נתוני הלמידה של ${name} אופסו`);
+              renderTable();
+          }
+        });
+      })
+    })
+
+    // Update Select All checkbox state based on current visible checkboxes
+    const selectAll = container.querySelector('#select-all-users');
+    if (selectAll) {
+      const allCb = Array.from(container.querySelectorAll('.user-checkbox'));
+      if (allCb.length > 0) {
+        selectAll.checked = allCb.every(cb => cb.checked);
+        selectAll.indeterminate = !selectAll.checked && allCb.some(cb => cb.checked);
+      } else {
+        selectAll.checked = false;
+        selectAll.indeterminate = false;
+      }
+    }
+  }
+
+  // Setup Org-wide reset button (once)
+  const resetAllBtn = container.querySelector('#reset-all-org-progress');
+  if (resetAllBtn) {
+    resetAllBtn.addEventListener('click', async () => {
+      await showConfirmModal({
+        title: 'אזהרה קריטית!',
+        message: 'אתה עומד לאפס את <strong>כל נתוני הלמידה</strong> של כל העובדים בארגון. פעולה זו אינה הפיכה! האם להמשיך?',
+        confirmText: 'אפס הכל (קריטי)',
+        onConfirm: async () => {
+            await resetOrgProgress(currentUser.orgId);
+            showToast('כל נתוני הלמידה בארגון אופסו');
+            renderTable();
+        }
+      });
+    })
+  }
+
+  // Search & Filter event listeners
+  container.querySelector('#user-search')?.addEventListener('input', applyFilters);
+  container.querySelector('#filter-role')?.addEventListener('change', applyFilters);
+  container.querySelector('#filter-org')?.addEventListener('change', applyFilters);
+
+  await renderTable();
 
   // Form Reset Helper
   const resetFormToCreate = () => {
@@ -361,8 +439,10 @@ export default async function renderAdminUsers(container) {
     delete form.dataset.editId
     
     const submitBtn = document.getElementById('submit-btn')
-    submitBtn.querySelector('i').className = 'bx bx-user-plus'
-    submitBtn.querySelector('span').innerText = 'צור חשבון ושגר הזמנה'
+    if (submitBtn) {
+      submitBtn.querySelector('i').className = 'bx bx-user-plus'
+      submitBtn.querySelector('span').innerText = 'צור חשבון'
+    }
     document.getElementById('cancel-edit-btn').classList.add('hidden')
   }
 
@@ -430,7 +510,7 @@ export default async function renderAdminUsers(container) {
       submitBtn.disabled = false
       submitBtn.innerHTML = isEdit 
       ? `<i class='bx bx-save'></i> <span>שמור שינויים</span>`
-      : `<i class='bx bx-user-plus'></i> <span>צור חשבון ושגר הזמנה</span>`
+      : `<i class='bx bx-user-plus'></i> <span>צור חשבון</span>`
     }
   })
 
@@ -461,9 +541,6 @@ export default async function renderAdminUsers(container) {
       updateBulkBar();
     }
   });
-
-  // Remove the redundant click listener that was causing conflicts
-  // container.addEventListener('click', (e) => { ... });
 
   // Handle 'Clear Selection' button in the bulk bar
   container.querySelector('#clear-selection-btn').addEventListener('click', () => {
@@ -501,20 +578,35 @@ export default async function renderAdminUsers(container) {
 
   // Bulk Delete
   container.querySelector('#bulk-delete-btn').addEventListener('click', async () => {
+    const userIds = Array.from(selectedUserIds);
     await showConfirmModal({
         title: 'מחיקה קבוצתית',
-        message: `האם אתה בטוח שברצונך למחוק לצמיתות את <strong>${selectedUserIds.size}</strong> המשתמשים שנבחרו? פעולה זו אינה הפיכה.`,
+        message: `האם אתה בטוח שברצונך למחוק לצמיתות את <strong>${userIds.length}</strong> המשתמשים שנבחרו? פעולה זו אינה הפיכה.`,
         confirmText: 'מחק הכל',
         onConfirm: async () => {
-            const promises = Array.from(selectedUserIds).map(id => deleteUser(id));
-            await Promise.all(promises);
-            showToast('המשתמשים נמחקו בהצלחה');
-            selectedUserIds.clear();
-            updateBulkBar();
-            renderTable();
+            try {
+              showToast('מוחק משתמשים...', 'info');
+              const results = await bulkDeleteUsers(userIds);
+              const successCount = results.filter(r => r.status === 'success').length;
+              const failCount = results.length - successCount;
+              
+              if (successCount > 0) {
+                showToast(`${successCount} משתמשים נמחקו בהצלחה`);
+              }
+              if (failCount > 0) {
+                showToast(`${failCount} משתמשים נכשלו במחיקה`, 'error');
+              }
+              
+              selectedUserIds.clear();
+              updateBulkBar();
+              await renderTable();
+            } catch (err) {
+              showToast(err.message, 'error');
+            }
         }
     });
   });
+
 
   // Bulk Move Org
   const bulkMoveBtn = container.querySelector('#bulk-move-org-btn');
@@ -622,12 +714,10 @@ export default async function renderAdminUsers(container) {
           throw new Error('לא נמצאו משתמשים תקינים (ודא שהאימייל תקין והשם מלא מלא)');
         }
 
-
         const batchResults = await bulkCreateUsers(usersToBatch);
         
         const successCount = batchResults.filter(r => r.status === 'success').length;
         const failCount = batchResults.length - successCount;
-        const errors = batchResults.filter(r => r.status === 'error').map(r => `${r.email}: ${r.error}`);
 
         if (successCount > 0) {
           showToast(`${successCount} משתמשים נוספו בהצלחה`);
@@ -636,8 +726,9 @@ export default async function renderAdminUsers(container) {
 
         if (failCount > 0) {
           bulkMsg.style.color = 'hsl(var(--color-danger))';
-          bulkMsg.innerHTML = `הושלם עם שגיאות: ${successCount} הצליחו, ${failCount} נכשלו.`;
-          console.warn('Bulk import errors:', errors);
+          bulkMsg.innerHTML = `הושלם עם שגיאות: ${successCount} הצליחו, ${failCount} נכשלו. בדוק את הקונסול (F12) לפרטים.`;
+          console.warn('Bulk import errors (Detailed):', batchResults.filter(r => r.status === 'error'));
+
         } else {
           bulkMsg.style.color = 'hsl(var(--color-success))';
           bulkMsg.innerHTML = `כל ${successCount} המשתמשים נוספו בהצלחה!`;
