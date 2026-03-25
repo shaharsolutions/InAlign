@@ -102,9 +102,49 @@ export async function fetchGroupMembers(groupId) {
 
 export async function assignUsersToGroup(groupId, userIds) {
   if (supabase) {
+    // 1. Mark group membership
     const inserts = userIds.map(uid => ({ group_id: groupId, user_id: uid }));
-    const { error } = await supabase.from('group_members').upsert(inserts, { onConflict: 'group_id, user_id' });
-    if (error) throw new Error(error.message);
+    const { error: membersError } = await supabase.from('group_members').upsert(inserts, { onConflict: 'group_id, user_id' });
+    if (membersError) throw new Error(membersError.message);
+
+    // 2. Proactively initialize learner_progress for these users for all courses already assigned to the group
+    // This ensures they show up correctly in reports and have tracking state ready.
+    const { data: assignments } = await supabase
+      .from('group_assignments')
+      .select(`
+        course_id,
+        courses (org_id)
+      `)
+      .eq('group_id', groupId);
+
+    if (assignments && assignments.length > 0) {
+      const progressInserts = [];
+      
+      for (const uid of userIds) {
+        for (const asg of assignments) {
+          progressInserts.push({
+            user_id: uid,
+            course_id: asg.course_id,
+            org_id: asg.courses?.org_id,
+            status: 'not_started',
+            progress_percent: 0,
+            last_accessed: new Date().toISOString()
+          });
+        }
+      }
+
+      if (progressInserts.length > 0) {
+        // Use upsert to avoid duplicate errors if progress already exists for some reason
+        const { error: progError } = await supabase
+          .from('learner_progress')
+          .upsert(progressInserts, { onConflict: 'user_id, course_id' });
+        
+        if (progError) {
+          console.error("[LMS] Error initializing progress for new group members:", progError.message);
+          // We don't throw here to avoid failing the membership update if only progress init fails
+        }
+      }
+    }
   } else {
     console.log(`[MOCK] Assigned users ${userIds} to group ${groupId}`);
   }
