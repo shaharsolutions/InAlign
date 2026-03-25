@@ -83,7 +83,53 @@ export async function fetchUsers() {
   }
 }
 
+export async function bulkCreateUsers(usersData) {
+  const currentUser = getCurrentUserSync();
+  if (!currentUser || (currentUser.role !== 'org_admin' && currentUser.role !== 'super_admin')) throw new Error("אין הרשאה");
+
+  if (supabase) {
+    const { data, error } = await supabase.functions.invoke('create-user', {
+      body: {
+        users: usersData.map(u => ({
+          ...u,
+          phone: formatPhoneToE164(u.phone)
+        })),
+        callerId: currentUser.id,
+        orgId: currentUser.orgId // Default orgId for the batch
+      }
+    });
+
+    if (error) {
+      console.error("[LMS] bulkCreateUsers Edge Function Error:", error);
+      throw new Error("שגיאה בתקשורת עם השרת ליצירת משתמשים: " + error.message);
+    }
+
+    if (data && data.error) {
+      throw new Error(data.error);
+    }
+
+    return data.results;
+  } else {
+    // Mock
+    const results = usersData.map(u => {
+      const newUser = {
+        id: 'usr-' + Math.random().toString(36).substr(2, 4),
+        full_name: u.fullName,
+        email: u.email,
+        role: u.role || 'learner',
+        org_id: currentUser.org_id,
+        status: 'פעיל',
+        created_at: new Date().toLocaleDateString('he-IL')
+      }
+      MOCK_USERS.push(newUser);
+      return { email: u.email, status: 'success', userId: newUser.id };
+    });
+    return results;
+  }
+}
+
 export async function createUser(userData) {
+
   const currentUser = getCurrentUserSync();
   if (!currentUser || (currentUser.role !== 'org_admin' && currentUser.role !== 'super_admin')) throw new Error("אין הרשאה");
 

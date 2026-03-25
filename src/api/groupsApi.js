@@ -119,17 +119,23 @@ export async function assignUsersToGroup(groupId, userIds) {
 
     if (assignments && assignments.length > 0) {
       const progressInserts = [];
+      const adminUser = getCurrentUserSync(); // Fallback to current admin's org if needed
       
       for (const uid of userIds) {
         for (const asg of assignments) {
-          progressInserts.push({
-            user_id: uid,
-            course_id: asg.course_id,
-            org_id: asg.courses?.org_id,
-            status: 'not_started',
-            progress_percent: 0,
-            last_accessed: new Date().toISOString()
-          });
+          // Robust org_id check: use course's org_id, fall back to current user's org if possible
+          let recordOrgId = asg.courses?.org_id || adminUser?.orgId;
+          
+          if (recordOrgId && uid) {
+            progressInserts.push({
+              user_id: uid,
+              course_id: asg.course_id,
+              org_id: recordOrgId,
+              status: 'not_started',
+              progress_percent: 0,
+              last_accessed: new Date().toISOString()
+            });
+          }
         }
       }
 
@@ -140,7 +146,7 @@ export async function assignUsersToGroup(groupId, userIds) {
           .upsert(progressInserts, { onConflict: 'user_id, course_id' });
         
         if (progError) {
-          console.error("[LMS] Error initializing progress for new group members:", progError.message);
+          console.error("[LMS] Error initializing progress for new group members:", progError.message, progError.code);
           // We don't throw here to avoid failing the membership update if only progress init fails
         }
       }

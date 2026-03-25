@@ -1,4 +1,4 @@
-import { fetchUsers, createUser, deleteUser, updateUser, bulkUpdateUsersOrg } from '../api/usersApi.js'
+import { fetchUsers, createUser, bulkCreateUsers, deleteUser, updateUser, bulkUpdateUsersOrg } from '../api/usersApi.js'
 import { resetUserProgress, resetOrgProgress } from '../api/progressApi.js'
 import { fetchGroups, assignUsersToGroup, createGroup } from '../api/groupsApi.js'
 import { getCurrentUserSync } from '../api/authApi.js'
@@ -584,69 +584,38 @@ export default async function renderAdminUsers(container) {
 
         bulkMsg.innerHTML = `<i class='bx bx-loader-alt bx-spin'></i> מעבד ${data.length} משתמשים...`;
         
-        let successCount = 0;
-        let failCount = 0;
-        let errors = [];
+        bulkMsg.innerHTML = `<i class='bx bx-loader-alt bx-spin'></i> שולח ${data.length} משתמשים לשרת...`;
+        
+        const usersToBatch = data.map(row => {
+          // Map Hebrew headers to keys
+          const fullName = (row['שם מלא'] || row['Full Name'])?.toString().trim();
+          const email = (row['אימייל'] || row['Email'])?.toString().trim().toLowerCase();
+          const phone = row['טלפון'] || row['Phone'];
+          const password = row['סיסמה'] || row['Password'] || 'Lms123456'; 
+          const role = row['תפקיד (learner/org_admin)'] || row['Role'] || 'learner';
+          const orgId = row['מזהה ארגון (Org ID)'] || row['Org ID'];
+          const groupName = (row['שיוך לקבוצה'] || row['Group Name'])?.toString().trim();
 
-        // Pre-fetch groups to minimize individual lookups
-        let groupsCache = await fetchGroups();
+          return {
+            fullName,
+            email,
+            phone: phone ? phone.toString() : '',
+            password: password.toString(),
+            role,
+            orgId: isSuperAdmin ? orgId : currentUser.orgId,
+            groupName
+          };
+        }).filter(u => u.fullName && u.email); // Basic check before sending
 
-        for (const row of data) {
-          try {
-            // Map Hebrew headers to keys
-            const fullName = row['שם מלא'] || row['Full Name'];
-            const email = row['אימייל'] || row['Email'];
-            const phone = row['טלפון'] || row['Phone'];
-            const password = row['סיסמה'] || row['Password'] || 'Lms123456'; 
-            const role = row['תפקיד (learner/org_admin)'] || row['Role'] || 'learner';
-            const orgId = row['מזהה ארגון (Org ID)'] || row['Org ID'];
-            const groupName = row['שיוך לקבוצה'] || row['Group Name'];
-
-            if (!fullName || !email) {
-              throw new Error(`חסר שם או אימייל עבור השורה: ${JSON.stringify(row)}`);
-            }
-
-            const newUser = await createUser({
-              fullName,
-              email,
-              phone: phone ? phone.toString() : '',
-              password: password.toString(),
-              role,
-              orgId: isSuperAdmin ? orgId : currentUser.orgId
-            });
-
-            // Handle Group Association
-            if (groupName && newUser?.id) {
-              let trimmedGroupName = groupName.toString().trim();
-              let group = groupsCache.find(g => g.name === trimmedGroupName);
-              let groupId;
-
-              if (!group) {
-                // Create group if it doesn't exist
-                try {
-                  const newGroup = await createGroup(trimmedGroupName);
-                  groupsCache.push(newGroup);
-                  groupId = newGroup.id;
-                } catch (gErr) {
-                  console.warn(`Could not create group '${trimmedGroupName}':`, gErr);
-                }
-              } else {
-                groupId = group.id;
-              }
-
-              if (groupId) {
-                await assignUsersToGroup(groupId, [newUser.id]);
-              }
-            }
-
-            successCount++;
-            bulkMsg.innerHTML = `<i class='bx bx-loader-alt bx-spin'></i> מעבד... (${successCount}/${data.length})`;
-          } catch (err) {
-            console.error(`Error creating user from Excel:`, err);
-            failCount++;
-            errors.push(err.message);
-          }
+        if (usersToBatch.length === 0) {
+          throw new Error('לא נמצאו משתמשים תקינים לעדכון (ודא שיש שם מלא ואימייל)');
         }
+
+        const batchResults = await bulkCreateUsers(usersToBatch);
+        
+        const successCount = batchResults.filter(r => r.status === 'success').length;
+        const failCount = batchResults.length - successCount;
+        const errors = batchResults.filter(r => r.status === 'error').map(r => `${r.email}: ${r.error}`);
 
         if (successCount > 0) {
           showToast(`${successCount} משתמשים נוספו בהצלחה`);

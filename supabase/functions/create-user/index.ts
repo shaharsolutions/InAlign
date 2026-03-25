@@ -7,22 +7,18 @@ const corsHeaders = {
 }
 
 Deno.serve(async (req) => {
-  // 1. מענה לבקשת preflight של הדפדפן (CORS)
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
   }
 
   try {
-    // אתחול לקוח Supabase עזרת SERVICE_ROLE_KEY שיש לו הרשאות מלאות!
-    // חשוב: מפתח זה אסור שיגיע לעולם לצד הלקוח (הדפדפן)
     const supabaseAdmin = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     )
 
-    // משיכת הפרטים שנשלחו מהלקוח
     const body = await req.json();
-    const { email, password, fullName, phone, role, orgId, callerId } = body;
+    const { email, password, fullName, phone, role, orgId, callerId, users } = body;
 
     // Verify caller has permissions
     if (callerId) {
@@ -35,41 +31,107 @@ Deno.serve(async (req) => {
       if (callerError || (callerData.role !== 'org_admin' && callerData.role !== 'super_admin')) {
         throw new Error('Unauthorized: Only admins can create users')
       }
-    } else {
-       // In case callerId is missing, we could try to verify Auth token, but for now we follow existing logic
-       // Optionally throw error if security policy requires it.
     }
 
-    // 1. יצירת המשתמש בהגדרות האימות (Auth) של Supabase
-    const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
-      email,
-      password,
-      email_confirm: true, // חוסך שליחת מייל אישור
-      phone: phone || undefined,
-      user_metadata: { full_name: fullName, phone: phone, role: role, org_id: orgId },
-    })
+    // Determine if bulk or single
+    const usersToProcess = users && Array.isArray(users) 
+      ? users 
+      : [{ email, password, fullName, phone, role, orgId, groupName: body.groupName }];
 
-    if (authError) throw authError
+    const results = [];
+    const groupsCache: Record<string, string> = {}; // { name_orgId: groupId }
 
-    // 2. עדכון או יצירת טבלת profiles הציבורית
-    // (שימוש ב-upsert כדי להבטיח שהשורה תיווצר גם אם אין trigger במסד)
-    const { error: profileError } = await supabaseAdmin
-      .from('profiles')
-      .upsert({
-        id: authData.user.id,
-        email: email, // שמירת המייל לצורך תצוגה
-        full_name: fullName,
-        phone: phone || null,
-        role: role,
-        org_id: orgId,
-      })
+    for (const user of usersToProcess) {
+      const uEmail = user.email?.trim().toLowerCase();
+      const uFullName = user.fullName?.trim();
+      const uPassword = user.password || 'Lms123456';
+      const uRole = user.role || 'learner';
+      const uOrgId = user.orgId || orgId;
+      const uPhone = user.phone?.toString().trim() || null;
+      const uGroupName = user.groupName?.trim();
 
-    if (profileError) throw profileError
+      try {
+        if (!uEmail || !uFullName) {
+          throw new Error('Missing email or full name');
+        }
+
+        // 1. Create Auth User
+        const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
+          email: uEmail,
+          password: uPassword,
+          email_confirm: true,
+          phone: uPhone || undefined,
+          user_metadata: { full_name: uFullName, phone: uPhone, role: uRole, org_id: uOrgId },
+        })
+
+        if (authError) throw authError
+
+        // 2. Create/Update Profile
+        const { error: profileError } = await supabaseAdmin
+          .from('profiles')
+          .upsert({
+            id: authData.user.id,
+            email: uEmail,
+            full_name: uFullName,
+            phone: uPhone,
+            role: uRole,
+            org_id: uOrgId,
+          })
+
+        if (profileError) throw profileError
+
+        // 3. Handle Group Assignment
+        if (uGroupName && uOrgId) {
+          const cacheKey = `${uGroupName}_${uOrgId}`;
+          let groupId = groupsCache[cacheKey];
+
+          if (!groupId) {
+            // Check if group exists in DB
+            const { data: existingGroup } = await supabaseAdmin
+              .from('groups')
+              .select('id')
+              .eq('name', uGroupName)
+              .eq('org_id', uOrgId)
+              .maybeSingle();
+
+            if (existingGroup) {
+              groupId = existingGroup.id;
+            } else {
+              // Create new group
+              const { data: newGroup, error: groupCreateError } = await supabaseAdmin
+                .from('groups')
+                .insert({ name: uGroupName, org_id: uOrgId })
+                .select('id')
+                .single();
+              
+              if (!groupCreateError && newGroup) {
+                groupId = newGroup.id;
+              }
+            }
+            if (groupId) groupsCache[cacheKey] = groupId;
+          }
+
+          if (groupId) {
+            await supabaseAdmin.from('group_members').upsert({
+              group_id: groupId,
+              user_id: authData.user.id
+            }, { onConflict: 'group_id, user_id' });
+          }
+        }
+
+        results.push({ email: uEmail, status: 'success', userId: authData.user.id });
+      } catch (err: any) {
+        results.push({ email: uEmail || 'unknown', status: 'error', error: err.message });
+      }
+    }
 
     return new Response(
       JSON.stringify({
-        message: 'המשתמש נוצר בהצלחה',
-        user: { id: authData.user.id, email },
+        message: 'Processing complete',
+        results: results,
+        // For backward compatibility return first user if single request
+        user: results.length === 1 && results[0].status === 'success' ? { id: results[0].userId, email: results[0].email } : null,
+        error: results.length === 1 && results[0].status === 'error' ? results[0].error : null,
       }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -79,8 +141,9 @@ Deno.serve(async (req) => {
   } catch (error: any) {
     return new Response(JSON.stringify({ error: error.message || String(error) }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      status: 200, // Returning 200 so the frontend can handle the {error: ...} object comfortably
+      status: 200,
     })
   }
 })
+
 
