@@ -586,8 +586,11 @@ export default async function renderAdminUsers(container) {
         
         bulkMsg.innerHTML = `<i class='bx bx-loader-alt bx-spin'></i> שולח ${data.length} משתמשים לשרת...`;
         
-        const usersToBatch = data.map(row => {
-          // Map Hebrew headers to keys
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        const usersToBatch = [];
+        const skippedRows = [];
+
+        data.forEach((row, index) => {
           const fullName = (row['שם מלא'] || row['Full Name'])?.toString().trim();
           const email = (row['אימייל'] || row['Email'])?.toString().trim().toLowerCase();
           const phone = row['טלפון'] || row['Phone'];
@@ -596,20 +599,29 @@ export default async function renderAdminUsers(container) {
           const orgId = row['מזהה ארגון (Org ID)'] || row['Org ID'];
           const groupName = (row['שיוך לקבוצה'] || row['Group Name'])?.toString().trim();
 
-          return {
-            fullName,
-            email,
-            phone: phone ? phone.toString() : '',
-            password: password.toString(),
-            role,
-            orgId: isSuperAdmin ? orgId : currentUser.orgId,
-            groupName
-          };
-        }).filter(u => u.fullName && u.email); // Basic check before sending
+          if (fullName && email && emailRegex.test(email)) {
+            usersToBatch.push({
+              fullName,
+              email,
+              phone: phone ? phone.toString() : '',
+              password: password.toString(),
+              role,
+              orgId: isSuperAdmin ? orgId : currentUser.orgId,
+              groupName
+            });
+          } else {
+            skippedRows.push({ index: index + 2, name: fullName, email: email });
+          }
+        });
+
+        if (skippedRows.length > 0) {
+          console.warn('Skipped invalid rows:', skippedRows);
+        }
 
         if (usersToBatch.length === 0) {
-          throw new Error('לא נמצאו משתמשים תקינים לעדכון (ודא שיש שם מלא ואימייל)');
+          throw new Error('לא נמצאו משתמשים תקינים (ודא שהאימייל תקין והשם מלא מלא)');
         }
+
 
         const batchResults = await bulkCreateUsers(usersToBatch);
         

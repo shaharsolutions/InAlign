@@ -41,14 +41,22 @@ Deno.serve(async (req) => {
     const results = [];
     const groupsCache: Record<string, string> = {}; // { name_orgId: groupId }
 
+    const cleanEmail = (email: string) => {
+       if (!email) return "";
+       // Remove all control characters, whitespace, and zero-width spaces
+       // Also ensures it corresponds to standard ASCII for email addresses
+       return email.replace(/[\u0000-\u001F\u007F-\u009F\u200B-\u200D\uFEFF]/g, "").trim().toLowerCase();
+    };
+
     for (const user of usersToProcess) {
-      const uEmail = user.email?.trim().toLowerCase();
+      const uEmail = cleanEmail(user.email);
       const uFullName = user.fullName?.trim();
       const uPassword = user.password || 'Lms123456';
       const uRole = user.role || 'learner';
       const uOrgId = user.orgId || orgId;
       const uPhone = user.phone?.toString().trim() || null;
       const uGroupName = user.groupName?.trim();
+
 
       try {
         if (!uEmail || !uFullName) {
