@@ -42,14 +42,13 @@ CREATE TABLE public.course_files (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
--- Table: course_assignments
+-- Table: course_assignments (Per-organization access control)
 CREATE TABLE public.course_assignments (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     org_id UUID NOT NULL REFERENCES public.organizations(id) ON DELETE CASCADE,
-    user_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
     course_id UUID NOT NULL REFERENCES public.courses(id) ON DELETE CASCADE,
     assigned_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
-    UNIQUE(user_id, course_id)
+    UNIQUE(org_id, course_id)
 );
 
 -- Table: learner_progress
@@ -140,8 +139,8 @@ CREATE POLICY "Org Admins can assign courses" ON public.course_assignments FOR A
     org_id = (SELECT org_id FROM public.profiles WHERE id = auth.uid()) 
     AND EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role IN ('super_admin', 'org_admin'))
 );
-CREATE POLICY "Learners can see their assignments" ON public.course_assignments FOR SELECT USING (
-    user_id = auth.uid()
+CREATE POLICY "Learners can see their org assignments" ON public.course_assignments FOR SELECT USING (
+    org_id = (SELECT org_id FROM public.profiles WHERE id = auth.uid())
 );
 
 -- 6. Learner Progress Policies

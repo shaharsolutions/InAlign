@@ -316,7 +316,7 @@ export default async function renderAdminUsers(container) {
                    data-org="${u.org_id || ''}"
                    title="עריכת משתמש"><i class='bx bx-edit'></i></button>
                  <button class="btn btn-outline text-sm view-courses-btn" data-id="${u.id}" data-name="${u.full_name}" data-courses='${JSON.stringify(u.assigned_courses || []).replace(/'/g, "&apos;")}' title="צפייה בלומדות משויכות"><i class='bx bx-book-open'></i></button>
-                 ${u.id !== currentUser.id ? `<button class="btn btn-outline text-sm impersonate-btn" data-id="${u.id}" data-name="${u.full_name}" title="התחזות למשתמש"><i class='bx bx-user-voice' style="color: hsl(var(--color-primary)); font-weight: bold;"></i></button>` : ''}
+                 ${u.id !== currentUser.id ? `<button class="btn btn-outline text-sm impersonate-btn" data-id="${u.id}" data-name="${u.full_name}" title="התחזות למשתמש"><i class='bx bx-glasses' style="color: hsl(var(--color-primary)); font-weight: bold;"></i></button>` : ''}
                  <button class="btn btn-outline text-sm reset-user-btn" data-id="${u.id}" data-name="${u.full_name}" title="איפוס נתוני למידה"><i class='bx bx-refresh' style="color: hsl(var(--color-warning));"></i></button>
                  ${u.id !== currentUser.id ? `<button class="btn btn-outline text-sm delete-btn" data-id="${u.id}" data-name="${u.full_name}" title="מחיקת חשבון"><i class='bx bx-trash' style="color: hsl(var(--color-danger));"></i></button>` : ''}
                </div>

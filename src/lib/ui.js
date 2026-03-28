@@ -593,15 +593,17 @@ export async function showBulkRoleModal({ users, onAssign }) {
  * Dynamic Branding: Apply organization primary color to CSS variables
  */
 export function applyOrganizationStyles(user) {
-    // Super Admins (and impersonated ones) always use the system blue
-    if (!user || user.role === 'super_admin' || user.originalRole === 'super_admin') {
+    // Force system blue ONLY for real Super Admins (who are NOT impersonating someone else)
+    if (!user || (user.role === 'super_admin' && !user.isImpersonating)) {
         // Reset to default LMS blue
         document.documentElement.style.setProperty('--color-primary', '216 100% 50%');
         document.documentElement.style.setProperty('--color-primary-hover', '216 100% 45%');
         return;
     }
 
-    const orgColor = user.orgColor || (user.org_color); // Support different field names from DB/Mock
+    // From here on, either it's a regular user or a Super Admin who IS impersonating someone.
+    // We use the orgColor provided (which should now be correctly passed in impersonation mode).
+    const orgColor = user.orgColor || user.org_color;
 
     if (orgColor) {
         const hsl = hexToHslComponents(orgColor);

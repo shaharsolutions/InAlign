@@ -38,7 +38,7 @@ export async function fetchUsers() {
       .from('profiles')
       .select(`
         id, full_name, role, email, phone, created_at, org_id,
-        organizations (name, auto_enroll_course_ids),
+        organizations (name, auto_enroll_course_ids, primary_color, logo_url),
         group_members (
           groups (id, name, group_assignments (course_id))
         ),
@@ -107,9 +107,16 @@ export async function fetchUsers() {
             })
             .filter(c => !!c.title);
 
+        const orgInfo = Array.isArray(u.organizations) ? u.organizations[0] : u.organizations;
+
         return {
             ...u,
-            org_name: u.organizations?.name || 'ללא ארגון',
+            org_name: orgInfo?.name || 'ללא ארגון',
+            org_color: orgInfo?.primary_color || null,
+            org_logo: orgInfo?.logo_url || null,
+            orgColor: orgInfo?.primary_color || null, // UI expectations
+            orgLogo: orgInfo?.logo_url || null, // UI expectations
+            orgId: u.org_id, // Support both naming conventions
             phone: formatPhoneForDisplay(u.phone),
             email: u.email || '---', 
             status: 'פעיל',
@@ -267,7 +274,6 @@ export async function updateUser(userId, userData) {
 
     // 3. If org changed, sync related tables (like in bulk move)
     if (count > 0 && finalOrgId) {
-        await supabase.from('course_assignments').update({ org_id: finalOrgId }).eq('user_id', userId);
         await supabase.from('learner_progress').update({ org_id: finalOrgId }).eq('user_id', userId);
     }
 
@@ -364,17 +370,7 @@ export async function bulkUpdateUsersOrg(userIds, newOrgId) {
             throw new Error("לא נמצאו רשומות לעדכון או שההרשאות לא מאפשרות עדכון (RLS).");
         }
 
-        // 2. Denormalized Update: Course Assignments
-        // This ensures the user see those assignments in the new org flow if applicable, 
-        // though typically they should get NEW assignments in the new org.
-        const { error: aError } = await supabase
-            .from('course_assignments')
-            .update({ org_id: newOrgId })
-            .in('user_id', userIds);
-        
-        if (aError) console.warn("[LMS] Course assignments move failed (non-critical):", aError.message);
-
-        // 3. Denormalized Update: Learner Progress
+        // 2. Denormalized Update: Learner Progress
         // This ensures historical progress appears in the NEW org's reports.
         const { error: prError } = await supabase
             .from('learner_progress')

@@ -23,7 +23,9 @@ export async function checkAuth() {
       const impersonated = {
           ...impData,
           fullName: impData.fullName || impData.full_name,
-          full_name: impData.full_name || impData.fullName
+          full_name: impData.full_name || impData.fullName,
+          orgId: impData.orgId || impData.org_id,
+          org_id: impData.org_id || impData.orgId
       };
       // Ensure the original user metadata is attached for the "Stop" button
       return { ...impersonated, originalRole: realUser.role, isImpersonating: true };
@@ -38,7 +40,14 @@ export async function checkAuth() {
       
       const impStored = localStorage.getItem('lms.impersonation');
       if (impStored) {
-          const impersonated = JSON.parse(impStored);
+          const impData = JSON.parse(impStored);
+          const impersonated = {
+              ...impData,
+              fullName: impData.fullName || impData.full_name,
+              full_name: impData.full_name || impData.fullName,
+              orgId: impData.orgId || impData.org_id,
+              org_id: impData.org_id || impData.orgId
+          };
           return { ...impersonated, originalRole: mockCurrentUser.role, isImpersonating: true };
       }
       
@@ -174,7 +183,9 @@ export function getCurrentUserSync() {
           const impersonated = {
               ...impData,
               fullName: impData.fullName || impData.full_name,
-              full_name: impData.full_name || impData.fullName
+              full_name: impData.full_name || impData.fullName,
+              orgId: impData.orgId || impData.org_id,
+              org_id: impData.org_id || impData.orgId
           };
           return { ...impersonated, originalRole: mockCurrentUser.role, isImpersonating: true };
       }

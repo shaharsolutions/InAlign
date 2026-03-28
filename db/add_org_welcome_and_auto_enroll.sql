@@ -27,11 +27,6 @@ BEGIN
             INSERT INTO public.learner_progress (org_id, user_id, course_id, status, progress_percent)
             VALUES (NEW.org_id, NEW.id, cid, 'not_started', 0)
             ON CONFLICT (user_id, course_id) DO NOTHING;
-            
-            -- Also insert into course_assignments for admin tracking
-            INSERT INTO public.course_assignments (org_id, user_id, course_id, assigned_at)
-            VALUES (NEW.org_id, NEW.id, cid, now())
-            ON CONFLICT (user_id, course_id) DO NOTHING;
         END LOOP;
     END IF;
 

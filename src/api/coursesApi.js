@@ -17,20 +17,30 @@ export async function fetchCourses() {
       const { data, error } = await supabase.from('courses').select('*');
       if (error) throw new Error(error.message);
       return data;
-    } else if (user.role === 'org_admin') {
-      const { data, error } = await supabase.from('courses').select('*').eq('org_id', user.orgId);
+    } 
+    
+    // For non-super admins (Org Admin and Learner), orgId is required
+    const effectiveOrgId = user.orgId || user.org_id;
+    if (!effectiveOrgId) {
+        console.warn(`[LMS] fetchCourses - Missing orgId for user ${user.id} (${user.role})`);
+        return [];
+    }
+
+    if (user.role === 'org_admin') {
+      const { data, error } = await supabase.from('courses').select('*').eq('org_id', effectiveOrgId);
       if (error) throw new Error(error.message);
       return data;
     } else {
       // Learner fetches from assignments, handled via progress/assignments API usually
       // For simplicity, fetch published
-      const { data, error } = await supabase.from('courses').select('*').eq('org_id', user.orgId).eq('published', true);
+      const { data, error } = await supabase.from('courses').select('*').eq('org_id', effectiveOrgId).eq('published', true);
       if (error) throw new Error(error.message);
       return data;
     }
   } else {
+    const effectiveOrgId = user.orgId || user.org_id;
     if (user.role === 'super_admin') return [...MOCK_COURSES];
-    return MOCK_COURSES.filter(c => c.org_id === user.org_id);
+    return MOCK_COURSES.filter(c => c.org_id === effectiveOrgId);
   }
 }
 
