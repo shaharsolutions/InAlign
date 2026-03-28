@@ -62,8 +62,8 @@ export default async function renderAdminUsers(container) {
     </div>
 
     <div id="bulk-actions-bar" class="card mb-4 slide-up hidden" style="background: hsl(var(--color-primary)/0.05); border: 1px dashed hsl(var(--color-primary)); padding: 1rem 1.5rem;">
-      <div class="flex justify-between items-center">
-        <div class="flex items-center gap-4">
+      <div class="flex flex-wrap justify-between items-center gap-4">
+        <div class="flex flex-wrap items-center gap-4">
           <div class="flex items-center gap-2">
             <i class='bx bx-check-square' style="font-size: 1.5rem; color: hsl(var(--color-primary));"></i>
             <span class="font-bold" id="selected-count" style="font-size: 0.95rem;">0 משתמשים נבחרו</span>
@@ -88,9 +88,9 @@ export default async function renderAdminUsers(container) {
       </div>
     </div>
 
-    <div class="grid grid-cols-12 slide-up" style="gap: 2rem; align-items: start;">
+    <div class="grid grid-cols-12 slide-up" style="gap: var(--gap-standard); align-items: start;">
        <!-- Add User Section (Top Full Width) -->
-       <div class="card" style="grid-column: span 12; box-shadow: 0 10px 25px -10px hsla(var(--color-primary), 0.1); border: 1px solid hsla(var(--color-primary), 0.08);">
+       <div class="card" style="grid-column: 1 / -1; box-shadow: 0 10px 25px -10px hsla(var(--color-primary), 0.1); border: 1px solid hsla(var(--color-primary), 0.08);">
          <h3 class="mb-4" id="form-title" style="font-size: 1.1rem; border-bottom: 1px solid hsla(var(--text-main), 0.05); padding-bottom: 0.75rem;"><i class='bx bx-user-plus'></i> יצירת משתמש חדש</h3>
          <form id="user-create-form" class="flex flex-wrap items-end gap-3">
             <div class="form-group mb-0 flex-1" style="text-align: right; min-width: 200px;">
@@ -141,8 +141,8 @@ export default async function renderAdminUsers(container) {
        </div>
 
        <!-- Table Section (Primary) -->
-       <div class="card table-wrapper" style="grid-column: span 8; height: 100%;">
-          <div class="flex justify-between items-center mb-6">
+       <div class="card table-wrapper" style="grid-column: 1 / -1; height: 100%;">
+          <div class="flex flex-wrap justify-between items-center mb-6 gap-4">
              <div>
                <h3 class="m-0" style="font-size: 1.25rem;">רשימת משתמשים פעילים</h3>
                <p class="text-xs text-muted">ניהול ומעקב אחר כלל המשתמשים המשוייכים למערכת</p>
@@ -211,7 +211,7 @@ export default async function renderAdminUsers(container) {
        </div>
 
        <!-- Sidebar Actions Area (Excel Only now) -->
-       <div class="flex flex-col gap-6" style="grid-column: span 4;">
+       <div class="flex flex-col gap-6" style="grid-column: 1 / -1;">
          <div class="card" style="background: hsla(var(--color-primary), 0.02); border: 1px dashed hsla(var(--color-primary), 0.25);">
            <h3 class="mb-2" style="font-size: 1.1rem; color: hsl(var(--color-primary));"><i class='bx bx-file-import'></i> יבוא המוני (Excel)</h3>
            <p class="text-xs text-muted mb-4" style="line-height: 1.4;">הוסף כמות גדולה של עובדים בלחיצת כפתור אחת. פשוט הורד את התבנית, מלא והעלה חזרה.</p>

@@ -66,9 +66,9 @@ export default async function renderSuperAdminSettings(container) {
        </div>
        ` : ''}
 
-       <div class="grid grid-cols-12 gap-6">
-          <!-- Categories Management Section -->
-          <div class="card" style="grid-column: span 4;">
+        <div class="grid grid-cols-12 gap-6">
+           <!-- Categories Management Section -->
+           <div class="card" style="grid-column: 1 / -1;">
             <h3 class="mb-3">ניהול קטגוריות לומדות</h3>
             
             ${user?.role === 'super_admin' ? `
@@ -91,9 +91,9 @@ export default async function renderSuperAdminSettings(container) {
             </form>
           </div>
 
-          <!-- Categories List Table Section -->
-          <div class="card table-wrapper" style="grid-column: span 8;">
-            <div class="flex justify-between items-center mb-4">
+           <!-- Categories List Table Section -->
+           <div class="card table-wrapper" style="grid-column: 1 / -1;">
+            <div class="flex flex-wrap justify-between items-center mb-4 gap-4">
                <h3 class="m-0">רשימת קטגוריות</h3>
                <div id="current-org-label" class="badge badge-primary"></div>
             </div>

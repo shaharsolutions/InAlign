@@ -13,7 +13,7 @@ export default async function renderLearnerDashboard(container) {
 
     <div id="welcome-message-container"></div>
     
-    <div class="stats grid grid-cols-3 mb-4 slide-up" style="gap: 2rem;">
+    <div class="stats grid grid-cols-3 mb-4 slide-up" style="gap: var(--gap-standard);">
       <div class="card flex items-center justify-between">
          <div>
             <h4 class="mb-1 text-muted">לומדות חובה לביצוע</h4>
@@ -37,8 +37,8 @@ export default async function renderLearnerDashboard(container) {
       </div>
     </div>
     
-    <div id="learner-courses" class="grid grid-cols-3 slide-up" style="gap: 2rem;">
-      <div class="text-center" style="grid-column: span 3; padding: 3rem;">
+    <div id="learner-courses" class="grid grid-cols-3 slide-up" style="gap: var(--gap-standard);">
+      <div class="text-center" style="grid-column: 1 / -1; padding: 3rem;">
         <i class='bx bx-loader bx-spin' style="font-size: 2rem;"></i> במידה ויש לומדות מוקצות הן יטענו...
       </div>
     </div>
@@ -66,7 +66,7 @@ export default async function renderLearnerDashboard(container) {
     }
     
     if (assignments.length === 0) {
-      coursesContainer.innerHTML = `<div class="card" style="grid-column: span 3; padding: 3rem; text-align: center;">בינתיים אין לומדות שצריך לבצע</div>`;
+      coursesContainer.innerHTML = `<div class="card" style="grid-column: 1 / -1; padding: 3rem; text-align: center;">בינתיים אין לומדות שצריך לבצע</div>`;
       document.getElementById('stat-pending').textContent = '0';
       document.getElementById('stat-progress').textContent = '0';
       document.getElementById('stat-done').textContent = '0';
@@ -123,6 +123,6 @@ export default async function renderLearnerDashboard(container) {
     document.getElementById('stat-done').textContent = done;
     
   } catch (err) {
-    coursesContainer.innerHTML = `<div class="card" style="grid-column: span 3; text-align: center; color: hsl(var(--color-danger));">שגיאה בטעינת הקורסים: ${err.message}</div>`;
+    coursesContainer.innerHTML = `<div class="card" style="grid-column: 1 / -1; text-align: center; color: hsl(var(--color-danger));">שגיאה בטעינת הקורסים: ${err.message}</div>`;
   }
 }

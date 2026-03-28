@@ -16,14 +16,14 @@ export default async function renderPlayer(container) {
   if (window._lmsHeartbeat) clearInterval(window._lmsHeartbeat);
   window._lmsActiveCourseId = courseId;
 
-  container.innerHTML = `
-    <div style="display: flex; flex-direction: column; height: 100vh; background: #0f172a; align-items: center; justify-content: center; font-family: 'Heebo', sans-serif;">
-      <div style="text-align: center;">
-        <i class='bx bx-loader-alt bx-spin' style="font-size: 4rem; color: #3b82f6;"></i>
-        <p style="margin-top: 1.5rem; color: #94a3b8; font-size: 1.25rem; font-weight: 500;">טוען את נתוני הקורס...</p>
+    container.innerHTML = `
+      <div class="player-container items-center justify-center">
+        <div style="text-align: center;">
+          <i class='bx bx-loader-alt bx-spin' style="font-size: 4rem; color: #3b82f6;"></i>
+          <p style="margin-top: 1.5rem; color: #94a3b8; font-size: 1.25rem; font-weight: 500;">טוען את נתוני הקורס...</p>
+        </div>
       </div>
-    </div>
-  `;
+    `;
 
   try {
     const [course, existingProgress] = await Promise.all([
@@ -199,34 +199,19 @@ export default async function renderPlayer(container) {
     window.API = window.API_1484_11 = API;
 
     container.innerHTML = `
-      <div style="display: flex; flex-direction: column; height: 100vh; background: #0f172a; overflow: hidden;">
-        <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px 24px; background: #ffffff; border-bottom: 1px solid #e2e8f0; z-index: 50; flex-shrink: 0;">
+      <div class="player-container">
+        <div class="player-header">
           <h2 style="margin: 0; font-size: 1.25rem; font-weight: 700; color: #1e293b; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
             ${course.title}
           </h2>
-          <button class="btn btn-primary" id="scorm-save-exit" style="display: flex; align-items: center; gap: 8px; padding: 8px 20px;">
+          <button class="btn btn-primary" id="scorm-save-exit" style="display: flex; align-items: center; gap: 8px; padding: 0.5rem 1rem;">
             <i class='bx bx-log-out-circle'></i>
             <span>שמור וצא</span>
           </button>
         </div>
 
-        <div style="flex: 1; display: flex; align-items: center; justify-content: center; padding: 20px; overflow: hidden; position: relative;">
-          <div style="
-            width: 100%;
-            height: 100%;
-            max-width: 1280px;
-            max-height: 720px;
-            aspect-ratio: 16 / 9;
-            background: #000;
-            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
-            border-radius: 12px;
-            position: relative;
-            overflow: hidden;
-            border: 1px solid rgba(255, 255, 255, 0.05);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-          ">
+        <div class="player-content">
+          <div class="player-frame-wrapper">
             <div id="iframe-loader" style="position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; background: #000; z-index: 10;">
               <div style="text-align: center;">
                 <i class='bx bx-loader-alt bx-spin' style="font-size: 3.5rem; color: #3b82f6;"></i>

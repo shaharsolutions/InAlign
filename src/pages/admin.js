@@ -16,7 +16,7 @@ export default async function renderAdminDashboard(container) {
   }
 
   container.innerHTML = `
-    <div class="flex justify-between items-center mb-4 fade-in">
+    <div class="flex flex-wrap justify-between items-center mb-4 gap-4 fade-in">
       <div>
         <h1 class="mb-1">דשבורד ודו"חות למידה</h1>
         <p class="text-muted">מעקב מלא אחרי ביצועי עובדים וייצוא נתונים למנהלים</p>
@@ -38,7 +38,7 @@ export default async function renderAdminDashboard(container) {
     
     ${isSuperAdmin ? `
     <div class="card mb-4 slide-up" style="border-right: 4px solid hsl(var(--color-primary));">
-        <div class="flex items-center gap-4">
+        <div class="flex flex-wrap items-center gap-4">
             <div style="font-weight: 600;">סינון לפי ארגון:</div>
             <select id="org-filter" class="form-control" style="max-width: 300px; margin: 0;">
                 <option value="">-- כל הארגונים --</option>
@@ -49,7 +49,7 @@ export default async function renderAdminDashboard(container) {
     </div>
     ` : ''}
 
-    <div class="stats grid grid-cols-4 mb-4 slide-up" style="gap: 2rem;">
+    <div class="stats grid grid-cols-4 mb-4 slide-up" style="gap: var(--gap-standard);">
       <div class="card">
          <h4 class="mb-1 text-muted">לומדים פעילים</h4>
          <div id="stat-active-users" style="font-size: 1.8rem; font-weight: 700;">--</div>
@@ -69,9 +69,9 @@ export default async function renderAdminDashboard(container) {
     </div>
     
     <div class="card slide-up mb-4 table-wrapper">
-      <div class="flex justify-between items-center mb-4">
+      <div class="flex flex-wrap justify-between items-center mb-4 gap-4">
          <h3 class="mb-0">מעקב ולומדות</h3>
-         <div class="flex gap-2 items-center">
+         <div class="flex flex-wrap gap-2 items-center">
            <button class="btn btn-outline text-sm" id="btn-export-excel" title="ייצוא ל-Excel"><i class='bx bx-spreadsheet' style="color: #107c41;"></i> הורידו Excel</button>
            <button class="btn btn-outline text-sm" id="btn-export-csv" title="ייצוא ל-CSV"><i class='bx bx-file'></i> CSV</button>
            <button class="btn btn-outline text-sm" id="btn-export-pdf" title="ייצוא ל-PDF"><i class='bx bxs-file-pdf' style="color: #F40F02;"></i> PDF</button>

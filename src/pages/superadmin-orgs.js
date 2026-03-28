@@ -9,9 +9,9 @@ export default async function renderSuperAdminOrgs(container) {
       <p class="text-muted">יצירה, עדכון ושליטה על כלל הדיירים במערכת המולטי-טננט הארגונית.</p>
     </div>
 
-    <div class="grid grid-cols-3 slide-up" style="gap: 2rem; align-items: start;">
+    <div class="grid grid-cols-3 slide-up" style="gap: var(--gap-standard); align-items: start;">
        <!-- Add Org Form Section -->
-       <div class="card" style="grid-column: span 1;">
+       <div class="card" style="grid-column: 1 / -1;">
          <h3 class="mb-3">יצירת ארגון חדש</h3>
          <form id="org-create-form">
             <div class="form-group" style="text-align: right;">
@@ -52,7 +52,7 @@ export default async function renderSuperAdminOrgs(container) {
        </div>
 
        <!-- Orgs Table Section -->
-       <div class="card table-wrapper" style="grid-column: span 2;">
+       <div class="card table-wrapper" style="grid-column: 1 / -1;">
          <h3 class="mb-3">רשימת הארגונים ב-InAlign</h3>
          <table class="table" id="orgs-table">
             <thead>

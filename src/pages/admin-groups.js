@@ -14,9 +14,9 @@ export default async function renderAdminGroups(container) {
       <p class="text-muted">יצירת קבוצות, שיוך עובדים והקצאת לומדות לפי מחלקות או תפקידים.</p>
     </div>
 
-    <div class="grid grid-cols-3 slide-up" style="gap: 2rem; align-items: start;">
+    <div class="grid grid-cols-3 slide-up" style="gap: var(--gap-standard); align-items: start;">
        <!-- Add Group Form Section -->
-       <div class="card" style="grid-column: span 1;">
+       <div class="card" style="grid-column: 1 / -1;">
          <h3 class="mb-3">יצירת קבוצה חדשה</h3>
          <form id="group-create-form">
             <div class="form-group" style="text-align: right;">
@@ -31,7 +31,7 @@ export default async function renderAdminGroups(container) {
        </div>
 
        <!-- Groups Table Section -->
-       <div class="card table-wrapper" style="grid-column: span 2;">
+       <div class="card table-wrapper" style="grid-column: 1 / -1;">
          <h3 class="mb-3">רשימת הקבוצות בארגון</h3>
          <table class="table" id="groups-table">
             <thead>
@@ -51,7 +51,7 @@ export default async function renderAdminGroups(container) {
 
     <!-- Group Dashboard (Hidden until group clicked) -->
     <div id="group-detail-view" class="card mt-6 slide-up hidden" style="border-top: 5px solid hsl(var(--color-primary));">
-        <div class="flex justify-between items-center mb-6">
+        <div class="flex flex-wrap justify-between items-center mb-6 gap-4">
             <div>
             <div class="flex items-center gap-2">
                 <h2 id="detail-group-name" class="m-0">שם הקבוצה</h2>

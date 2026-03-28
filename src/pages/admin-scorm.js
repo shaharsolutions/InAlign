@@ -9,9 +9,9 @@ export default async function renderAdminScorm(container) {
       <p class="text-muted">ניהול קטלוג ההדרכות, העלאת קבצי ZIP ופרסומם במערכת</p>
     </div>
 
-    <div class="grid grid-cols-3 slide-up" style="gap: 2rem; align-items: start;">
+    <div class="grid grid-cols-3 slide-up" style="gap: var(--gap-standard); align-items: start;">
        <!-- Form Section -->
-       <div class="card" style="grid-column: span 1;">
+       <div class="card" style="grid-column: 1 / -1;">
          <h3 class="mb-3">העלאת לומדה חדשה</h3>
          <form id="scorm-upload-form">
             <div class="form-group" style="text-align: right;">
@@ -41,7 +41,7 @@ export default async function renderAdminScorm(container) {
        </div>
 
        <!-- Table Section -->
-       <div class="card table-wrapper" style="grid-column: span 2;">
+       <div class="card table-wrapper" style="grid-column: 1 / -1;">
          <h3 class="mb-3">לומדות במערכת</h3>
          <table class="table" id="courses-table">
             <thead>
