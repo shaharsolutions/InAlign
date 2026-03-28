@@ -61,7 +61,7 @@ export default function renderLogin(container) {
         </div>
 
         <div class="login-footer-modern">
-          &copy; ${new Date().getFullYear()} LMS - מערכת למידה ארגונית. כל הזכויות שמורות.
+          &copy; ${new Date().getFullYear()} InAlign - מערכת למידה ארגונית. כל הזכויות שמורות.
         </div>
       </main>
     </div>

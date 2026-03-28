@@ -217,10 +217,10 @@ export default async function renderAdminDashboard(container) {
     try {
       let blob, filename;
       if (type === 'pdf') {
-        filename = 'LMS_Learners_Report.pdf';
+        filename = 'InAlign_Learners_Report.pdf';
         blob = await exportToPDF('progress-table'); 
       } else {
-        filename = 'LMS_Learners_Report.csv';
+        filename = 'InAlign_Learners_Report.csv';
         const formattedRecords = currentRecords.map(r => ({
           'שם הלומד': r.user_name || 'משתמש לא ידוע',
           'שם הלומדה': r.course_title || 'קורס שנמחק',

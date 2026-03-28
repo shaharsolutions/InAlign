@@ -25,7 +25,7 @@ export function renderNavbar(user) {
   nav.innerHTML = `
     <div class="container navbar-container">
       <div class="navbar-brand">
-        ${user.orgLogo ? `<img src="${user.orgLogo}" alt="${user.orgName}" style="height: 35px; max-width: 180px; object-fit: contain;">` : `<i class='bx bx-hive'></i> <span>LMS Enterprise</span>`}
+        ${user.orgLogo ? `<img src="${user.orgLogo}" alt="${user.orgName}" style="height: 35px; max-width: 180px; object-fit: contain;">` : `<i class='bx bx-hive'></i> <span>InAlign</span>`}
       </div>
       <div class="navbar-nav">
         ${linksStr}

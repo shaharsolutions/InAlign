@@ -47,7 +47,7 @@ export default async function renderPlayer(container) {
       isExiting: false
     };
 
-    console.warn(`[LMS] Initial State for ${courseId}: Status=${runtime.status}, Location="${runtime.location}", Progress=${runtime.progress}%`);
+    console.warn(`[InAlign] Initial State for ${courseId}: Status=${runtime.status}, Location="${runtime.location}", Progress=${runtime.progress}%`);
 
     const syncProgress = async (label = "periodic") => {
       if (window._lmsActiveCourseId !== runtime.courseId) return;
@@ -66,7 +66,7 @@ export default async function renderPlayer(container) {
       if (runtime.status === 'completed') finalProgress = 100;
 
       runtime.lastSync = now;
-      console.log(`[LMS] Syncing (${label}): Loc="${runtime.location}", Progress=${finalProgress}%`);
+      console.log(`[InAlign] Syncing (${label}): Loc="${runtime.location}", Progress=${finalProgress}%`);
 
       try {
         await saveLearnerProgress(runtime.courseId, { 
@@ -78,7 +78,7 @@ export default async function renderPlayer(container) {
           lesson_location: runtime.location
         });
       } catch (e) {
-          console.error(`[LMS] Sync error:`, e.message);
+          console.error(`[InAlign] Sync error:`, e.message);
       }
     };
 
@@ -101,7 +101,7 @@ export default async function renderPlayer(container) {
       try {
         await syncProgress(label);
       } catch (e) {
-        console.error("[LMS] Exit sync failed:", e);
+        console.error("[InAlign] Exit sync failed:", e);
       } finally {
         window.history.back();
       }
@@ -110,7 +110,7 @@ export default async function renderPlayer(container) {
     const API = {
       _initialized: false,
       Initialize: (n) => { 
-          console.warn("[LMS] SCORM Initialize called");
+          console.warn("[InAlign] SCORM Initialize called");
           API._initialized = true; 
           return "true"; 
       },
@@ -131,7 +131,7 @@ export default async function renderPlayer(container) {
         else if (key.includes('entry')) val = (runtime.baseTimeSeconds > 5 || runtime.location) ? "resume" : "ab-initio";
         else if (key.includes('total_time')) val = formatScorm12Time(runtime.baseTimeSeconds);
         
-        console.log(`[LMS] GetValue(${n}) -> "${val}"`);
+        console.log(`[InAlign] GetValue(${n}) -> "${val}"`);
         return val;
       },
       LMSGetValue: (n) => API.GetValue(n),
@@ -140,7 +140,7 @@ export default async function renderPlayer(container) {
         const key = n.toLowerCase();
         let changed = false;
 
-        console.log(`[LMS] SetValue(${n}, "${v}")`);
+        console.log(`[InAlign] SetValue(${n}, "${v}")`);
 
         if (key.includes('lesson_status') || key.includes('completion_status')) {
             const status = (v === 'passed' || v === 'completed') ? 'completed' : 'in_progress';
@@ -177,14 +177,14 @@ export default async function renderPlayer(container) {
       LMSSetValue: (n, v) => API.SetValue(n, v),
       
       Commit: () => { 
-          console.log("[LMS] SCORM Commit called");
+          console.log("[InAlign] SCORM Commit called");
           syncProgress("commit").catch(() => {}); 
           return "true"; 
       },
       LMSCommit: () => API.Commit(),
       
       Finish: () => { 
-          console.warn("[LMS] SCORM Finish called - exiting");
+          console.warn("[InAlign] SCORM Finish called - exiting");
           handleExit("scorm_finish");
           return "true"; 
       },

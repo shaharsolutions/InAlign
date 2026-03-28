@@ -90,7 +90,7 @@ export async function updateOrganization(id, name, color, logoUrl, welcomeMessag
 }
 
 export async function deleteOrganization(id) {
-  console.log(`[LMS] Attempting to delete organization ${id}`);
+  console.log(`[InAlign] Attempting to delete organization ${id}`);
   if (supabase) {
     const { error, count } = await supabase
       .from('organizations')
@@ -98,11 +98,11 @@ export async function deleteOrganization(id) {
       .eq('id', id);
     
     if (error) {
-        console.error("[LMS] Organization deletion error:", error);
+        console.error("[InAlign] Organization deletion error:", error);
         throw new Error(error.message);
     }
     
-    console.log(`[LMS] Organization delete count: ${count}`);
+    console.log(`[InAlign] Organization delete count: ${count}`);
     if (count === 0) {
         throw new Error("לא נמצאה רשומה למחיקה או שאין הרשאות מתאימות (RLS)");
     }
@@ -110,7 +110,7 @@ export async function deleteOrganization(id) {
   } else {
     const initialLen = mockOrgs.length;
     mockOrgs = mockOrgs.filter(o => o.id !== id);
-    console.log(`[LMS] Mock deletion. Prev: ${initialLen}, Now: ${mockOrgs.length}`);
+    console.log(`[InAlign] Mock deletion. Prev: ${initialLen}, Now: ${mockOrgs.length}`);
     return true;
   }
 }

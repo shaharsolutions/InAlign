@@ -92,7 +92,7 @@ export async function logout() {
 }
 
 export async function impersonateUser(targetUser) {
-    console.log(`[LMS] Starting impersonation of ${targetUser.full_name}`);
+    console.log(`[InAlign] Starting impersonation of ${targetUser.full_name}`);
     
     // Store in localStorage for persistence
     localStorage.setItem('lms.impersonation', JSON.stringify(targetUser));
@@ -112,7 +112,7 @@ export async function impersonateUser(targetUser) {
 }
 
 export async function stopImpersonating() {
-    console.log(`[LMS] Stopping impersonation`);
+    console.log(`[InAlign] Stopping impersonation`);
     localStorage.removeItem('lms.impersonation');
     window.location.reload();
 }
@@ -133,7 +133,7 @@ async function fetchUserProfile(userId) {
   let profile = profiles && profiles.length > 0 ? profiles[0] : null;
   
   if (!profile) {
-    console.error(`[LMS] No profile found for user ${userId}. Deleting session...`);
+    console.error(`[InAlign] No profile found for user ${userId}. Deleting session...`);
     // Optionally log out if no profile exists to keep things clean
     await supabase.auth.signOut();
     throw new Error('לא נמצא פרופיל משתמש במערכת. פנה למנהל המערכת.');
@@ -185,12 +185,12 @@ export function getCurrentUserSync() {
 export function onAuthStatusChange(callback) {
   if (supabase) {
     return supabase.auth.onAuthStateChange((event, session) => {
-      console.log(`[LMS] Auth event: ${event}`);
+      console.log(`[InAlign] Auth event: ${event}`);
       
       if (event === 'SIGNED_OUT') {
         localStorage.removeItem('lms.impersonation');
         if (window.__APP_STATE?.user && !session) {
-          console.warn("[LMS] Verified sign out, redirecting...");
+          console.warn("[InAlign] Verified sign out, redirecting...");
           window.__APP_STATE.user = null;
           if (window.location.hash !== '#/login') {
             window.location.hash = '#/login';
