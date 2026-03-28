@@ -61,6 +61,23 @@ export async function createGroup(name) {
   }
 }
 
+export async function updateGroup(id, name) {
+  if (supabase) {
+    const { data, error } = await supabase
+      .from('groups')
+      .update({ name })
+      .eq('id', id)
+      .select()
+      .single();
+    if (error) throw new Error(error.message);
+    return data;
+  } else {
+    const grp = MOCK_GROUPS.find(g => g.id === id);
+    if (grp) grp.name = name;
+    return grp;
+  }
+}
+
 export async function deleteGroup(id) {
   if (supabase) {
     console.log(`[LMS] Deleting group ${id}`);

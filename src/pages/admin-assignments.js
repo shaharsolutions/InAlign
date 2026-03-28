@@ -10,7 +10,7 @@ export default async function renderAdminAssignments(container) {
       <p class="text-muted">שיוך לומדות מקטלוג המערכת לארגונים השונים</p>
     </div>
 
-    <div class="grid grid-cols-3 slide-up" style="gap: 1.5rem; align-items: start;">
+    <div class="grid grid-cols-3 slide-up" style="gap: 2rem; align-items: start;">
        <!-- Form Section -->
        <div class="card" style="grid-column: span 1;">
          <h3 class="mb-3">ביצוע הקצאה חדשת</h3>

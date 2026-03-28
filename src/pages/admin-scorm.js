@@ -1,4 +1,5 @@
 import { uploadCourse, deleteCourse, fetchCourses } from '../api/coursesApi.js'
+import { fetchCategories } from '../api/categoriesApi.js'
 import { showConfirmModal, showToast } from '../lib/ui.js'
 
 export default async function renderAdminScorm(container) {
@@ -8,7 +9,7 @@ export default async function renderAdminScorm(container) {
       <p class="text-muted">ניהול קטלוג ההדרכות, העלאת קבצי ZIP ופרסומם במערכת</p>
     </div>
 
-    <div class="grid grid-cols-3 slide-up" style="gap: 1.5rem; align-items: start;">
+    <div class="grid grid-cols-3 slide-up" style="gap: 2rem; align-items: start;">
        <!-- Form Section -->
        <div class="card" style="grid-column: span 1;">
          <h3 class="mb-3">העלאת לומדה חדשה</h3>
@@ -24,10 +25,7 @@ export default async function renderAdminScorm(container) {
             <div class="form-group" style="text-align: right;">
                <label class="form-label" for="course-category">קטגוריה</label>
                <select class="form-control" id="course-category">
-                  <option value="כללי">כללי</option>
-                  <option value="אבטחת מידע">אבטחת מידע</option>
-                  <option value="משאבי אנוש">משאבי אנוש</option>
-                  <option value="טכנולוגיה">טכנולוגיה</option>
+                  <option value="כללי">טוען קטגוריות...</option>
                </select>
             </div>
             <div class="form-group" style="text-align: right;">
@@ -64,6 +62,21 @@ export default async function renderAdminScorm(container) {
   `
 
   const tableBody = container.querySelector('#courses-table tbody')
+  const categorySelect = container.querySelector('#course-category')
+
+  async function loadCategories() {
+    try {
+      const categories = await fetchCategories()
+      if (categories.length > 0) {
+        categorySelect.innerHTML = categories.map(c => `<option value="${c.name}">${c.name}</option>`).join('')
+      } else {
+        categorySelect.innerHTML = `<option value="כללי">כללי</option>`
+      }
+    } catch (err) {
+      console.error('Failed to load categories:', err)
+      categorySelect.innerHTML = `<option value="כללי">כללי (שגיאה בטעינה)</option>`
+    }
+  }
 
   async function renderTable() {
     try {
@@ -110,6 +123,7 @@ export default async function renderAdminScorm(container) {
     }
   }
 
+  await loadCategories()
   await renderTable()
 
   const form = container.querySelector('#scorm-upload-form')

@@ -11,10 +11,12 @@ export function renderNavbar(user) {
     linksStr += `<a href="#/superadmin/orgs" class="nav-link"><i class='bx bx-building-house'></i> ניהול ארגונים</a>`
     linksStr += `<a href="#/admin/users" class="nav-link"><i class='bx bx-group'></i> ניהול עובדים</a>`
     linksStr += `<a href="#/superadmin/assignments" class="nav-link"><i class='bx bx-link'></i> הקצאת לומדות</a>`
+    linksStr += `<a href="#/admin/settings" class="nav-link"><i class='bx bx-cog'></i> הגדרות</a>`
   } else if (user.role === 'admin' || user.role === 'org_admin') {
     linksStr += `<a href="#/admin" class="nav-link"><i class='bx bx-pie-chart-alt'></i> דשבורד מנהל</a>`
     linksStr += `<a href="#/admin/scorm" class="nav-link"><i class='bx bx-upload'></i> ניהול לומדות</a>`
     linksStr += `<a href="#/admin/users" class="nav-link"><i class='bx bx-user'></i> ניהול עובדים</a>`
+    linksStr += `<a href="#/admin/settings" class="nav-link"><i class='bx bx-cog'></i> הגדרות</a>`
     linksStr += `<a href="#/learner" class="nav-link"><i class='bx bx-book-open'></i> תצוגת לומד</a>`
   } else {
     linksStr += `<a href="#/learner" class="nav-link"><i class='bx bx-home'></i> האזור האישי שלי</a>`
@@ -30,7 +32,7 @@ export function renderNavbar(user) {
         <div class="user-menu flex items-center gap-2">
           ${user.originalRole === 'super_admin' ? `<button id="exit-impersonation-btn" class="btn btn-warning text-sm" style="background: hsl(var(--color-warning)); color: black;" title="חזור לניהול הראשי"><i class='bx bx-exit'></i> חזור לניהול הראשי</button>` : ''}
           <div class="text-sm text-muted" style="line-height: 1.2;">
-            שלום, ${user.fullName}<br>
+            שלום, ${user.fullName || user.full_name}<br>
             <strong style="color: hsl(var(--color-primary))">(${user.orgName || 'מנהל ראשי'})</strong>
           </div>
           <button id="logout-btn" class="btn btn-outline text-sm" title="התנתק"><i class='bx bx-log-out'></i></button>

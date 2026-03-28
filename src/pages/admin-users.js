@@ -1,9 +1,11 @@
-import { fetchUsers, createUser, bulkCreateUsers, deleteUser, updateUser, bulkUpdateUsersOrg, bulkDeleteUsers } from '../api/usersApi.js'
-import { resetUserProgress, resetOrgProgress } from '../api/progressApi.js'
+import { fetchUsers, createUser, bulkCreateUsers, deleteUser, updateUser, bulkUpdateUsersOrg, bulkDeleteUsers, bulkUpdateUsersRole } from '../api/usersApi.js'
+import { impersonateUser } from '../api/authApi.js'
+import { resetUserProgress, resetOrgProgress, bulkAssignCourses } from '../api/progressApi.js'
 import { fetchGroups, assignUsersToGroup, createGroup } from '../api/groupsApi.js'
 import { getCurrentUserSync } from '../api/authApi.js'
-import { showConfirmModal, showToast, showBulkGroupModal, showBulkOrgModal } from '../lib/ui.js'
+import { showConfirmModal, showToast, showBulkGroupModal, showBulkOrgModal, showBulkRoleModal, showCustomModal } from '../lib/ui.js'
 import { fetchOrganizations } from '../api/orgApi.js'
+import { fetchCourses } from '../api/coursesApi.js'
 import * as XLSX from 'https://cdn.jsdelivr.net/npm/xlsx@0.18.5/+esm'
 
 export default async function renderAdminUsers(container) {
@@ -74,6 +76,9 @@ export default async function renderAdminUsers(container) {
           <button class="btn btn-outline text-sm" id="bulk-move-org-btn">
             <i class='bx bx-transfer'></i> העברה לארגון אחר
           </button>
+          <button class="btn btn-outline text-sm" id="bulk-role-btn">
+            <i class='bx bx-user-check'></i> שינוי תפקיד
+          </button>
           ` : ''}
           <button class="btn btn-outline text-sm text-danger" id="bulk-delete-btn" style="color: hsl(var(--color-danger)); border-color: hsla(var(--color-danger), 0.3);">
             <i class='bx bx-trash'></i> מחיקה קבוצתית
@@ -87,26 +92,26 @@ export default async function renderAdminUsers(container) {
        <!-- Add User Section (Top Full Width) -->
        <div class="card" style="grid-column: span 12; box-shadow: 0 10px 25px -10px hsla(var(--color-primary), 0.1); border: 1px solid hsla(var(--color-primary), 0.08);">
          <h3 class="mb-4" id="form-title" style="font-size: 1.1rem; border-bottom: 1px solid hsla(var(--text-main), 0.05); padding-bottom: 0.75rem;"><i class='bx bx-user-plus'></i> יצירת משתמש חדש</h3>
-         <form id="user-create-form" class="flex flex-wrap items-end" style="gap: 2px;">
-            <div class="form-group" style="text-align: right; margin-bottom: 0; flex: 1; min-width: 240px;">
+         <form id="user-create-form" class="flex flex-wrap items-end gap-3">
+            <div class="form-group mb-0 flex-1" style="text-align: right; min-width: 200px;">
                <label class="form-label" for="user-name" style="font-size: 0.85rem; margin-bottom: 0.2rem;">שם מלא <span style="color: hsl(var(--color-danger));">*</span></label>
                <input class="form-control" type="text" id="user-name" required placeholder="לדוגמה: משה כהן" style="height: 44px; padding-top: 0; padding-bottom: 0;">
             </div>
-            <div class="form-group" style="text-align: right; margin-bottom: 0; flex: 1; min-width: 240px;">
+            <div class="form-group mb-0 flex-1" style="text-align: right; min-width: 200px;">
                <label class="form-label" for="user-email" style="font-size: 0.85rem; margin-bottom: 0.2rem;">כתובת אימייל <span style="color: hsl(var(--color-danger));">*</span></label>
                <input class="form-control" type="email" id="user-email" required placeholder="moshe@company.com" style="height: 44px; padding-top: 0; padding-bottom: 0;">
             </div>
-            <div class="form-group" style="text-align: right; margin-bottom: 0; flex: 1; min-width: 200px;">
+            <div class="form-group mb-0 flex-1" style="text-align: right; min-width: 150px;">
                <label class="form-label" for="user-phone" style="font-size: 0.85rem; margin-bottom: 0.2rem;">מספר טלפון</label>
                <input class="form-control" type="tel" id="user-phone" placeholder="050-0000000" style="height: 44px; padding-top: 0; padding-bottom: 0;">
             </div>
-            <div class="form-group" style="text-align: right; margin-bottom: 0; flex: 1; min-width: 200px;">
+            <div class="form-group mb-0 flex-1" style="text-align: right; min-width: 150px;">
                <label class="form-label" for="user-password" style="font-size: 0.85rem; margin-bottom: 0.2rem;">סיסמה לעובד <span style="color: hsl(var(--color-danger));">*</span></label>
                <input class="form-control" type="text" id="user-password" required placeholder="לפחות 6 תווים" style="height: 44px; padding-top: 0; padding-bottom: 0;">
             </div>
             
             ${isSuperAdmin ? `
-            <div class="form-group" style="text-align: right; margin-bottom: 0; flex: 1; min-width: 200px;">
+            <div class="form-group mb-0 flex-1" style="text-align: right; min-width: 150px;">
                <label class="form-label" for="user-org" style="font-size: 0.85rem; margin-bottom: 0.2rem;">שיוך לארגון</label>
                <select class="form-control" id="user-org" style="height: 44px; padding-top: 0; padding-bottom: 0;">
                   <option value="">-- בחר ארגון --</option>
@@ -115,7 +120,7 @@ export default async function renderAdminUsers(container) {
             </div>
             ` : ''}
 
-            <div class="form-group" style="text-align: right; margin-bottom: 0; flex: 1; min-width: 200px;">
+            <div class="form-group mb-0 flex-1" style="text-align: right; min-width: 150px;">
                <label class="form-label" for="user-role" style="font-size: 0.85rem; margin-bottom: 0.2rem;">תפקיד במערכת</label>
                <select class="form-control" id="user-role" style="height: 44px; padding-top: 0; padding-bottom: 0;">
                   <option value="learner">לומד (Learner)</option>
@@ -123,11 +128,11 @@ export default async function renderAdminUsers(container) {
                </select>
             </div>
             
-            <div style="display: flex; flex-direction: column; gap: 2px; margin-bottom: 0;">
-              <button type="submit" class="btn btn-primary" id="submit-btn" style="height: 44px; padding: 0 1.5rem; font-weight: 600; white-space: nowrap;">
+            <div class="flex flex-col gap-1 mb-0" style="min-width: fit-content;">
+              <button type="submit" class="btn btn-primary" id="submit-btn" style="height: 44px; padding: 0 1.5rem; font-weight: 600; white-space: nowrap; width: 100%;">
                 <i class='bx bx-user-plus' style="font-size: 1.1rem;"></i> <span>צור חשבון</span>
               </button>
-              <button type="button" class="btn btn-outline hidden" id="cancel-edit-btn" style="height: 44px; white-space: nowrap; padding: 0 1.5rem;">
+              <button type="button" class="btn btn-outline hidden" id="cancel-edit-btn" style="height: 44px; white-space: nowrap; padding: 0 1.5rem; width: 100%;">
                 ביטול
               </button>
             </div>
@@ -165,7 +170,6 @@ export default async function renderAdminUsers(container) {
                 <option value="">כל התפקידים</option>
                 <option value="learner">עובד / לומד</option>
                 <option value="org_admin">מנהל הדרכה</option>
-                ${isSuperAdmin ? '<option value="super_admin">מנהל על</option>' : ''}
               </select>
             </div>
             
@@ -191,9 +195,9 @@ export default async function renderAdminUsers(container) {
               <thead>
                   <tr>
                      <th style="width: 40px; padding: 1rem;"><input type="checkbox" id="select-all-users"></th>
-                     <th style="padding: 1rem;">שם מלא</th>
-                     <th style="padding: 1rem;">פרטי קשר</th>
-                     ${isSuperAdmin ? '<th style="padding: 1rem;">ארגון</th>' : ''}
+                     <th style="padding: 1rem;" class="nowrap">שם מלא</th>
+                     <th style="padding: 1rem;" class="nowrap">פרטי קשר</th>
+                     ${isSuperAdmin ? '<th style="padding: 1rem;" class="nowrap">ארגון</th>' : ''}
                      <th style="padding: 1rem;">סטטוס</th>
                      <th style="padding: 1rem; width: 120px;">הצטרפות</th>
                      <th style="padding: 1rem; text-align: left;">פעולות</th>
@@ -282,22 +286,23 @@ export default async function renderAdminUsers(container) {
         return `
           <tr data-user-id="${u.id}">
              <td><input type="checkbox" class="user-checkbox" data-id="${u.id}" data-name="${u.full_name}" ${selectedUserIds.has(u.id) ? 'checked' : ''}></td>
-             <td>
+             <td class="nowrap">
                 <div style="font-weight: 500;">${u.full_name}</div>
                 <div class="user-groups-list flex gap-1 mt-1 flex-wrap">
                   ${u.groups?.length > 0 
                     ? u.groups.map(g => `<span class="badge" style="font-size: 0.65rem; background: hsla(var(--color-primary), 0.1); color: hsl(var(--color-primary)); border: 1px solid hsla(var(--color-primary), 0.2);">${g.name}</span>`).join('') 
-                    : '<span class="badge" style="font-size: 0.65rem; background: hsla(var(--color-primary), 0.1); color: hsl(var(--color-primary)); border: 1px solid hsla(var(--color-primary), 0.2);">לא משויך לקבוצה</span>'}
+                    : '<span class="badge" style="font-size: 0.65rem; background: hsla(var(--color-warning), 0.1); color: hsl(var(--color-warning)); border: 1px solid hsla(var(--color-warning), 0.2);">לא משויך לקבוצה</span>'}
+                </div>
                 </div>
              </td>
-             <td>
+             <td class="nowrap">
                 ${u.email || '-'} <br>
-                <span class="text-xs text-muted">
+                <span class="text-xs text-muted nowrap">
                   ${u.phone || 'אין טלפון'} • 
                   ${u.role === 'org_admin' ? 'מנהל הדרכה' : u.role === 'super_admin' ? 'מנהל על' : 'עובד / לומד'}
                 </span>
              </td>
-             ${isSuperAdmin ? `<td><span class="text-sm">${u.org_name || '-'}</span></td>` : ''}
+             ${isSuperAdmin ? `<td class="nowrap"><span class="text-sm">${u.org_name || '-'}</span></td>` : ''}
              <td><span class="badge ${u.status === 'פעיל' ? 'badge-success' : 'badge-warning'}">${u.status || 'פעיל'}</span></td>
              <td>${u.created_at ? new Date(u.created_at).toLocaleDateString('he-IL') : '-'}</td>
              <td>
@@ -310,8 +315,10 @@ export default async function renderAdminUsers(container) {
                    data-role="${u.role}" 
                    data-org="${u.org_id || ''}"
                    title="עריכת משתמש"><i class='bx bx-edit'></i></button>
+                 <button class="btn btn-outline text-sm view-courses-btn" data-id="${u.id}" data-name="${u.full_name}" data-courses='${JSON.stringify(u.assigned_courses || []).replace(/'/g, "&apos;")}' title="צפייה בלומדות משויכות"><i class='bx bx-book-open'></i></button>
+                 ${u.id !== currentUser.id ? `<button class="btn btn-outline text-sm impersonate-btn" data-id="${u.id}" data-name="${u.full_name}" title="התחזות למשתמש"><i class='bx bx-user-voice' style="color: hsl(var(--color-primary)); font-weight: bold;"></i></button>` : ''}
                  <button class="btn btn-outline text-sm reset-user-btn" data-id="${u.id}" data-name="${u.full_name}" title="איפוס נתוני למידה"><i class='bx bx-refresh' style="color: hsl(var(--color-warning));"></i></button>
-                 <button class="btn btn-outline text-sm delete-btn" data-id="${u.id}" data-name="${u.full_name}" title="מחיקת חשבון"><i class='bx bx-trash' style="color: hsl(var(--color-danger));"></i></button>
+                 ${u.id !== currentUser.id ? `<button class="btn btn-outline text-sm delete-btn" data-id="${u.id}" data-name="${u.full_name}" title="מחיקת חשבון"><i class='bx bx-trash' style="color: hsl(var(--color-danger));"></i></button>` : ''}
                </div>
              </td>
           </tr>
@@ -397,6 +404,167 @@ export default async function renderAdminUsers(container) {
         });
       })
     })
+
+    // Setup view courses buttons
+    container.querySelectorAll('.view-courses-btn').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        const userId = e.currentTarget.getAttribute('data-id');
+        const name = e.currentTarget.getAttribute('data-name');
+        const courses = JSON.parse(e.currentTarget.getAttribute('data-courses'));
+        const canManage = isSuperAdmin || currentUser?.role === 'org_admin';
+        
+        let availableCourses = [];
+        if (canManage) {
+          try {
+            availableCourses = await fetchCourses();
+          } catch (err) {
+            console.error("Failed to fetch courses for modal", err);
+          }
+        }
+
+        showCustomModal({
+            title: `לומדות משויכות - ${name}`,
+            content: `
+                <div class="mb-4">
+                    <p class="text-xs text-muted mb-4 font-medium">רשימת כל הלומדות המשויכות לעובד זה (באמצעות שיוך לקבוצה, שיוך ארגוני או שיוך ישיר):</p>
+                    ${courses.length > 0 ? `
+                        <ul class="list-none p-0 m-0 flex flex-col gap-2">
+                            ${courses.map(c => `
+                                <li class="p-3 border rounded-lg flex items-center justify-between gap-3" style="background: hsla(var(--text-main), 0.02); border-color: hsla(var(--text-main), 0.05);">
+                                    <div class="flex items-center gap-3">
+                                      <div style="width: 32px; height: 32px; border-radius: 8px; background: hsla(var(--color-primary), 0.1); color: hsl(var(--color-primary)); display: flex; align-items: center; justify-content: center;">
+                                          <i class='bx bx-book' style="font-size: 1.25rem;"></i>
+                                      </div>
+                                      <div style="display: flex; flex-direction: column;">
+                                        <span style="font-weight: 600;">${c.title}</span>
+                                        <span class="text-xs text-muted" style="margin-top: 2px;">מקור: ${c.source || 'שיוך ישיר'}</span>
+                                      </div>
+                                    </div>
+                                    ${canManage ? `
+                                        <button class="btn btn-outline p-1 remove-course-btn" 
+                                          style="border: none; color: hsl(var(--color-danger));" 
+                                          data-course-id="${c.id}" 
+                                          data-course-title="${c.title}" 
+                                          title="הסר שיוך לומדה">
+                                          <i class='bx bx-trash' style="font-size: 1.15rem;"></i>
+                                        </button>
+                                    ` : ''}
+                                </li>
+                            `).join('')}
+                        </ul>
+                    ` : `
+                        <div class="p-6 text-center text-muted" style="background: hsla(var(--text-main), 0.02); border-radius: var(--radius-lg); border: 1px dashed hsla(var(--text-main), 0.1);">
+                            <i class='bx bx-info-circle' style="font-size: 2rem; display: block; margin-bottom: 0.5rem; opacity: 0.5;"></i>
+                            אין לומדות משויכות לעובד זה כרגע
+                        </div>
+                    `}
+                </div>
+
+                ${canManage ? `
+                  <div style="margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px dashed hsla(var(--text-main), 0.1);">
+                    <h4 class="mb-3" style="font-size: 0.95rem;"><i class='bx bx-plus-circle'></i> שיוך לומדה חדשה באופן ישיר</h4>
+                    <div class="flex gap-2">
+                      <select class="form-control" id="modal-direct-assign-select" style="height: 48px; flex: 1;">
+                        <option value="">-- בחר לומדה לשיוך --</option>
+                        ${availableCourses.map(c => `
+                          <option value="${c.id}" ${courses.some(ac => ac.id === c.id) ? 'disabled' : ''}>
+                            ${c.title} ${courses.some(ac => ac.id === c.id) ? '(כבר משויך)' : ''}
+                          </option>
+                        `).join('')}
+                      </select>
+                      <button class="btn btn-primary" id="modal-direct-assign-btn" style="height: 48px; white-space: nowrap;">
+                         שייך עכשיו
+                      </button>
+                    </div>
+                  </div>
+                ` : ''}
+            `,
+            footer: `
+                <button class="btn btn-primary w-full" data-close>סגור</button>
+            `
+        });
+
+        // Add event listeners to delete and add buttons within the modal
+        const modalOverlay = document.querySelector('.modal-overlay');
+        if (modalOverlay) {
+          // Add logic
+          const assignBtn = modalOverlay.querySelector('#modal-direct-assign-btn');
+          if (assignBtn) {
+            assignBtn.onclick = async () => {
+              const courseId = modalOverlay.querySelector('#modal-direct-assign-select').value;
+              if (!courseId) {
+                showToast('עליך לבחור לומדה מהרשימה', 'warning');
+                return;
+              }
+              assignBtn.disabled = true;
+              assignBtn.innerHTML = "<i class='bx bx-loader-alt bx-spin'></i>";
+              try {
+                await bulkAssignCourses([userId], courseId);
+                showToast('הלומדה שוייכה בהצלחה');
+                modalOverlay.querySelector('[data-close]').click();
+                await renderTable();
+              } catch (err) {
+                showToast(err.message, 'error');
+                assignBtn.disabled = false;
+                assignBtn.innerHTML = "שייך עכשיו";
+              }
+            };
+          }
+
+          modalOverlay.querySelectorAll('.remove-course-btn').forEach(delBtn => {
+            delBtn.onclick = async () => {
+              const courseId = delBtn.dataset.courseId;
+              const courseTitle = delBtn.dataset.courseTitle;
+
+              await showConfirmModal({
+                title: 'הסרת שיוך לומדה',
+                message: `האם אתה בטוח שברצונך להסיר את השיוך של הלומדה <strong>${courseTitle}</strong> מהעובד <strong>${name}</strong>? פעולה זו תמחק גם את נתוני ההתקדמות שלו בלומדה זו לצמיתות.`,
+                confirmText: 'הסר שיוך',
+                onConfirm: async () => {
+                  try {
+                    await resetUserProgress(userId, courseId);
+                    showToast('השיוך הוסר בהצלחה');
+                    
+                    // Close the current modal
+                    const closeBtn = modalOverlay.querySelector('[data-close]');
+                    if (closeBtn) closeBtn.click();
+                    
+                    // Refresh the table
+                    await renderTable();
+                  } catch (err) {
+                    showToast('שגיאה בהסרת השיוך: ' + err.message, 'error');
+                  }
+                }
+              });
+            };
+          });
+        }
+      });
+    });
+
+
+
+
+    // Setup impersonation buttons
+    container.querySelectorAll('.impersonate-btn').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        const userId = e.currentTarget.getAttribute('data-id');
+        const name = e.currentTarget.getAttribute('data-name');
+        
+        await showConfirmModal({
+            title: 'אישור התחזות המערכת',
+            message: `האם אתה בטוח שברצונך להתחזות למשתמש <strong>${name}</strong>? תוכל לראות את המערכת בדיוק כפי שהמשתמש רואה אותה.<br><br><strong>שימו לב:</strong> נתוני הלמידה וההתקדמות שתבצעו כעת יישמרו בשם המשתמש המתחזה.`,
+            confirmText: 'התחל התחזות',
+            type: 'info',
+            onConfirm: async () => {
+                const targetUser = allUsers.find(u => u.id === userId);
+                if (targetUser) {
+                    await impersonateUser(targetUser);
+                }
+            }
+        });
+      });
+    });
 
     // Update Select All checkbox state based on current visible checkboxes
     const selectAll = container.querySelector('#select-all-users');
@@ -586,7 +754,11 @@ export default async function renderAdminUsers(container) {
 
   // Bulk Delete
   container.querySelector('#bulk-delete-btn').addEventListener('click', async () => {
-    const userIds = Array.from(selectedUserIds);
+    const userIds = Array.from(selectedUserIds).filter(id => id !== currentUser.id);
+    if (userIds.length === 0) {
+        showToast('לא ניתן למחוק את המשתמש המחובר כרגע', 'warning');
+        return;
+    }
     await showConfirmModal({
         title: 'מחיקה קבוצתית',
         message: `האם אתה בטוח שברצונך למחוק לצמיתות את <strong>${userIds.length}</strong> המשתמשים שנבחרו? פעולה זו אינה הפיכה.`,
@@ -632,6 +804,30 @@ export default async function renderAdminUsers(container) {
         onAssign: async (newOrgId) => {
             await bulkUpdateUsersOrg(Array.from(selectedUserIds), newOrgId);
             showToast('המשתמשים הועברו בהצלחה לארגון החדש');
+            selectedUserIds.clear();
+            updateBulkBar();
+            renderTable();
+        }
+      });
+    });
+  }
+
+  // Bulk Role Change
+  const bulkRoleBtn = container.querySelector('#bulk-role-btn');
+  if (bulkRoleBtn) {
+    bulkRoleBtn.addEventListener('click', async () => {
+      const usersSelection = Array.from(selectedUserIds).map(id => {
+          const row = tableBody.querySelector(`tr[data-user-id="${id}"]`);
+          const cb = row.querySelector('.user-checkbox');
+          return { id, full_name: cb?.dataset.name || 'משתמש' };
+      });
+
+      await showBulkRoleModal({
+        users: usersSelection,
+        onAssign: async (newRole) => {
+            showToast('מעדכן תפקידים...', 'info');
+            await bulkUpdateUsersRole(Array.from(selectedUserIds), newRole);
+            showToast('התפקידים עודכנו בהצלחה');
             selectedUserIds.clear();
             updateBulkBar();
             renderTable();

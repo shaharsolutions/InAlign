@@ -1,6 +1,6 @@
 import { fetchOrgProgress, adminUpdateLearnerProgress, resetUserProgress } from '../api/progressApi.js'
 import { exportToCSV, exportToPDF } from '../lib/exportUtils.js'
-import { fetchOrganizations } from '../api/orgApi.js'
+import { fetchOrganizations, fetchOrganizationById } from '../api/orgApi.js'
 import { getCurrentUserSync } from '../api/authApi.js'
 import { showToast, showEditProgressModal } from '../lib/ui.js'
 
@@ -34,6 +34,8 @@ export default async function renderAdminDashboard(container) {
       </div>
     </div>
     
+    <div id="welcome-message-container"></div>
+    
     ${isSuperAdmin ? `
     <div class="card mb-4 slide-up" style="border-right: 4px solid hsl(var(--color-primary));">
         <div class="flex items-center gap-4">
@@ -47,7 +49,7 @@ export default async function renderAdminDashboard(container) {
     </div>
     ` : ''}
 
-    <div class="stats grid grid-cols-4 mb-4 slide-up" style="gap: 1.5rem;">
+    <div class="stats grid grid-cols-4 mb-4 slide-up" style="gap: 2rem;">
       <div class="card">
          <h4 class="mb-1 text-muted">לומדים פעילים</h4>
          <div id="stat-active-users" style="font-size: 1.8rem; font-weight: 700;">--</div>
@@ -178,6 +180,28 @@ export default async function renderAdminDashboard(container) {
 
   // Initial load
   await loadData();
+
+  // Load Welcome Message
+  if (user.orgId) {
+    try {
+      const org = await fetchOrganizationById(user.orgId);
+      if (org?.welcome_message) {
+        const welcomeContainer = container.querySelector('#welcome-message-container');
+        if (welcomeContainer) {
+          welcomeContainer.innerHTML = `
+            <div class="card mb-6 slide-up" style="background: linear-gradient(135deg, hsl(var(--color-primary)/0.08) 0%, transparent 100%); border-right: 5px solid hsl(var(--color-primary)); padding: 1.25rem 2rem;">
+               <div class="flex gap-4 items-center">
+                  <div style="font-size: 1.5rem; color: hsl(var(--color-primary)); flex-shrink: 0;"><i class='bx bxs-megaphone'></i></div>
+                  <p style="margin:0; font-weight: 500; font-size: 1.1rem; line-height: 1.4; white-space: pre-wrap; display: -webkit-box; -webkit-line-clamp: 5; -webkit-box-orient: vertical; overflow: hidden;">${org.welcome_message}</p>
+               </div>
+            </div>
+          `;
+        }
+      }
+    } catch (e) {
+      console.error("Failed to load welcome message", e);
+    }
+  }
 
   // Filter change listener
   const filter = container.querySelector('#org-filter');

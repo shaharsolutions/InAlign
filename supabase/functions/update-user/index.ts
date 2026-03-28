@@ -20,8 +20,22 @@ Deno.serve(async (req) => {
     const body = await req.json();
     const { userId, password, fullName, phone, role, orgId, email, callerId } = body;
 
-    if (!userId || !orgId) {
-      throw new Error('Missing required parameters: userId or orgId')
+    if (!userId) {
+      throw new Error('Missing required parameter: userId')
+    }
+
+    // Fetch existing profile to get current data if needed
+    const { data: existingProfile, error: profileFetchError } = await supabaseAdmin
+      .from('profiles')
+      .select('*')
+      .eq('id', userId)
+      .single()
+
+    if (profileFetchError) throw new Error('Could not find profile for user ' + userId)
+
+    const finalOrgId = orgId || existingProfile.org_id;
+    if (!finalOrgId) {
+      throw new Error('User has no organization associated and none was provided')
     }
 
     // Verify caller has permissions
@@ -35,10 +49,20 @@ Deno.serve(async (req) => {
       if (callerError || (callerData.role !== 'org_admin' && callerData.role !== 'super_admin')) {
         throw new Error('Unauthorized to perform this action')
       }
+      
+      // If Org Admin, verify they own the user
+      if (callerData.role === 'org_admin' && callerData.org_id !== finalOrgId) {
+         throw new Error('Unauthorized to edit users from other organizations')
+      }
     }
 
     // 1. Update Auth payload
-    const userMetadataUpdate = { full_name: fullName, phone: phone, role: role, org_id: orgId }
+    const userMetadataUpdate = { 
+        full_name: fullName || existingProfile.full_name, 
+        phone: phone || existingProfile.phone, 
+        role: role || existingProfile.role, 
+        org_id: finalOrgId 
+    }
     
     const authUpdatePayload: any = {
       user_metadata: userMetadataUpdate
@@ -69,11 +93,11 @@ Deno.serve(async (req) => {
       .from('profiles')
       .upsert({
         id: userId,
-        email: email || authData.user.email,
-        full_name: fullName,
-        phone: phone || null,
-        role: role,
-        org_id: orgId,
+        email: email || authData.user.email || existingProfile.email,
+        full_name: fullName || existingProfile.full_name,
+        phone: (phone !== undefined) ? (phone || null) : existingProfile.phone,
+        role: role || existingProfile.role,
+        org_id: finalOrgId,
       })
 
     if (profileError) throw profileError

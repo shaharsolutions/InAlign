@@ -1,11 +1,11 @@
 import { 
     fetchGroups, createGroup, deleteGroup, assignCourseToGroup, 
     fetchGroupMembers, assignUsersToGroup, removeUserFromGroup,
-    fetchGroupCourses, unassignCourseFromGroup 
+    fetchGroupCourses, unassignCourseFromGroup, updateGroup 
 } from '../api/groupsApi.js'
 import { fetchCourses } from '../api/coursesApi.js'
 import { fetchUsers } from '../api/usersApi.js'
-import { showConfirmModal, showToast } from '../lib/ui.js'
+import { showConfirmModal, showToast, showCustomModal } from '../lib/ui.js'
 
 export default async function renderAdminGroups(container) {
   container.innerHTML = `
@@ -14,7 +14,7 @@ export default async function renderAdminGroups(container) {
       <p class="text-muted">יצירת קבוצות, שיוך עובדים והקצאת לומדות לפי מחלקות או תפקידים.</p>
     </div>
 
-    <div class="grid grid-cols-3 slide-up" style="gap: 1.5rem; align-items: start;">
+    <div class="grid grid-cols-3 slide-up" style="gap: 2rem; align-items: start;">
        <!-- Add Group Form Section -->
        <div class="card" style="grid-column: span 1;">
          <h3 class="mb-3">יצירת קבוצה חדשה</h3>
@@ -53,8 +53,11 @@ export default async function renderAdminGroups(container) {
     <div id="group-detail-view" class="card mt-6 slide-up hidden" style="border-top: 5px solid hsl(var(--color-primary));">
         <div class="flex justify-between items-center mb-6">
             <div>
+            <div class="flex items-center gap-2">
                 <h2 id="detail-group-name" class="m-0">שם הקבוצה</h2>
-                <p class="text-muted m-0">ניהול עובדים ולומדות עבור קבוצה זו</p>
+                <button class="btn btn-ghost p-1 edit-detail-name-btn" title="ערוך שם קבוצה"><i class='bx bx-edit-alt'></i></button>
+            </div>
+            <p class="text-muted m-0">ניהול עובדים ולומדות עבור קבוצה זו</p>
             </div>
             <button class="btn btn-outline" id="close-detail-btn"><i class='bx bx-x'></i> סגור</button>
         </div>
@@ -107,6 +110,7 @@ export default async function renderAdminGroups(container) {
            <td>
               <div class="flex gap-2">
                 <button class="btn btn-outline text-sm select-group-btn" data-id="${g.id}" data-name="${g.name}" title="נהל קבוצה"><i class='bx bx-cog'></i></button>
+                <button class="btn btn-outline text-sm edit-group-btn" data-id="${g.id}" data-name="${g.name}" title="ערוך שם"><i class='bx bx-edit-alt'></i></button>
                 <button class="btn btn-outline text-sm text-danger delete-group-btn" data-id="${g.id}" data-name="${g.name}" title="מחיקה"><i class='bx bx-trash'></i></button>
               </div>
            </td>
@@ -120,7 +124,24 @@ export default async function renderAdminGroups(container) {
   async function showGroupDetail(groupId, groupName) {
     currentGroup = { id: groupId, name: groupName };
     detailView.classList.remove('hidden');
-    container.querySelector('#detail-group-name').innerText = groupName;
+    
+    // Ensure header structure is correct (in case it was replaced by an input)
+    const headerTitle = container.querySelector('#detail-group-name');
+    if (headerTitle) {
+        headerTitle.innerText = groupName;
+    } else {
+        // Fallback or restore structure if innerHTML was manipulated
+        const headerContainer = detailView.querySelector('.flex.justify-between.items-center.mb-6 > div');
+        headerContainer.innerHTML = `
+            <div class="flex items-center gap-2">
+                <h2 id="detail-group-name" class="m-0">${groupName}</h2>
+                <button class="btn btn-ghost p-1 edit-detail-name-btn" title="ערוך שם קבוצה"><i class='bx bx-edit-alt'></i></button>
+            </div>
+            <p class="text-muted m-0">ניהול עובדים ולומדות עבור קבוצה זו</p>
+        `;
+        // Re-attach listener
+        headerContainer.querySelector('.edit-detail-name-btn').onclick = attachEditHeaderListener;
+    }
     
     // Load members
     const memberList = container.querySelector('#member-list');
@@ -205,20 +226,120 @@ export default async function renderAdminGroups(container) {
             }
         });
     }
+
+    const editBtn = e.target.closest('.edit-group-btn');
+    if(editBtn) {
+        const gid = editBtn.dataset.id;
+        const gname = editBtn.dataset.name;
+        const nameCell = row.querySelector('td:first-child');
+        const originalContent = nameCell.innerHTML;
+        
+        nameCell.innerHTML = `
+            <div class="flex gap-2 items-center">
+                <input type="text" class="form-control text-sm" value="${gname}" id="edit-group-input-${gid}" style="min-width: 150px;">
+                <button class="btn btn-primary p-1 save-group-name" data-id="${gid}"><i class='bx bx-check'></i></button>
+                <button class="btn btn-outline p-1 cancel-group-rename"><i class='bx bx-x'></i></button>
+            </div>
+        `;
+        
+        const input = nameCell.querySelector('input');
+        input.focus();
+        input.select();
+
+        nameCell.querySelector('.cancel-group-rename').onclick = (ev) => {
+            ev.stopPropagation();
+            nameCell.innerHTML = originalContent;
+        };
+
+        nameCell.querySelector('.save-group-name').onclick = async (ev) => {
+            ev.stopPropagation();
+            const newName = input.value.trim();
+            if(!newName || newName === gname) {
+                nameCell.innerHTML = originalContent;
+                return;
+            }
+
+            try {
+                nameCell.innerHTML = `<i class='bx bx-loader bx-spin'></i> מעדכן...`;
+                await updateGroup(gid, newName);
+                showToast('שם הקבוצה עודכן בהצלחה');
+                renderTable();
+            } catch (err) {
+                showToast(err.message, 'error');
+                nameCell.innerHTML = originalContent;
+            }
+        };
+
+        input.onkeydown = (ev) => {
+            if(ev.key === 'Enter') nameCell.querySelector('.save-group-name').click();
+            if(ev.key === 'Escape') nameCell.querySelector('.cancel-group-rename').click();
+        };
+    }
   });
 
   container.querySelector('#close-detail-btn').onclick = () => detailView.classList.add('hidden');
 
-  // Add Member to Group
+  function attachEditHeaderListener() {
+    if(!currentGroup) return;
+    const headerTitleScope = container.querySelector('#detail-group-name');
+    if (!headerTitleScope) return;
+    
+    const headerDiv = headerTitleScope.parentElement;
+    const originalHTML = headerDiv.parentElement.innerHTML; // Save the whole outer div content
+    
+    headerDiv.innerHTML = `
+        <div class="flex gap-2 items-center">
+            <input type="text" class="form-control" value="${currentGroup.name}" id="edit-detail-input">
+            <button class="btn btn-primary p-1 save-detail-name"><i class='bx bx-check'></i></button>
+            <button class="btn btn-outline p-1 cancel-detail-rename"><i class='bx bx-x'></i></button>
+        </div>
+    `;
+
+    const input = headerDiv.querySelector('input');
+    input.focus();
+    input.select();
+
+    headerDiv.querySelector('.cancel-detail-rename').onclick = () => {
+        showGroupDetail(currentGroup.id, currentGroup.name);
+    };
+
+    headerDiv.querySelector('.save-detail-name').onclick = async () => {
+        const newName = input.value.trim();
+        if(!newName || newName === currentGroup.name) {
+            showGroupDetail(currentGroup.id, currentGroup.name);
+            return;
+        }
+
+        try {
+            await updateGroup(currentGroup.id, newName);
+            showToast('שם הקבוצה עודכן בהצלחה');
+            currentGroup.name = newName;
+            renderTable();
+            showGroupDetail(currentGroup.id, newName);
+        } catch (err) {
+            showToast(err.message, 'error');
+            showGroupDetail(currentGroup.id, currentGroup.name);
+        }
+    };
+
+    input.onkeydown = (ev) => {
+        if(ev.key === 'Enter') headerDiv.querySelector('.save-detail-name').click();
+        if(ev.key === 'Escape') headerDiv.querySelector('.cancel-detail-rename').click();
+    };
+  }
+
+  // Initial attachment
+  const editDetailBtn = container.querySelector('.edit-detail-name-btn');
+  if (editDetailBtn) editDetailBtn.onclick = attachEditHeaderListener;
+
   container.querySelector('#add-member-btn').onclick = async () => {
     if(!currentGroup) return;
     try {
         const allUsers = await fetchUsers();
-        const modal = document.createElement('div');
-        modal.style = `position: fixed; inset: 0; background: rgba(0,0,0,0.6); display: flex; align-items: center; justify-content: center; z-index: 9999; backdrop-filter: blur(4px);`;
-        modal.innerHTML = `
-            <div class="card" style="max-width: 400px; width: 90%; text-align: right;">
-                <h3 class="mb-4">הוספת עובד לקבוצה</h3>
+        
+        showCustomModal({
+            title: 'הוספת עובד לקבוצה',
+            content: `
                 <div class="form-group">
                     <label class="form-label">בחר עובד מהרשימה</label>
                     <select class="form-control" id="member-to-add">
@@ -226,23 +347,35 @@ export default async function renderAdminGroups(container) {
                         ${allUsers.map(u => `<option value="${u.id}">${u.full_name}</option>`).join('')}
                     </select>
                 </div>
-                <div class="flex gap-2 mt-4">
-                    <button class="btn btn-primary w-full" id="confirm-add-btn">הוסף</button>
-                    <button class="btn btn-outline w-full" id="close-modal-btn">ביטול</button>
-                </div>
-            </div>
-        `;
-        document.body.appendChild(modal);
-        modal.querySelector('#close-modal-btn').onclick = () => modal.remove();
-        modal.querySelector('#confirm-add-btn').onclick = async () => {
-            const uid = modal.querySelector('#member-to-add').value;
-            if(!uid) return;
-            await assignUsersToGroup(currentGroup.id, [uid]);
-            showToast('העובד התווסף בהצלחה');
-            modal.remove();
-            showGroupDetail(currentGroup.id, currentGroup.name);
-            renderTable();
-        };
+            `,
+            footer: `
+                <button class="btn btn-primary w-full" id="confirm-add-btn">הוסף</button>
+                <button class="btn btn-outline w-full" data-close>ביטול</button>
+            `
+        });
+
+        const confirmBtn = document.getElementById('confirm-add-btn');
+        if (confirmBtn) {
+            confirmBtn.onclick = async () => {
+                const uid = document.getElementById('member-to-add').value;
+                if(!uid) return;
+                
+                confirmBtn.disabled = true;
+                confirmBtn.innerHTML = `<i class='bx bx-loader-alt bx-spin'></i> מוסיף...`;
+                
+                try {
+                    await assignUsersToGroup(currentGroup.id, [uid]);
+                    showToast('העובד התווסף בהצלחה');
+                    document.querySelector('.modal-overlay')?.remove();
+                    showGroupDetail(currentGroup.id, currentGroup.name);
+                    renderTable();
+                } catch (err) {
+                    showToast(err.message, 'error');
+                    confirmBtn.disabled = false;
+                    confirmBtn.innerHTML = `הוסף`;
+                }
+            };
+        }
     } catch (err) {
         showToast(err.message, 'error');
     }
@@ -268,40 +401,50 @@ export default async function renderAdminGroups(container) {
     });
   });
 
-  // Assign course to group
   container.querySelector('#assign-course-btn').onclick = async () => {
     if(!currentGroup) return;
     try {
         const courses = await fetchCourses();
-        const modal = document.createElement('div');
-        modal.style = `position: fixed; inset: 0; background: rgba(0,0,0,0.6); display: flex; align-items: center; justify-content: center; z-index: 9999; backdrop-filter: blur(4px);`;
-        modal.innerHTML = `
-            <div class="card" style="max-width: 400px; width: 90%; text-align: right;">
-                <h3 class="mb-2">הקצאת לומדה לקבוצה</h3>
-                <p class="text-sm text-muted mb-4">הלומדה תוקצה לכל '<strong>${currentGroup.name}</strong>'</p>
+        
+        showCustomModal({
+            title: 'הקצאת לומדה לקבוצה',
+            content: `
+                <p class="text-sm text-muted mb-4">הלומדה תוקצה לכל חברי '<strong>${currentGroup.name}</strong>'</p>
                 <div class="form-group">
                     <select class="form-control" id="course-to-assign">
                         <option value="">-- בחר לומדה --</option>
                         ${courses.map(c => `<option value="${c.id}">${c.title}</option>`).join('')}
                     </select>
                 </div>
-                <div class="flex gap-2 mt-4">
-                    <button class="btn btn-primary w-full" id="confirm-assign-btn">הקצה עכשיו</button>
-                    <button class="btn btn-outline w-full" id="close-asg-modal">ביטול</button>
-                </div>
-            </div>
-        `;
-        document.body.appendChild(modal);
-        modal.querySelector('#close-asg-modal').onclick = () => modal.remove();
-        modal.querySelector('#confirm-assign-btn').onclick = async () => {
-            const cid = modal.querySelector('#course-to-assign').value;
-            if(!cid) return;
-            await assignCourseToGroup(currentGroup.id, cid);
-            showToast('הלומדה הוקצתה לקבוצה');
-            modal.remove();
-            showGroupDetail(currentGroup.id, currentGroup.name);
-            renderTable();
-        };
+            `,
+            footer: `
+                <button class="btn btn-primary w-full" id="confirm-assign-btn">הקצה עכשיו</button>
+                <button class="btn btn-outline w-full" data-close>ביטול</button>
+            `
+        });
+
+        const confirmBtn = document.getElementById('confirm-assign-btn');
+        if (confirmBtn) {
+            confirmBtn.onclick = async () => {
+                const cid = document.getElementById('course-to-assign').value;
+                if(!cid) return;
+
+                confirmBtn.disabled = true;
+                confirmBtn.innerHTML = `<i class='bx bx-loader-alt bx-spin'></i> מקצה...`;
+
+                try {
+                    await assignCourseToGroup(currentGroup.id, cid);
+                    showToast('הלומדה הוקצתה לקבוצה');
+                    document.querySelector('.modal-overlay')?.remove();
+                    showGroupDetail(currentGroup.id, currentGroup.name);
+                    renderTable();
+                } catch (err) {
+                    showToast(err.message, 'error');
+                    confirmBtn.disabled = false;
+                    confirmBtn.innerHTML = `הקצה עכשיו`;
+                }
+            };
+        }
     } catch(err) {
         showToast(err.message, 'error');
     }

@@ -12,12 +12,36 @@ export async function checkAuth() {
   if (supabase) {
     const { data: { session }, error } = await supabase.auth.getSession();
     if (error || !session) return null;
-    return await fetchUserProfile(session.user.id);
+    
+    const realUser = await fetchUserProfile(session.user.id);
+    
+    // Check for impersonation
+    const stored = localStorage.getItem('lms.impersonation');
+    if (stored) {
+      const impData = JSON.parse(stored);
+      // Normalize to ensure both conventions are present
+      const impersonated = {
+          ...impData,
+          fullName: impData.fullName || impData.full_name,
+          full_name: impData.full_name || impData.fullName
+      };
+      // Ensure the original user metadata is attached for the "Stop" button
+      return { ...impersonated, originalRole: realUser.role, isImpersonating: true };
+    }
+    
+    return realUser;
   } else {
     // Mock
     const stored = localStorage.getItem('mock.auth.token');
     if (stored) {
       mockCurrentUser = JSON.parse(stored);
+      
+      const impStored = localStorage.getItem('lms.impersonation');
+      if (impStored) {
+          const impersonated = JSON.parse(impStored);
+          return { ...impersonated, originalRole: mockCurrentUser.role, isImpersonating: true };
+      }
+      
       return mockCurrentUser;
     }
     return null;
@@ -30,7 +54,9 @@ export async function login(email, password) {
     if (error) throw new Error(error.message);
     const userProfile = await fetchUserProfile(data.user.id);
     
-    // Update global state for synchronous router checks
+    // Clear any stale impersonation on fresh login
+    localStorage.removeItem('lms.impersonation');
+
     if (!window.__APP_STATE) window.__APP_STATE = {};
     window.__APP_STATE.user = userProfile;
     
@@ -43,6 +69,7 @@ export async function login(email, password) {
         if (user && password === '123456') {
            mockCurrentUser = user;
            localStorage.setItem('mock.auth.token', JSON.stringify(user));
+           localStorage.removeItem('lms.impersonation');
            resolve(user);
         } else {
            reject(new Error('שם משתמש או סיסמה שגויים (Mock)'));
@@ -53,6 +80,7 @@ export async function login(email, password) {
 }
 
 export async function logout() {
+  localStorage.removeItem('lms.impersonation');
   if (supabase) {
     await supabase.auth.signOut();
   } else {
@@ -61,6 +89,32 @@ export async function logout() {
   }
   if (window.__APP_STATE) window.__APP_STATE.user = null;
   window.location.hash = '#/login';
+}
+
+export async function impersonateUser(targetUser) {
+    console.log(`[LMS] Starting impersonation of ${targetUser.full_name}`);
+    
+    // Store in localStorage for persistence
+    localStorage.setItem('lms.impersonation', JSON.stringify(targetUser));
+    
+    // Update live state
+    const currentUser = getCurrentUserSync();
+    if (window.__APP_STATE) {
+        window.__APP_STATE.user = { 
+            ...targetUser, 
+            originalRole: currentUser?.originalRole || currentUser?.role,
+            isImpersonating: true 
+        };
+    }
+    
+    // Force reload to apply all changes across all pages/components
+    window.location.reload();
+}
+
+export async function stopImpersonating() {
+    console.log(`[LMS] Stopping impersonation`);
+    localStorage.removeItem('lms.impersonation');
+    window.location.reload();
 }
 
 async function fetchUserProfile(userId) {
@@ -109,9 +163,21 @@ async function fetchUserProfile(userId) {
 
 export function getCurrentUserSync() {
   if (supabase) {
-    // Requires pre-fetching from app root and injecting to window or state manager.
-    // For this architecture MVP, we read from window object if populated.
     return window.__APP_STATE?.user || null;
+  }
+  
+  // Mock logic
+  if (mockCurrentUser) {
+      const impStored = localStorage.getItem('lms.impersonation');
+      if (impStored) {
+          const impData = JSON.parse(impStored);
+          const impersonated = {
+              ...impData,
+              fullName: impData.fullName || impData.full_name,
+              full_name: impData.full_name || impData.fullName
+          };
+          return { ...impersonated, originalRole: mockCurrentUser.role, isImpersonating: true };
+      }
   }
   return mockCurrentUser;
 }
@@ -121,14 +187,8 @@ export function onAuthStatusChange(callback) {
     return supabase.auth.onAuthStateChange((event, session) => {
       console.log(`[LMS] Auth event: ${event}`);
       
-      // Update global state immediately if session exists
-      if (session?.user && !window.__APP_STATE?.user) {
-          console.log("[LMS] Session found, updating app state...");
-          // This will be populated properly by fetchUserProfile in main.js
-      }
-
       if (event === 'SIGNED_OUT') {
-        // Only redirect if we were actually logged in and now we are not
+        localStorage.removeItem('lms.impersonation');
         if (window.__APP_STATE?.user && !session) {
           console.warn("[LMS] Verified sign out, redirecting...");
           window.__APP_STATE.user = null;

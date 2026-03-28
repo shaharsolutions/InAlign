@@ -28,12 +28,31 @@ export async function fetchOrganizations() {
     return [...mockOrgs];
   }
 }
+export async function fetchOrganizationById(id) {
+    if (supabase) {
+        const { data, error } = await supabase
+            .from('organizations')
+            .select('*')
+            .eq('id', id)
+            .single();
+        if (error) throw new Error(error.message);
+        return data;
+    } else {
+        return mockOrgs.find(o => o.id === id);
+    }
+}
 
 export async function createOrganization(name, color = '#0066FF', logoUrl = '') {
   if (supabase) {
     const { data, error } = await supabase
       .from('organizations')
-      .insert([{ name, primary_color: color, logo_url: logoUrl }])
+      .insert([{ 
+          name, 
+          primary_color: color, 
+          logo_url: logoUrl,
+          welcome_message: '',
+          auto_enroll_course_ids: []
+      }])
       .select()
       .single();
     if (error) throw new Error(error.message);
@@ -45,11 +64,17 @@ export async function createOrganization(name, color = '#0066FF', logoUrl = '') 
   }
 }
 
-export async function updateOrganization(id, name, color, logoUrl) {
+export async function updateOrganization(id, name, color, logoUrl, welcomeMessage, autoEnrollIds) {
   if (supabase) {
+    const updateData = { name };
+    if (color !== undefined) updateData.primary_color = color;
+    if (logoUrl !== undefined) updateData.logo_url = logoUrl;
+    if (welcomeMessage !== undefined) updateData.welcome_message = welcomeMessage;
+    if (autoEnrollIds !== undefined) updateData.auto_enroll_course_ids = Array.isArray(autoEnrollIds) ? autoEnrollIds : (autoEnrollIds ? [autoEnrollIds] : []);
+
     const { data, error } = await supabase
       .from('organizations')
-      .update({ name, primary_color: color, logo_url: logoUrl })
+      .update(updateData)
       .eq('id', id)
       .select()
       .single();

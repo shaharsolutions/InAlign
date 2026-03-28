@@ -1,5 +1,6 @@
 import { getCurrentUserSync } from '../api/authApi.js'
 import { fetchLearnerAssignments } from '../api/progressApi.js'
+import { fetchOrganizationById } from '../api/orgApi.js'
 
 export default async function renderLearnerDashboard(container) {
   const user = getCurrentUserSync()
@@ -9,8 +10,10 @@ export default async function renderLearnerDashboard(container) {
       <h1 class="mb-2">לוח למידה אישי</h1>
       <p class="text-muted">עקוב אחר ההתקדמות שלך והקפד להשלים משימות בזמן</p>
     </div>
+
+    <div id="welcome-message-container"></div>
     
-    <div class="stats grid grid-cols-3 mb-4 slide-up" style="gap: 1.5rem;">
+    <div class="stats grid grid-cols-3 mb-4 slide-up" style="gap: 2rem;">
       <div class="card flex items-center justify-between">
          <div>
             <h4 class="mb-1 text-muted">לומדות חובה לביצוע</h4>
@@ -34,7 +37,7 @@ export default async function renderLearnerDashboard(container) {
       </div>
     </div>
     
-    <div id="learner-courses" class="grid grid-cols-3 slide-up" style="gap: 1.5rem;">
+    <div id="learner-courses" class="grid grid-cols-3 slide-up" style="gap: 2rem;">
       <div class="text-center" style="grid-column: span 3; padding: 3rem;">
         <i class='bx bx-loader bx-spin' style="font-size: 2rem;"></i> במידה ויש לומדות מוקצות הן יטענו...
       </div>
@@ -42,9 +45,25 @@ export default async function renderLearnerDashboard(container) {
   `
 
   const coursesContainer = container.querySelector('#learner-courses');
+  const welcomeContainer = container.querySelector('#welcome-message-container');
   
   try {
-    const assignments = await fetchLearnerAssignments();
+    const [assignments, org] = await Promise.all([
+      fetchLearnerAssignments(),
+      user.orgId ? fetchOrganizationById(user.orgId) : Promise.resolve(null)
+    ]);
+
+    // Handle Welcome Message
+    if (org?.welcome_message) {
+        welcomeContainer.innerHTML = `
+           <div class="card mb-6 slide-up" style="background: linear-gradient(135deg, hsl(var(--color-primary)/0.08) 0%, transparent 100%); border-right: 5px solid hsl(var(--color-primary)); padding: 1.25rem 2rem;">
+              <div class="flex gap-4 items-center">
+                 <div style="font-size: 1.5rem; color: hsl(var(--color-primary)); flex-shrink: 0;"><i class='bx bxs-megaphone'></i></div>
+                 <p style="margin:0; font-weight: 500; font-size: 1.1rem; line-height: 1.4; white-space: pre-wrap; display: -webkit-box; -webkit-line-clamp: 5; -webkit-box-orient: vertical; overflow: hidden;">${org.welcome_message}</p>
+              </div>
+           </div>
+        `;
+    }
     
     if (assignments.length === 0) {
       coursesContainer.innerHTML = `<div class="card" style="grid-column: span 3; padding: 3rem; text-align: center;">בינתיים אין לומדות שצריך לבצע</div>`;

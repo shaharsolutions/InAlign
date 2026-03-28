@@ -7,6 +7,7 @@ import renderAdminGroups from './pages/admin-groups.js'
 import renderLearnerDashboard from './pages/learner.js'
 import renderPlayer from './pages/player.js'
 import renderSuperAdminOrgs from './pages/superadmin-orgs.js'
+import renderSuperAdminSettings from './pages/superadmin-settings.js'
 
 /**
  * Route Configuration
@@ -57,6 +58,12 @@ export const routes = [
     path: '#/superadmin/assignments',
     component: renderAdminAssignments,
     roles: ['super_admin'],
+    layout: 'default'
+  },
+  {
+    path: '#/admin/settings',
+    component: renderSuperAdminSettings,
+    roles: ['admin', 'org_admin', 'super_admin'],
     layout: 'default'
   },
   {

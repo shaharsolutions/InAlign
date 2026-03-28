@@ -10,6 +10,7 @@ export function showConfirmModal({ title, message, type = 'danger', confirmText 
     const color = type === 'danger' ? 'hsl(var(--color-danger))' : 'hsl(var(--color-primary))';
     const icon = type === 'danger' ? 'bx-error-alt' : 'bx-info-circle';
     
+    modal.className = 'modal-overlay';
     modal.style = `
       position: fixed; inset: 0; background: rgba(0,0,0,0.6); 
       display: flex; align-items: center; justify-content: center; 
@@ -42,7 +43,6 @@ export function showConfirmModal({ title, message, type = 'danger', confirmText 
         
         modal.querySelector('#modal-confirm').onclick = async () => {
             const btn = modal.querySelector('#modal-confirm');
-            const originalHtml = btn.innerHTML;
             btn.disabled = true;
             btn.innerHTML = `<i class='bx bx-loader-alt bx-spin'></i> מבצע...`;
             
@@ -60,8 +60,153 @@ export function showConfirmModal({ title, message, type = 'danger', confirmText 
 }
 
 /**
- * Show a simple toast-like message (can be expanded)
+ * Show a modern alert modal (HTML replacement for window.alert)
  */
+export function showAlert({ title = 'הודעה', message, type = 'info', confirmText = 'הבנתי' }) {
+    const modal = document.createElement('div');
+    const color = type === 'danger' ? 'hsl(var(--color-danger))' : 
+                  type === 'success' ? '#10b981' : 
+                  'hsl(var(--color-primary))';
+    const icon = type === 'danger' ? 'bx-error-alt' : 
+                 type === 'success' ? 'bx-check-circle' : 
+                 'bx-info-circle';
+    
+    modal.className = 'modal-overlay';
+    modal.style = `
+      position: fixed; inset: 0; background: rgba(0,0,0,0.6); 
+      display: flex; align-items: center; justify-content: center; 
+      z-index: 9999; backdrop-filter: blur(4px); animation: fadeIn 0.3s ease;
+    `;
+    
+    modal.innerHTML = `
+      <div class="card slide-up" style="max-width: 450px; width: 90%; text-align: center; padding: 2.5rem; border-top: 5px solid ${color};">
+        <div style="font-size: 3.5rem; color: ${color}; margin-bottom: 1rem;">
+           <i class='bx ${icon}'></i>
+        </div>
+        <h2 class="mb-2">${title}</h2>
+        <p class="text-muted mb-6" style="font-size: 1.1rem; line-height: 1.6;">${message}</p>
+        <div class="flex justify-center">
+           <button class="btn btn-primary px-12" id="modal-ok">
+              ${confirmText}
+           </button>
+        </div>
+      </div>
+    `;
+    
+    document.body.appendChild(modal);
+
+    return new Promise((resolve) => {
+        modal.querySelector('#modal-ok').onclick = () => {
+            modal.remove();
+            resolve(true);
+        };
+    });
+}
+
+/**
+ * Show a modern prompt modal (HTML replacement for window.prompt)
+ */
+export function showPrompt({ title, message, defaultValue = '', placeholder = '', confirmText = 'אישור', cancelText = 'ביטול' }) {
+    const modal = document.createElement('div');
+    const color = 'hsl(var(--color-primary))';
+    
+    modal.className = 'modal-overlay';
+    modal.style = `
+      position: fixed; inset: 0; background: rgba(0,0,0,0.6); 
+      display: flex; align-items: center; justify-content: center; 
+      z-index: 9999; backdrop-filter: blur(4px); animation: fadeIn 0.3s ease;
+    `;
+    
+    modal.innerHTML = `
+      <div class="card slide-up" style="max-width: 450px; width: 90%; padding: 2.5rem; border-top: 5px solid ${color};">
+        <h2 class="mb-2 text-center">${title}</h2>
+        <p class="text-muted mb-4 text-center" style="font-size: 1rem;">${message}</p>
+        
+        <div class="form-group mb-6">
+            <input type="text" id="prompt-input" class="form-control" value="${defaultValue}" placeholder="${placeholder}" autofocus style="height: 48px;">
+        </div>
+
+        <div class="flex gap-3 justify-center">
+           <button class="btn btn-primary px-8" id="modal-confirm">
+              ${confirmText}
+           </button>
+           <button class="btn btn-outline px-8" id="modal-cancel">${cancelText}</button>
+        </div>
+      </div>
+    `;
+    
+    document.body.appendChild(modal);
+    
+    const input = modal.querySelector('#prompt-input');
+    input.focus();
+    input.select();
+
+    return new Promise((resolve) => {
+        const handleConfirm = () => {
+            const value = input.value;
+            modal.remove();
+            resolve(value);
+        };
+
+        modal.querySelector('#modal-cancel').onclick = () => {
+            modal.remove();
+            resolve(null);
+        };
+        
+        modal.querySelector('#modal-confirm').onclick = handleConfirm;
+        
+        input.onkeydown = (e) => {
+            if (e.key === 'Enter') handleConfirm();
+            if (e.key === 'Escape') {
+                modal.remove();
+                resolve(null);
+            }
+        };
+    });
+}
+
+/**
+ * Show a custom modal with any HTML content
+ */
+export function showCustomModal({ title, content, footer, onClose }) {
+    const modal = document.createElement('div');
+    modal.className = 'modal-overlay';
+    
+    modal.innerHTML = `
+      <div class="card slide-up" style="max-width: 500px; width: 95%; padding: 2rem; border-top: 5px solid hsl(var(--color-primary)); text-align: right;">
+        <div class="flex justify-between items-center mb-6">
+            <h2 class="m-0">${title}</h2>
+            <button class="btn btn-outline p-1" id="modal-close-icon" style="border:none;"><i class='bx bx-x' style="font-size: 1.5rem;"></i></button>
+        </div>
+        <div class="modal-body mb-6">
+            ${content}
+        </div>
+        <div class="modal-footer flex gap-3">
+            ${footer || ''}
+        </div>
+      </div>
+    `;
+    
+    document.body.appendChild(modal);
+
+    return new Promise((resolve) => {
+        const close = () => {
+            modal.remove();
+            if (onClose) onClose();
+            resolve(null);
+        };
+        
+        modal.querySelector('#modal-close-icon').onclick = close;
+        
+        // Expose close to children
+        modal.close = close;
+        
+        // Any buttons with 'data-close' will close the modal
+        modal.querySelectorAll('[data-close]').forEach(btn => {
+            btn.onclick = close;
+        });
+    });
+}
 export function showToast(message, type = 'success') {
     const toast = document.createElement('div');
     const bg = type === 'success' ? '#10b981' : type === 'warning' ? '#f59e0b' : '#ef4444';
@@ -377,6 +522,68 @@ export async function showBulkGroupModal({ users, groups, onAssign }) {
                 console.error("Bulk group assign failed:", err);
                 btn.disabled = false;
                 btn.innerHTML = `<i class='bx bx-group'></i> הוסף לקבוצה`;
+            }
+        };
+    });
+}
+
+/**
+ * Show a modal for bulk role assignment
+ */
+export async function showBulkRoleModal({ users, onAssign }) {
+    const modal = document.createElement('div');
+    modal.style = `
+      position: fixed; inset: 0; background: rgba(0,0,0,0.6); 
+      display: flex; align-items: center; justify-content: center; 
+      z-index: 9999; backdrop-filter: blur(4px); animation: fadeIn 0.3s ease;
+    `;
+    
+    modal.innerHTML = `
+      <div class="card slide-up" style="max-width: 500px; width: 95%; padding: 2rem; border-top: 5px solid hsl(var(--color-primary)); text-align: right;">
+        <h2 class="mb-2">שינוי תפקיד קבוצתי</h2>
+        <p class="text-muted mb-4">בחר את התפקיד החדש עבור <strong>${users.length}</strong> המשתמשים שנבחרו.</p>
+        
+        <form id="bulk-role-form" style="text-align: right;">
+            <div class="form-group">
+                <label class="form-label">בחר תפקיד במערכת</label>
+                <select class="form-control" id="bulk-role-select" required style="height: 48px;">
+                    <option value="">-- בחר תפקיד --</option>
+                    <option value="learner">לומד (Learner)</option>
+                    <option value="org_admin">מנהל הדרכה (Admin)</option>
+                </select>
+            </div>
+            
+            <div class="flex gap-3 mt-6">
+                <button type="submit" class="btn btn-primary w-full justify-center">
+                    <i class='bx bx-user-check'></i> עדכן תפקיד לכולם
+                </button>
+                <button type="button" id="bulk-role-cancel-btn" class="btn btn-outline w-full justify-center">ביטול</button>
+            </div>
+        </form>
+      </div>
+    `;
+    
+    document.body.appendChild(modal);
+
+    return new Promise((resolve) => {
+        const close = () => { modal.remove(); resolve(null); };
+        modal.querySelector('#bulk-role-cancel-btn').onclick = close;
+        
+        modal.querySelector('#bulk-role-form').onsubmit = async (e) => {
+            e.preventDefault();
+            const role = modal.querySelector('#bulk-role-select').value;
+            const btn = modal.querySelector('button[type="submit"]');
+            
+            btn.disabled = true;
+            btn.innerHTML = `<i class='bx bx-loader-alt bx-spin'></i> מעדכן...`;
+            
+            try {
+                if (onAssign) await onAssign(role);
+                close();
+            } catch (err) {
+                console.error("Bulk role assign failed:", err);
+                btn.disabled = false;
+                btn.innerHTML = `<i class='bx bx-user-check'></i> עדכן תפקיד לכולם`;
             }
         };
     });
