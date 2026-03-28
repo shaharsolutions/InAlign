@@ -230,56 +230,27 @@ export default async function renderPlayer(container) {
         throw new Error("לא נמצאו קבצי לומדה עבור קורס זה. ייתכן שההעלאה נכשלה או שהקבצים נמחקו.");
     }
 
-    const baseDir = course.fileUrl.substring(0, course.fileUrl.lastIndexOf('/') + 1);
+    if ('serviceWorker' in navigator) {
+      try {
+        await navigator.serviceWorker.register('/scorm-sw.js');
+        await navigator.serviceWorker.ready;
+      } catch (err) {
+        console.error('[InAlign] SW registration failed:', err);
+      }
+    }
 
-    const response = await fetch(course.fileUrl);
-    const html = await response.text();
-
-    const injection = `
-      <script>
-        // 1. Provide SCORM API to the course
-        window.API = window.parent.API;
-        window.API_1484_11 = window.parent.API;
-
-        // 2. Resolve relative paths for dynamic loading (XHR/Fetch)
-        // This is critical because window.location is 'about:srcdoc'
-        (function() {
-          const base = "${baseDir}";
-          
-          const originalOpen = XMLHttpRequest.prototype.open;
-          XMLHttpRequest.prototype.open = function(method, url) {
-            if (typeof url === 'string' && !url.match(/^(http|https|\\/\\/|blob:|data:)/)) {
-              const cleanUrl = url.startsWith('/') ? url.substring(1) : url;
-              arguments[1] = base + cleanUrl;
-            }
-            return originalOpen.apply(this, arguments);
-          };
-
-          const originalFetch = window.fetch;
-          window.fetch = function(input, init) {
-            if (typeof input === 'string' && !input.match(/^(http|https|\\/\\/|blob:|data:)/)) {
-              const cleanUrl = input.startsWith('/') ? input.substring(1) : input;
-              input = base + cleanUrl;
-            }
-            return originalFetch(input, init);
-          };
-        })();
-      </script>
-    `;
-
-    // Strategy: 
-    // 1. Force a <base> tag at the very top of the head.
-    // 2. Replace relative paths for the initial assets (stylesheets/scripts) to be absolute.
-    //    This bypasses potential browser bugs where <base> is ignored for initial loads in srcdoc.
-    let processedHtml = html.replace(/<head>/i, `<head><base href="${baseDir}">` + injection);
+    let proxyUrl = course.fileUrl;
+    try {
+       const urlObj = new URL(course.fileUrl);
+       const pathPart = urlObj.pathname.split('scorm_packages/')[1];
+       if (pathPart) {
+           proxyUrl = '/scorm-proxy/' + pathPart + urlObj.search;
+       }
+    } catch(e) {
+       console.error('[InAlign] URL parse error', e);
+    }
     
-    // Explicitly prefix paths that often fail in Storyline/srcdoc on initial load
-    processedHtml = processedHtml.replace(
-      /(src|href)=["'](?:\.\/)?(html5|lib|mobile|data)\//g, 
-      (match, p1, p2) => `${p1}="${baseDir}${p2}/`
-    );
-
-    iframe.srcdoc = processedHtml;
+    iframe.src = proxyUrl;
     
     iframe.onload = () => { 
         document.getElementById('iframe-loader').style.display = 'none'; 
