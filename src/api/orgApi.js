@@ -12,7 +12,7 @@ export async function fetchOrganizations() {
       const { data: orgs, error } = await supabase
         .from('organizations')
         .select(`
-          id, name, primary_color, created_at,
+          id, name, primary_color, created_at, logo_url,
           profiles:profiles(count),
           courses:courses(count)
         `);
@@ -29,27 +29,27 @@ export async function fetchOrganizations() {
   }
 }
 
-export async function createOrganization(name, color = '#0066FF') {
+export async function createOrganization(name, color = '#0066FF', logoUrl = '') {
   if (supabase) {
     const { data, error } = await supabase
       .from('organizations')
-      .insert([{ name, primary_color: color }])
+      .insert([{ name, primary_color: color, logo_url: logoUrl }])
       .select()
       .single();
     if (error) throw new Error(error.message);
     return data;
   } else {
-    const newOrg = { id: 'org-' + Date.now(), name, created_at: new Date().toLocaleDateString('he-IL'), total_courses: 0, total_users: 0 };
+    const newOrg = { id: 'org-' + Date.now(), name, created_at: new Date().toLocaleDateString('he-IL'), total_courses: 0, total_users: 0, primary_color: color, logo_url: logoUrl };
     mockOrgs.push(newOrg);
     return newOrg;
   }
 }
 
-export async function updateOrganization(id, name, color) {
+export async function updateOrganization(id, name, color, logoUrl) {
   if (supabase) {
     const { data, error } = await supabase
       .from('organizations')
-      .update({ name, primary_color: color })
+      .update({ name, primary_color: color, logo_url: logoUrl })
       .eq('id', id)
       .select()
       .single();

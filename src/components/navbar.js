@@ -1,4 +1,5 @@
 import { logout } from '../auth.js'
+import { applyOrganizationStyles } from '../lib/ui.js'
 
 export function renderNavbar(user) {
   const nav = document.createElement('nav')
@@ -22,8 +23,7 @@ export function renderNavbar(user) {
   nav.innerHTML = `
     <div class="container navbar-container">
       <div class="navbar-brand">
-        <i class='bx bx-hive'></i>
-        <span>LMS Enterprise</span>
+        ${user.orgLogo ? `<img src="${user.orgLogo}" alt="${user.orgName}" style="height: 35px; max-width: 180px; object-fit: contain;">` : `<i class='bx bx-hive'></i> <span>LMS Enterprise</span>`}
       </div>
       <div class="navbar-nav">
         ${linksStr}
@@ -48,6 +48,7 @@ export function renderNavbar(user) {
         window.__APP_STATE.user.originalRole = null;
         window.__APP_STATE.user.orgId = window.__APP_STATE.user.originalOrgId || null;
         window.__APP_STATE.user.orgName = 'ניהול ראשי';
+        applyOrganizationStyles(window.__APP_STATE.user);
         window.location.hash = '#/superadmin/orgs';
       });
     }

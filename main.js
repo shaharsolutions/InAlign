@@ -1,5 +1,6 @@
 import { initRouter } from './src/router.js'
 import { checkAuth, onAuthStatusChange } from './src/auth.js'
+import { applyOrganizationStyles } from './src/lib/ui.js'
 
 document.addEventListener('DOMContentLoaded', async () => {
   const appContainer = document.getElementById('app')
@@ -8,11 +9,14 @@ document.addEventListener('DOMContentLoaded', async () => {
   try {
     const user = await checkAuth()
     
-    // Set global data and init router
+    // Set global data and apply branding
     window.__APP_STATE = { user }
+    applyOrganizationStyles(user)
     
     // Listen for session invalidations
-    onAuthStatusChange();
+    onAuthStatusChange((event) => {
+      if (event === 'SIGNED_OUT') applyOrganizationStyles(null);
+    });
 
     initRouter(appContainer)
     

@@ -1,4 +1,5 @@
 import { login } from '../auth.js'
+import { applyOrganizationStyles } from '../lib/ui.js'
 
 export default function renderLogin(container) {
   container.innerHTML = `
@@ -17,7 +18,7 @@ export default function renderLogin(container) {
       <!-- Main Login Section -->
       <main class="login-main">
         <div class="blob" style="top: 10%; right: 10%;"></div>
-        <div class="blob" style="bottom: 10%; left: 10%; background: blue; opacity: 0.05;"></div>
+        <div class="blob" style="bottom: 10%; left: 10%; background: hsl(var(--color-primary)); opacity: 0.05;"></div>
         
         <div class="login-card-modern fade-in">
           <div class="login-header-modern">
@@ -87,6 +88,9 @@ export default function renderLogin(container) {
       const pass = document.getElementById('password').value
       const user = await login(email, pass)
       
+      // Apply Organization branding (colors, logo)
+      applyOrganizationStyles(user);
+
       // Navigate on success based on role
       if (user.role === 'super_admin') window.location.hash = '#/superadmin/orgs'
       else if (user.role === 'org_admin') window.location.hash = '#/admin'

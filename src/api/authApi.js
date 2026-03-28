@@ -4,8 +4,8 @@ import { supabase } from '../lib/supabase.js'
 let mockCurrentUser = null;
 const MOCK_PROFILES = {
   'admin@test.com': { id: 'usr-1', org_id: 'org-1', role: 'super_admin', full_name: 'מנהל על מרכזי' },
-  'org@test.com': { id: 'usr-2', org_id: 'org-2', role: 'org_admin', full_name: 'מנהל הדרכה הייטק' },
-  'learner@test.com': { id: 'usr-3', org_id: 'org-2', role: 'learner', full_name: 'ישראל הלומד ציבורי' }
+  'org@test.com': { id: 'usr-2', org_id: 'org-2', role: 'org_admin', full_name: 'מנהל הדרכה הייטק', org_color: '#198754' },
+  'learner@test.com': { id: 'usr-3', org_id: 'org-2', role: 'learner', full_name: 'ישראל הלומד ציבורי', org_color: '#198754' }
 };
 
 export async function checkAuth() {
@@ -85,15 +85,15 @@ async function fetchUserProfile(userId) {
     throw new Error('לא נמצא פרופיל משתמש במערכת. פנה למנהל המערכת.');
   }
 
-  // 2. Separately fetch organization name
-  let orgName = null;
+  // 2. Separately fetch organization settings
+  let orgSettings = null;
   if (profile.org_id) {
     const { data: orgData } = await supabase
       .from('organizations')
-      .select('name')
+      .select('name, primary_color, logo_url')
       .eq('id', profile.org_id);
     
-    if (orgData && orgData.length > 0) orgName = orgData[0].name;
+    if (orgData && orgData.length > 0) orgSettings = orgData[0];
   }
 
   return {
@@ -101,7 +101,9 @@ async function fetchUserProfile(userId) {
     fullName: profile.full_name,
     role: profile.role,
     orgId: profile.org_id,
-    orgName: orgName
+    orgName: orgSettings?.name || null,
+    orgColor: orgSettings?.primary_color || null,
+    orgLogo: orgSettings?.logo_url || null
   };
 }
 

@@ -1,6 +1,6 @@
 import { fetchOrganizations, createOrganization, updateOrganization, deleteOrganization } from '../api/orgApi.js'
 import { resetOrgProgress } from '../api/progressApi.js'
-import { showConfirmModal, showToast } from '../lib/ui.js'
+import { showConfirmModal, showToast, applyOrganizationStyles } from '../lib/ui.js'
 
 export default async function renderSuperAdminOrgs(container) {
   container.innerHTML = `
@@ -18,10 +18,27 @@ export default async function renderSuperAdminOrgs(container) {
                <label class="form-label" for="org-name">שם הארגון <span style="color: hsl(var(--color-danger));">*</span></label>
                <input class="form-control" type="text" id="org-name" required placeholder="לדוגמה: אלביט מערכות">
             </div>
-            <div class="form-group" style="text-align: right;">
-               <label class="form-label" for="org-color">צבע ראשי (White License)</label>
-               <input class="form-control" type="color" id="org-color" value="#0066FF" style="height: 45px;">
-            </div>
+             <div class="form-group" style="text-align: right;">
+                <label class="form-label" for="org-logo">קישור ללוגו (URL)</label>
+                <input class="form-control" type="url" id="org-logo" placeholder="https://domain.com/logo.png">
+             </div>
+             <div class="form-group" style="text-align: right;">
+                <label class="form-label" for="org-color">צבע ראשי (White License)</label>
+                <div style="display: flex; gap: 12px; align-items: center; flex-direction: row-reverse;">
+                  <div style="position: relative; width: 48px; height: 48px; overflow: hidden; border-radius: 10px; border: 1px solid hsl(var(--border-color)); box-shadow: var(--shadow-sm); flex-shrink: 0;">
+                    <input type="color" id="org-color" value="#0066FF" style="position: absolute; top: -10px; left: -10px; width: 80px; height: 80px; cursor: pointer; border: none; padding: 0;">
+                  </div>
+                  <div style="flex: 1; position: relative; direction: ltr;">
+                    <span style="position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: hsl(var(--text-muted)); font-weight: 700; font-size: 0.75rem; letter-spacing: 0.05em; font-family: var(--font-en); pointer-events: none;">HEX</span>
+                    <input class="form-control" type="text" id="org-color-hex" value="#0066FF" placeholder="#0066FF" maxlength="7" style="padding-left: 48px; font-family: var(--font-en); font-weight: 600; text-transform: uppercase; background: hsl(var(--bg-surface-hover)/0.3); border-color: hsl(var(--border-color)); height: 48px;">
+                  </div>
+                </div>
+                <div class="color-presets mt-4" style="display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; margin-top: 1.25rem;">
+                  ${['#0066FF', '#198754', '#DC3545', '#FFC107', '#6610F2', '#FD7E14', '#20C997', '#0DCAF0', '#343A40', '#6C757D'].map(c => `
+                    <div class="color-preset-item" data-color="${c}" style="width: 26px; height: 26px; background: ${c}; border-radius: 6px; cursor: pointer; border: 2px solid transparent; transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); box-shadow: 0 1px 2px rgba(0,0,0,0.1);" title="${c}" onmouseover="this.style.transform='translateY(-2px)'; this.style.borderColor='white'; this.style.boxShadow='0 4px 6px rgba(0,0,0,0.1)';" onmouseout="this.style.transform='translateY(0)'; this.style.borderColor='transparent'; this.style.boxShadow='0 1px 2px rgba(0,0,0,0.1)';"></div>
+                  `).join('')}
+                </div>
+             </div>
             
             <input type="hidden" id="edit-org-id" value="">
             <button id="org-submit-btn" type="submit" class="btn btn-primary w-full justify-center mt-4">
@@ -40,11 +57,12 @@ export default async function renderSuperAdminOrgs(container) {
          <table class="table" id="orgs-table">
             <thead>
                <tr>
-                  <th>שם הארגון</th>
+                  <th style="width: 60px;"></th>
+                  <th style="min-width: 180px;">שם הארגון</th>
                   <th>משתמשים</th>
                   <th>לומדות</th>
                   <th>תאריך הקמה</th>
-                  <th>פעולות</th>
+                  <th style="text-align: left;">פעולות</th>
                </tr>
             </thead>
             <tbody>
@@ -60,19 +78,22 @@ export default async function renderSuperAdminOrgs(container) {
 
   async function renderTable() {
     try {
-      tableBody.innerHTML = `<tr><td colspan="5" style="text-align: center;"><i class='bx bx-loader bx-spin'></i> טוען...</td></tr>`
+      tableBody.innerHTML = `<tr><td colspan="6" style="text-align: center;"><i class='bx bx-loader bx-spin'></i> טוען...</td></tr>`
       const orgs = await fetchOrganizations()
       console.log(`[LMS] Table Render: Fetched ${orgs.length} organizations.`);
       if (orgs.length === 0) {
-        tableBody.innerHTML = `<tr><td colspan="5" style="text-align: center;" class="text-muted">אין ארגונים במערכת</td></tr>`
+        tableBody.innerHTML = `<tr><td colspan="6" style="text-align: center;" class="text-muted">אין ארגונים במערכת</td></tr>`
         return
       }
 
       tableBody.innerHTML = orgs.map(o => `
         <tr data-id="${o.id}">
-           <td>
-              <div style="font-weight: 500;">${o.name}</div>
-              <div class="text-xs text-muted font-mono" style="user-select: all; cursor: pointer;" title="לחץ להעתקה" onclick="navigator.clipboard.writeText('${o.id}'); showToast('המזהה הועתק')">${o.id}</div>
+           <td style="width: 60px;">
+              ${o.logo_url ? `<img src="${o.logo_url}" alt="${o.name}" style="width: 40px; height: 40px; object-fit: contain; border-radius: 4px;">` : `<div style="width: 40px; height: 40px; background: hsl(var(--bg-surface-hover)); border-radius: 4px; display: flex; align-items: center; justify-content: center; color: hsl(var(--text-muted)); font-size: 1.25rem;"><i class='bx bx-image'></i></div>`}
+           </td>
+           <td style="white-space: nowrap;">
+              <div style="font-weight: 600; color: hsl(var(--text-main));">${o.name}</div>
+              <div class="text-xs text-muted font-mono" style="user-select: all; cursor: pointer; opacity: 0.7;" title="לחץ להעתקה" onclick="navigator.clipboard.writeText('${o.id}'); showToast('המזהה הועתק')">${o.id}</div>
            </td>
 
            <td>
@@ -85,7 +106,7 @@ export default async function renderSuperAdminOrgs(container) {
            <td>${o.created_at ? new Date(o.created_at).toLocaleDateString('he-IL') : '-'}</td>
            <td>
              <div class="flex gap-2">
-               <button class="btn btn-outline text-sm edit-org-btn" 
+               <button class="btn btn-outline text-sm edit-org-btn" data-logo="${o.logo_url || ''}" 
                  data-id="${o.id}" data-name="${o.name}" data-color="${o.primary_color || '#0066FF'}" 
                  title="עריכה">
                  <i class='bx bx-edit'></i>
@@ -140,7 +161,7 @@ export default async function renderSuperAdminOrgs(container) {
       
       await showConfirmModal({
         title: 'אזהרת איפוס ארגון',
-        message: `האם אתה בטוח שברצונך למחוק את <strong>כל נתוני اللמידה</strong> של ארגון <strong>${orgName}</strong>? פעולה זו אינה הפיכה.`,
+        message: `האם אתה בטוח שברצונך למחוק את <strong>כל נתוני הלמידה</strong> של ארגון <strong>${orgName}</strong>? פעולה זו אינה הפיכה.`,
         onConfirm: async () => {
             await resetOrgProgress(orgId);
             showToast(`כל נתוני הלמידה של ${orgName} אופסו`);
@@ -151,7 +172,10 @@ export default async function renderSuperAdminOrgs(container) {
     if (editBtn) {
       document.getElementById('edit-org-id').value = editBtn.dataset.id;
       document.getElementById('org-name').value = editBtn.dataset.name;
-      document.getElementById('org-color').value = editBtn.dataset.color || '#0066FF';
+      document.getElementById('org-logo').value = editBtn.dataset.logo || '';
+      const colorValue = editBtn.dataset.color || '#0066FF';
+      document.getElementById('org-color').value = colorValue;
+      document.getElementById('org-color-hex').value = colorValue.toUpperCase();
       document.getElementById('org-submit-btn').innerHTML = `<i class='bx bx-save'></i> שמור שינויים`;
       container.querySelector('.card h3').innerText = 'עריכת ארגון קיים';
       document.getElementById('org-cancel-edit').style.display = 'flex';
@@ -165,8 +189,37 @@ export default async function renderSuperAdminOrgs(container) {
       user.role = 'org_admin';
       user.orgId = enterBtn.dataset.id;
       user.orgName = enterBtn.dataset.name;
+      applyOrganizationStyles(user);
       window.location.hash = '#/admin';
     }
+  });
+
+  // Color Picker Sync Logic
+  const colorPicker = container.querySelector('#org-color');
+  const colorHex = container.querySelector('#org-color-hex');
+  const presetItems = container.querySelectorAll('.color-preset-item');
+
+  colorPicker.addEventListener('input', (e) => {
+    colorHex.value = e.target.value.toUpperCase();
+  });
+
+  colorHex.addEventListener('input', (e) => {
+    let val = e.target.value;
+    if (!val.startsWith('#')) val = '#' + val;
+    if (/^#[0-9A-F]{6}$/i.test(val)) {
+      colorPicker.value = val;
+    }
+  });
+
+  presetItems.forEach(item => {
+    item.addEventListener('click', () => {
+      const color = item.dataset.color;
+      colorPicker.value = color;
+      colorHex.value = color.toUpperCase();
+      // Simple feedback
+      item.style.transform = 'scale(0.9)';
+      setTimeout(() => item.style.transform = 'scale(1)', 100);
+    });
   });
 
   await renderTable()
@@ -175,6 +228,8 @@ export default async function renderSuperAdminOrgs(container) {
     form.reset();
     document.getElementById('edit-org-id').value = '';
     document.getElementById('org-submit-btn').innerHTML = `<i class='bx bx-plus-circle'></i> פתח סביבת הדרכה`;
+    document.getElementById('org-color-hex').value = '#0066FF';
+    document.getElementById('org-color').value = '#0066FF';
     container.querySelector('.card h3').innerText = 'יצירת ארגון חדש';
     document.getElementById('org-cancel-edit').style.display = 'none';
   });
@@ -184,6 +239,7 @@ export default async function renderSuperAdminOrgs(container) {
     const submitBtn = document.getElementById('org-submit-btn')
     const orgId = document.getElementById('edit-org-id').value;
     const orgName = document.getElementById('org-name').value;
+    const orgLogo = document.getElementById('org-logo').value;
     const orgColor = document.getElementById('org-color').value;
 
     submitBtn.disabled = true;
@@ -191,16 +247,18 @@ export default async function renderSuperAdminOrgs(container) {
     
     try {
       if (orgId) {
-        await updateOrganization(orgId, orgName, orgColor);
+        await updateOrganization(orgId, orgName, orgColor, orgLogo);
         showToast('הארגון עודכן');
       } else {
-        await createOrganization(orgName, orgColor);
+        await createOrganization(orgName, orgColor, orgLogo);
         showToast('הארגון נוצר בהצלחה');
       }
       await renderTable();
       form.reset();
       document.getElementById('edit-org-id').value = '';
       submitBtn.innerHTML = `<i class='bx bx-plus-circle'></i> פתח סביבת הדרכה`;
+      document.getElementById('org-color-hex').value = '#0066FF';
+      document.getElementById('org-color').value = '#0066FF';
       container.querySelector('.card h3').innerText = 'יצירת ארגון חדש';
       document.getElementById('org-cancel-edit').style.display = 'none';
     } catch (err) {

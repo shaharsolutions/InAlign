@@ -4,7 +4,7 @@ import { fetchGroups, assignUsersToGroup, createGroup } from '../api/groupsApi.j
 import { getCurrentUserSync } from '../api/authApi.js'
 import { showConfirmModal, showToast, showBulkGroupModal, showBulkOrgModal } from '../lib/ui.js'
 import { fetchOrganizations } from '../api/orgApi.js'
-import * as XLSX from 'xlsx'
+import * as XLSX from 'https://cdn.jsdelivr.net/npm/xlsx@0.18.5/+esm'
 
 export default async function renderAdminUsers(container) {
   const currentUser = getCurrentUserSync();
@@ -90,25 +90,25 @@ export default async function renderAdminUsers(container) {
          <form id="user-create-form" class="flex flex-wrap items-end" style="gap: 2px;">
             <div class="form-group" style="text-align: right; margin-bottom: 0; flex: 1; min-width: 240px;">
                <label class="form-label" for="user-name" style="font-size: 0.85rem; margin-bottom: 0.2rem;">שם מלא <span style="color: hsl(var(--color-danger));">*</span></label>
-               <input class="form-control" type="text" id="user-name" required placeholder="לדוגמה: משה כהן" style="height: 42px; padding-top: 0; padding-bottom: 0;">
+               <input class="form-control" type="text" id="user-name" required placeholder="לדוגמה: משה כהן" style="height: 44px; padding-top: 0; padding-bottom: 0;">
             </div>
             <div class="form-group" style="text-align: right; margin-bottom: 0; flex: 1; min-width: 240px;">
                <label class="form-label" for="user-email" style="font-size: 0.85rem; margin-bottom: 0.2rem;">כתובת אימייל <span style="color: hsl(var(--color-danger));">*</span></label>
-               <input class="form-control" type="email" id="user-email" required placeholder="moshe@company.com" style="height: 42px; padding-top: 0; padding-bottom: 0;">
+               <input class="form-control" type="email" id="user-email" required placeholder="moshe@company.com" style="height: 44px; padding-top: 0; padding-bottom: 0;">
             </div>
             <div class="form-group" style="text-align: right; margin-bottom: 0; flex: 1; min-width: 200px;">
                <label class="form-label" for="user-phone" style="font-size: 0.85rem; margin-bottom: 0.2rem;">מספר טלפון</label>
-               <input class="form-control" type="tel" id="user-phone" placeholder="050-0000000" style="height: 42px; padding-top: 0; padding-bottom: 0;">
+               <input class="form-control" type="tel" id="user-phone" placeholder="050-0000000" style="height: 44px; padding-top: 0; padding-bottom: 0;">
             </div>
             <div class="form-group" style="text-align: right; margin-bottom: 0; flex: 1; min-width: 200px;">
                <label class="form-label" for="user-password" style="font-size: 0.85rem; margin-bottom: 0.2rem;">סיסמה לעובד <span style="color: hsl(var(--color-danger));">*</span></label>
-               <input class="form-control" type="text" id="user-password" required placeholder="לפחות 6 תווים" style="height: 42px; padding-top: 0; padding-bottom: 0;">
+               <input class="form-control" type="text" id="user-password" required placeholder="לפחות 6 תווים" style="height: 44px; padding-top: 0; padding-bottom: 0;">
             </div>
             
             ${isSuperAdmin ? `
             <div class="form-group" style="text-align: right; margin-bottom: 0; flex: 1; min-width: 200px;">
                <label class="form-label" for="user-org" style="font-size: 0.85rem; margin-bottom: 0.2rem;">שיוך לארגון</label>
-               <select class="form-control" id="user-org" style="height: 42px; padding-top: 0; padding-bottom: 0;">
+               <select class="form-control" id="user-org" style="height: 44px; padding-top: 0; padding-bottom: 0;">
                   <option value="">-- בחר ארגון --</option>
                   ${organizations.map(o => `<option value="${o.id}">${o.name}</option>`).join('')}
                </select>
@@ -117,17 +117,17 @@ export default async function renderAdminUsers(container) {
 
             <div class="form-group" style="text-align: right; margin-bottom: 0; flex: 1; min-width: 200px;">
                <label class="form-label" for="user-role" style="font-size: 0.85rem; margin-bottom: 0.2rem;">תפקיד במערכת</label>
-               <select class="form-control" id="user-role" style="height: 42px; padding-top: 0; padding-bottom: 0;">
+               <select class="form-control" id="user-role" style="height: 44px; padding-top: 0; padding-bottom: 0;">
                   <option value="learner">לומד (Learner)</option>
                   <option value="org_admin">מנהל הדרכה (Admin)</option>
                </select>
             </div>
             
             <div style="display: flex; flex-direction: column; gap: 2px; margin-bottom: 0;">
-              <button type="submit" class="btn btn-primary" id="submit-btn" style="height: 42px; padding: 0 1.5rem; font-weight: 600; white-space: nowrap;">
+              <button type="submit" class="btn btn-primary" id="submit-btn" style="height: 44px; padding: 0 1.5rem; font-weight: 600; white-space: nowrap;">
                 <i class='bx bx-user-plus' style="font-size: 1.1rem;"></i> <span>צור חשבון</span>
               </button>
-              <button type="button" class="btn btn-outline hidden" id="cancel-edit-btn" style="height: 42px; white-space: nowrap; padding: 0 1.5rem;">
+              <button type="button" class="btn btn-outline hidden" id="cancel-edit-btn" style="height: 44px; white-space: nowrap; padding: 0 1.5rem;">
                 ביטול
               </button>
             </div>
@@ -150,31 +150,39 @@ export default async function renderAdminUsers(container) {
           </div>
 
           <!-- Search & Filters -->
-          <div class="flex flex-wrap gap-4 mb-6 items-center bg-muted/20 p-4 rounded-lg" style="background: hsla(var(--text-main), 0.03); border: 1px solid hsla(var(--text-main), 0.05);">
-            <div class="form-group mb-0" style="flex: 2; min-width: 200px;">
-              <div class="relative">
-                <i class='bx bx-search absolute' style="right: 12px; top: 50%; transform: translateY(-50%); color: hsla(var(--text-main), 0.4); z-index: 10;"></i>
-                <input type="text" id="user-search" class="form-control" placeholder="חיפוש לפי שם, אימייל או טלפון..." style="padding-right: 40px; height: 42px; width: 100%;">
-              </div>
+          <div class="flex flex-wrap gap-4 mb-6" style="background: hsla(var(--text-main), 0.03); border: 1px solid hsla(var(--text-main), 0.05); padding: 1rem; border-radius: var(--radius-lg); align-items: stretch;">
+            <!-- Search -->
+            <div class="form-group mb-0" style="flex: 2; min-width: 200px; position: relative; height: 46px;">
+              <i class='bx bx-search' style="position: absolute; right: 14px; top: 50%; transform: translateY(-50%); color: hsla(var(--text-main), 0.4); z-index: 10; font-size: 1.25rem; pointer-events: none;"></i>
+              <input type="text" id="user-search" class="form-control" placeholder="חיפוש לפי שם, אימייל או טלפון..." 
+                style="padding-right: 44px; height: 46px !important; width: 100%; padding-top: 0 !important; padding-bottom: 0 !important; line-height: 46px !important; border: 1px solid hsl(var(--border-color)) !important; box-sizing: border-box !important;">
             </div>
-            <div class="form-group mb-0" style="flex: 1; min-width: 150px;">
-              <select id="filter-role" class="form-control" style="height: 42px;">
+            
+            <!-- Role Filter -->
+            <div class="form-group mb-0" style="flex: 1; min-width: 150px; height: 46px;">
+              <select id="filter-role" class="form-control" 
+                style="height: 46px !important; padding: 0 1rem !important; line-height: 46px !important; border: 1px solid hsl(var(--border-color)) !important; box-sizing: border-box !important; appearance: auto;">
                 <option value="">כל התפקידים</option>
                 <option value="learner">עובד / לומד</option>
                 <option value="org_admin">מנהל הדרכה</option>
                 ${isSuperAdmin ? '<option value="super_admin">מנהל על</option>' : ''}
               </select>
             </div>
+            
+            <!-- Org Filter -->
             ${isSuperAdmin ? `
-            <div class="form-group mb-0" style="flex: 1; min-width: 180px;">
-              <select id="filter-org" class="form-control" style="height: 42px;">
+            <div class="form-group mb-0" style="flex: 1; min-width: 180px; height: 46px;">
+              <select id="filter-org" class="form-control" 
+                style="height: 46px !important; padding: 0 1rem !important; line-height: 46px !important; border: 1px solid hsl(var(--border-color)) !important; box-sizing: border-box !important; appearance: auto;">
                 <option value="">כל הארגונים</option>
                 ${organizations.map(o => `<option value="${o.id}">${o.name}</option>`).join('')}
               </select>
             </div>
             ` : ''}
-            <div id="results-count" class="text-xs text-muted font-medium ml-auto">
-              מציג 0 משתמשים
+            
+            <!-- Results Count -->
+            <div id="results-count" class="text-xs text-muted font-medium ml-auto" style="white-space: nowrap; height: 46px; display: flex; align-items: center; padding: 0 0.5rem;">
+              מציג 0 משתתפים
             </div>
           </div>
 
@@ -259,7 +267,7 @@ export default async function renderAdminUsers(container) {
 
     const countLabel = container.querySelector('#results-count');
     if (countLabel) {
-      countLabel.innerText = `מציג ${filteredUsers.length} מתוך ${allUsers.length} משתמשים`;
+      countLabel.innerText = `מציג ${filteredUsers.length} מתוך ${allUsers.length} משתתפים`;
     }
 
     if (!tableBody) return;

@@ -381,3 +381,69 @@ export async function showBulkGroupModal({ users, groups, onAssign }) {
         };
     });
 }
+
+/**
+ * Dynamic Branding: Apply organization primary color to CSS variables
+ */
+export function applyOrganizationStyles(user) {
+    // Super Admins (and impersonated ones) always use the system blue
+    if (!user || user.role === 'super_admin' || user.originalRole === 'super_admin') {
+        // Reset to default LMS blue
+        document.documentElement.style.setProperty('--color-primary', '216 100% 50%');
+        document.documentElement.style.setProperty('--color-primary-hover', '216 100% 45%');
+        return;
+    }
+
+    const orgColor = user.orgColor || (user.org_color); // Support different field names from DB/Mock
+
+    if (orgColor) {
+        const hsl = hexToHslComponents(orgColor);
+        document.documentElement.style.setProperty('--color-primary', `${hsl.h} ${hsl.s}% ${hsl.l}%`);
+        // Create a hover state by darkening the lightness by 5%
+        document.documentElement.style.setProperty('--color-primary-hover', `${hsl.h} ${hsl.s}% ${Math.max(0, hsl.l - 5)}%`);
+    } else {
+        // Reset to default LMS blue
+        document.documentElement.style.setProperty('--color-primary', '216 100% 50%');
+        document.documentElement.style.setProperty('--color-primary-hover', '216 100% 45%');
+    }
+}
+
+/**
+ * Convert Hex color string to HSL components
+ */
+function hexToHslComponents(hex) {
+    let r = 0, g = 0, b = 0;
+    // Clean the hex string
+    hex = hex.replace('#', '');
+    
+    if (hex.length === 3) {
+        r = parseInt(hex[0] + hex[0], 16);
+        g = parseInt(hex[1] + hex[1], 16);
+        b = parseInt(hex[2] + hex[2], 16);
+    } else if (hex.length === 6) {
+        r = parseInt(hex.substring(0, 2), 16);
+        g = parseInt(hex.substring(2, 4), 16);
+        b = parseInt(hex.substring(4, 6), 16);
+    }
+    
+    r /= 255; g /= 255; b /= 255;
+    let cmin = Math.min(r, g, b),
+        cmax = Math.max(r, g, b),
+        delta = cmax - cmin,
+        h = 0, s = 0, l = 0;
+
+    if (delta === 0) h = 0;
+    else if (cmax === r) h = ((g - b) / delta) % 6;
+    else if (cmax === g) h = (b - r) / delta + 2;
+    else h = (r - g) / delta + 4;
+
+    h = Math.round(h * 60);
+    if (h < 0) h += 360;
+
+    l = (cmax + cmin) / 2;
+    s = delta === 0 ? 0 : delta / (1 - Math.abs(2 * l - 1));
+    s = +(s * 100).toFixed(1);
+    l = +(l * 100).toFixed(1);
+
+    return { h, s, l };
+}
