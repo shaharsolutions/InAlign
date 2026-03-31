@@ -47,16 +47,30 @@ document.addEventListener('DOMContentLoaded', () => {
         
         const texts = ['תצוגת קורס (Course)', 'דף כניסה (Login)', 'לוח לומד (Learner)'];
 
+        const slider = document.querySelector('.image-slider');
+        
         function updateSlider() {
             slides.forEach((slide, index) => {
                 if (index === currentSlide) {
                     slide.classList.add('active');
+                    // Set slider height to active slide height
+                    if (slide.complete) {
+                        slider.style.height = `${slide.offsetHeight}px`;
+                    } else {
+                        slide.onload = () => {
+                            slider.style.height = `${slide.offsetHeight}px`;
+                        };
+                    }
                 } else {
                     slide.classList.remove('active');
                 }
             });
             sliderText.textContent = texts[currentSlide];
         }
+
+        // Initial height set
+        window.addEventListener('load', updateSlider);
+        window.addEventListener('resize', updateSlider);
 
         nextBtn.addEventListener('click', () => {
             currentSlide = (currentSlide + 1) % slides.length;
