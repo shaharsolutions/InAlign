@@ -1,1 +1,0 @@
-ALTER TABLE IF EXISTS public.learner_progress ADD COLUMN IF NOT EXISTS completed_at TIMESTAMP WITH TIME ZONE;
