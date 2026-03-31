@@ -45,7 +45,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const prevBtn = document.getElementById('slider-prev');
         const sliderText = document.getElementById('slider-text');
         
-        const texts = ['תצוגת קורס (Course)', 'דף כניסה (Login)', 'לוח לומד (Learner)'];
+        const texts = ['לוח לומד (Learner)', 'תצוגת קורס (Course)', 'דף כניסה (Login)'];
+        sliderText.textContent = texts[currentSlide];
 
         const slider = document.querySelector('.image-slider');
         
