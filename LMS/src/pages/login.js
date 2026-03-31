@@ -1,0 +1,104 @@
+import { login } from '../auth.js'
+import { applyOrganizationStyles } from '../lib/ui.js'
+
+export default function renderLogin(container) {
+  container.innerHTML = `
+    <div class="login-page">
+      <!-- Decorative Aside (Visible on Desktop) -->
+      <aside class="login-aside">
+        <div class="login-aside-content">
+          <div class="login-aside-icon">
+            <i class='bx bxs-graduation'></i>
+          </div>
+          <h1>ברוכים הבאים למערכת הלמידה</h1>
+          <p>הפורטל המרכזי של הארגון להכשרה, פיתוח מקצועי וניהול ידע. כל כלי הלמידה שלך במקום אחד.</p>
+        </div>
+      </aside>
+
+      <!-- Main Login Section -->
+      <main class="login-main">
+        <div class="blob" style="top: 10%; right: 10%;"></div>
+        <div class="blob" style="bottom: 10%; left: 10%; background: hsl(var(--color-primary)); opacity: 0.05;"></div>
+        
+        <div class="login-card-modern fade-in">
+          <div class="login-header-modern">
+            <div class="login-logo-mobile">
+              <i class='bx bxs-graduation'></i>
+            </div>
+            <h2>התחברות למערכת</h2>
+            <p class="text-muted">אנא הזן את פרטי הגישה שלך</p>
+          </div>
+
+          <form id="login-form">
+            <div class="form-group" style="text-align: right;">
+              <label class="form-label" for="email">כתובת דוא"ל</label>
+              <input class="form-control" type="email" id="email" required placeholder="user@company.com" dir="ltr">
+            </div>
+            
+            <div class="form-group" style="text-align: right;">
+              <label class="form-label" for="password">סיסמה</label>
+              <div class="password-input-wrapper">
+                <input class="form-control" type="password" id="password" required placeholder="123456" dir="ltr">
+                <button type="button" id="toggle-password" class="password-toggle-btn">
+                  <i class='bx bx-show'></i>
+                </button>
+              </div>
+            </div>
+
+            <div class="flex justify-between items-center mb-4 text-sm">
+              <label class="flex items-center gap-2 cursor-pointer">
+                <input type="checkbox" class="rounded"> <span>זכור אותי</span>
+              </label>
+              <a href="#" class="text-primary hover:underline">שכחתי סיסמה?</a>
+            </div>
+
+            <button type="submit" class="btn btn-primary w-full py-3 text-lg font-semibold">
+              <i class='bx bx-log-in'></i> כניסה למערכת
+            </button>
+            
+          <div id="login-error" style="color: hsl(var(--color-danger)); min-height: 24px; text-align: center; margin-top: 1rem;" class="text-sm"></div>
+          </form>
+        </div>
+
+        <div class="login-footer-modern">
+          &copy; ${new Date().getFullYear()} InAlign - מערכת למידה ארגונית. כל הזכויות שמורות.
+        </div>
+      </main>
+    </div>
+  `
+
+  const passwordInput = document.getElementById('password')
+  const toggleBtn = document.getElementById('toggle-password')
+  
+  toggleBtn.addEventListener('click', () => {
+    const isPassword = passwordInput.type === 'password'
+    passwordInput.type = isPassword ? 'text' : 'password'
+    toggleBtn.innerHTML = isPassword ? `<i class='bx bx-hide'></i>` : `<i class='bx bx-show'></i>`
+  })
+
+  const form = document.getElementById('login-form')
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault()
+    const btn = form.querySelector('button')
+    btn.innerHTML = `<i class='bx bx-loader-alt bx-spin'></i> מתחבר...`
+    btn.disabled = true
+    
+    try {
+      const email = document.getElementById('email').value
+      const pass = document.getElementById('password').value
+      const user = await login(email, pass)
+      
+      // Apply Organization branding (colors, logo)
+      applyOrganizationStyles(user);
+
+      // Navigate on success based on role
+      if (user.role === 'super_admin') window.location.hash = '#/superadmin/orgs'
+      else if (user.role === 'org_admin') window.location.hash = '#/admin'
+      else window.location.hash = '#/learner'
+    } catch (err) {
+      document.getElementById('login-error').innerHTML = err.message
+      btn.innerHTML = `<i class='bx bx-log-in'></i> כניסה למערכת`
+      btn.disabled = false
+    }
+  })
+}

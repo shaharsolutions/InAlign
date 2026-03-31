@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>סקירת אבטחת מידע - InAlign LMS</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/boxicons@2.1.4/css/boxicons.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #0066FF;
+            --primary-light: #E6F0FF;
+            --success: #198754;
+            --warning: #FFC107;
+            --danger: #DC3545;
+            --text-main: #1A202C;
+            --text-muted: #718096;
+            --bg-body: #F7FAFC;
+            --bg-card: #FFFFFF;
+            --border: #E2E8F0;
+            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            --radius: 12px;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Heebo', sans-serif;
+            background-color: var(--bg-body);
+            color: var(--text-main);
+            line-height: 1.6;
+            padding: 40px 20px;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 50px;
+            animation: fadeIn 0.8s ease-out;
+        }
+
+        .logo {
+            font-size: 2.5rem;
+            color: var(--primary);
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .logo i {
+            font-size: 3rem;
+        }
+
+        h1 {
+            font-size: 2.2rem;
+            font-weight: 800;
+            letter-spacing: -0.5px;
+            color: var(--text-main);
+        }
+
+        .subtitle {
+            color: var(--text-muted);
+            font-size: 1.1rem;
+            margin-top: 5px;
+        }
+
+        .status-header {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 14px;
+            border-radius: 50px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            background: #EDF2F7;
+        }
+
+        .badge-success {
+            background-color: #C6F6D5;
+            color: #22543D;
+        }
+
+        section {
+            margin-bottom: 30px;
+            opacity: 0;
+            transform: translateY(20px);
+            animation: slideUp 0.6s ease-out forwards;
+        }
+
+        section:nth-child(1) { animation-delay: 0.1s; }
+        section:nth-child(2) { animation-delay: 0.2s; }
+        section:nth-child(3) { animation-delay: 0.3s; }
+        section:nth-child(4) { animation-delay: 0.4s; }
+        section:nth-child(5) { animation-delay: 0.5s; }
+
+        .card {
+            background: var(--bg-card);
+            border-radius: var(--radius);
+            padding: 30px;
+            box-shadow: var(--shadow);
+            border: 1px solid var(--border);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 4px;
+            height: 100%;
+            background: var(--primary);
+        }
+
+        .card-header {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .card-header i {
+            font-size: 1.8rem;
+            color: var(--primary);
+            background: var(--primary-light);
+            width: 50px;
+            height: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 10px;
+        }
+
+        h2 {
+            font-size: 1.5rem;
+            font-weight: 700;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+        }
+
+        .list-item {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 12px;
+            align-items: flex-start;
+        }
+
+        .list-item i {
+            color: var(--primary);
+            margin-top: 4px;
+            font-size: 1.2rem;
+        }
+
+        .recommendation-card {
+            background: #F8FAFC;
+            border-right: 4px solid var(--warning);
+            padding: 15px 20px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+        }
+
+        footer {
+            text-align: center;
+            margin-top: 60px;
+            padding-top: 30px;
+            border-top: 1px solid var(--border);
+            color: var(--text-muted);
+            font-size: 0.9rem;
+        }
+
+        .print-btn {
+            position: fixed;
+            bottom: 30px;
+            left: 30px;
+            background: var(--text-main);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 50px;
+            font-family: inherit;
+            font-weight: 600;
+            cursor: pointer;
+            box-shadow: 0 10px 15px -3px rgba(0,0,0,0.3);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            z-index: 100;
+            transition: transform 0.2s;
+        }
+
+        .print-btn:hover {
+            transform: scale(1.05);
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @media print {
+            .print-btn { display: none; }
+            body { padding: 0; background: white; }
+            .card { box-shadow: none; border: 1px solid #eee; margin-bottom: 20px; }
+            section { break-inside: avoid; }
+        }
+    </style>
+</head>
+<body>
+
+    <button class="print-btn" onclick="window.print()">
+        <i class='bx bx-printer'></i>
+        הורדה כ-PDF
+    </button>
+
+    <div class="container">
+        <header>
+            <div class="logo">
+                <i class='bx bxs-shield-check'></i>
+                <span>InAlign</span>
+            </div>
+            <h1>סקירת אבטחת מידע - מערכת LMS</h1>
+            <p class="subtitle">דוח טכני ריכוזי עבור ארכיטקטורת המערכת והגנת המידע</p>
+            
+            <div class="status-header">
+                <div class="badge badge-success">
+                    <i class='bx bxs-check-circle'></i>
+                    סטטוס: מאובטח
+                </div>
+                <div class="badge">
+                    <i class='bx bx-calendar'></i>
+                    עדכון אחרון: 30/03/2026
+                </div>
+            </div>
+        </header>
+
+        <section>
+            <div class="card">
+                <div class="card-header">
+                    <i class='bx bx-user-check'></i>
+                    <h2>ניהול זהויות ואימות</h2>
+                </div>
+                <p class="mb-3">המערכת מתבססת על <strong>Supabase Auth</strong> לניהול משתמשים ואימותם בצורה ריכוזית ומאובטחת.</p>
+                <div class="grid">
+                    <div class="list-item">
+                        <i class='bx bxs-check-shield'></i>
+                        <div>
+                            <strong>פרוטוקול JWT</strong>
+                            <p class="text-muted text-sm">שימוש בטוקנים חתומים ומוצפנים לניהול סשנים של משתמשים.</p>
+                        </div>
+                    </div>
+                    <div class="list-item">
+                        <i class='bx bxs-lock-alt'></i>
+                        <div>
+                            <strong>הצפנת סיסמאות</strong>
+                            <p class="text-muted text-sm">מנגנון Hashing מתקדם (BCrypt) המופעל ע"י Supabase.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section>
+            <div class="card">
+                <div class="card-header">
+                    <i class='bx bx-key'></i>
+                    <h2>בקרת גישה והרשאות (RLS)</h2>
+                </div>
+                <p class="mb-3">אבטחת המידע נאכפת ישירות ברמת מסד הנתונים באמצעות <strong>Row Level Security</strong>.</p>
+                <div class="list-item">
+                    <i class='bx bx-list-check'></i>
+                    <div>
+                        <strong>Multi-Tenancy (בידוד ארגוני)</strong>
+                        <p class="text-muted">הפרדה מוחלטת בגישה לנתונים - מנהלי ארגון רואים רק את המשתמשים והתכנים המשויכים אליהם.</p>
+                    </div>
+                </div>
+                <div class="list-item">
+                    <i class='bx bx-group'></i>
+                    <div>
+                        <strong>מודל תפקידים (RBAC)</strong>
+                        <p class="text-muted">מנגנון הרשאות מדורג: Super Admin, Org Admin ו-Learner.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section>
+            <div class="card">
+                <div class="card-header">
+                    <i class='bx bx-data'></i>
+                    <h2>אבטחת נתונים ותכנים</h2>
+                </div>
+                <div class="grid">
+                    <div class="list-item">
+                        <i class='bx bx-cloud-upload'></i>
+                        <div>
+                            <strong>אחסון מאובטח</strong>
+                            <p class="text-muted text-sm">קבצי לומדות מאוחסנים ב-Storage מוגן המאפשר גישה לפי הרשאות בלבד.</p>
+                        </div>
+                    </div>
+                    <div class="list-item">
+                        <i class='bx bx-broadcast'></i>
+                        <div>
+                            <strong>הצפנה במעבר</strong>
+                            <p class="text-muted text-sm">כל התקשורת מתבצעת תחת פרוטוקול HTTPS/TLS 1.3.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section>
+            <div class="card">
+                <div class="card-header">
+                    <i class='bx bx-bulb'></i>
+                    <h2>המלצות לחיזוק האבטחה</h2>
+                </div>
+                <div class="recommendation-card">
+                    <strong>1. אימות דו-שלבי (MFA)</strong>
+                    <p class="text-muted text-sm">מומלץ להפעיל MFA לחשבונות מנהלי על ומנהלי ארגון.</p>
+                </div>
+                <div class="recommendation-card">
+                    <strong>2. Content Security Policy (CSP)</strong>
+                    <p class="text-muted text-sm">הטמעת כותרות CSP למניעת הזרקת קוד זדוני ממקורות חיצוניים.</p>
+                </div>
+                <div class="recommendation-card">
+                    <strong>3. Rate Limiting</strong>
+                    <p class="text-muted text-sm">הגדרת מגבלות קצב בקשות למניעת ניסיונות Brute Force.</p>
+                </div>
+            </div>
+        </section>
+
+        <footer>
+            <p>&copy; 2026 InAlign - פתרונות למידה דיגיטליים</p>
+            <p class="text-sm mt-2">מסמך זה נוצר באופן אוטומטי ע"י מערכת סקירת האבטחה</p>
+        </footer>
+    </div>
+
+</body>
+</html>
