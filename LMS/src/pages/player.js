@@ -49,42 +49,60 @@ export default async function renderPlayer(container) {
 
     console.warn(`[InAlign] Initial State for ${courseId}: Status=${runtime.status}, Location="${runtime.location}", Progress=${runtime.progress}%`);
 
-    const syncProgress = async (label = "periodic") => {
-      if (window._lmsActiveCourseId !== runtime.courseId) return;
-
-      const now = Date.now();
-      if (label === "heartbeat" && now - runtime.lastSync < 15000) return; 
+    const syncProgressDebounced = (function() {
+      let timeout = null;
+      let pendingUpdates = null;
       
-      const elapsed = Math.floor((now - runtime.startTime) / 1000);
-      const totalTime = runtime.baseTimeSeconds + Math.max(runtime.sessionTimeSeconds, elapsed);
-      
-      if (runtime.status === 'not_started' && totalTime > 15) runtime.status = 'in_progress';
-      
-      let finalProgress = runtime.progress;
-      // UI Boost: Ensure at least 5% if in progress, but if we have real progress (like 14%), use it!
-      if (runtime.status === 'in_progress' && finalProgress < 5) finalProgress = 5;
-      if (runtime.status === 'completed') finalProgress = 100;
+      return async (label = "periodic", immediate = false) => {
+        if (window._lmsActiveCourseId !== runtime.courseId) return;
 
-      runtime.lastSync = now;
-      console.log(`[InAlign] Syncing (${label}): Loc="${runtime.location}", Progress=${finalProgress}%`);
+        const now = Date.now();
+        if (label === "heartbeat" && now - runtime.lastSync < 30000) return; 
+        
+        const elapsed = Math.floor((now - runtime.startTime) / 1000);
+        const totalTime = runtime.baseTimeSeconds + Math.max(runtime.sessionTimeSeconds, elapsed);
+        
+        if (runtime.status === 'not_started' && totalTime > 15) runtime.status = 'in_progress';
+        
+        let finalProgress = runtime.progress;
+        if (runtime.status === 'in_progress' && finalProgress < 5) finalProgress = 5;
+        if (runtime.status === 'completed') finalProgress = 100;
 
-      try {
-        await saveLearnerProgress(runtime.courseId, { 
+        pendingUpdates = { 
           status: runtime.status,
           progress: finalProgress,
           score: runtime.score,
           time: totalTime,
           suspend_data: runtime.suspendData,
-          lesson_location: runtime.location
-        });
-      } catch (e) {
-          console.error(`[InAlign] Sync error:`, e.message);
-      }
-    };
+          lesson_location: runtime.location,
+          org_id: course.org_id // Pass org_id to avoid extra query in API
+        };
+
+        const performSync = async () => {
+          if (!pendingUpdates || window._lmsActiveCourseId !== runtime.courseId) return;
+          const currentUpdates = { ...pendingUpdates };
+          pendingUpdates = null;
+          runtime.lastSync = Date.now();
+          console.log(`[InAlign] Syncing (${label}): Loc="${currentUpdates.lesson_location}", Progress=${currentUpdates.progress}%`);
+          try {
+            await saveLearnerProgress(runtime.courseId, currentUpdates);
+          } catch (e) {
+            console.error(`[InAlign] Sync error:`, e.message);
+          }
+        };
+
+        if (timeout) clearTimeout(timeout);
+        if (immediate || label === "commit" || label === "scorm_finish") {
+          await performSync();
+        } else {
+          timeout = setTimeout(performSync, 5000); // 5s debounce for regular updates
+        }
+      };
+    })();
 
     window._lmsHeartbeat = setInterval(() => {
-        syncProgress("heartbeat").catch(() => {});
-    }, 20000);
+        syncProgressDebounced("heartbeat").catch(() => {});
+    }, 45000); // Increased interval for pulse
 
     const handleExit = async (label = "exit") => {
       if (runtime.isExiting) return;
@@ -99,7 +117,7 @@ export default async function renderPlayer(container) {
       if (window._lmsHeartbeat) clearInterval(window._lmsHeartbeat);
       
       try {
-        await syncProgress(label);
+        await syncProgressDebounced(label, true);
       } catch (e) {
         console.error("[InAlign] Exit sync failed:", e);
       } finally {
@@ -170,7 +188,7 @@ export default async function renderPlayer(container) {
         }
 
         if (changed) {
-            syncProgress("setValue").catch(() => {});
+            syncProgressDebounced("setValue").catch(() => {});
         }
         return "true";
       },
@@ -178,7 +196,7 @@ export default async function renderPlayer(container) {
       
       Commit: () => { 
           console.log("[InAlign] SCORM Commit called");
-          syncProgress("commit").catch(() => {}); 
+          syncProgressDebounced("commit").catch(() => {}); 
           return "true"; 
       },
       LMSCommit: () => API.Commit(),
@@ -251,11 +269,18 @@ export default async function renderPlayer(container) {
     } catch(e) {
        console.error('[InAlign] URL parse error', e);
     }
-    
+    if (window.navigator.serviceWorker) {
+        await window.navigator.serviceWorker.ready;
+    }
+
     iframe.src = proxyUrl;
     
+    // Quick-Show: If it's already in cache, it might load almost instantly
     iframe.onload = () => { 
-        document.getElementById('iframe-loader').style.display = 'none'; 
+        document.getElementById('iframe-loader').style.opacity = '0';
+        setTimeout(() => {
+            if (document.getElementById('iframe-loader')) document.getElementById('iframe-loader').style.display = 'none';
+        }, 500);
         iframe.style.opacity = '1'; 
     };
 

@@ -45,7 +45,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const prevBtn = document.getElementById('slider-prev');
         const sliderText = document.getElementById('slider-text');
         
-        const texts = ['תצוגת קורס (Course)', 'תצוגת מנהל (Admin)', 'תצוגת לומד (Learner)'];
+        const texts = ['תצוגת קורס (Course)', 'דף כניסה (Login)', 'לוח לומד (Learner)'];
 
         function updateSlider() {
             slides.forEach((slide, index) => {

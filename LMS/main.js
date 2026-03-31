@@ -41,6 +41,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     initRouter(appContainer)
+
+    // Pre-register SCORM Service Worker for faster course loading
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('./scorm-sw.js').catch(err => {
+        console.error('[InAlign] SW pre-registration failed:', err);
+      });
+    }
     
   } catch (err) {
     console.error("Initialization Failed", err)
