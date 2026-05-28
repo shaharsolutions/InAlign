@@ -81,6 +81,21 @@ export default async function renderLearnerDashboard(container) {
       if (course.status === 'completed') { hebrewStatus = 'הושלם'; done++; statusColorMsg = 'color: hsl(var(--color-success));' }
       else if (course.status === 'in_progress') { hebrewStatus = 'בתהליך'; inProg++; }
       else { pending++; }
+      const progressHtml = course.progressKnown ? `
+          <div class="progress-section mb-3">
+            <div class="flex justify-between text-sm mb-1">
+              <span style="font-weight: 500; ${statusColorMsg}">${hebrewStatus}</span>
+              <span>${course.progress}%</span>
+            </div>
+            <div class="progress-bar-bg">
+              <div class="progress-bar-fill ${course.progress === 100 ? 'bg-success' : ''}" style="width: ${course.progress}%; ${course.progress === 100 ? 'background: hsl(var(--color-success));' : ''}"></div>
+            </div>
+          </div>
+      ` : `
+          <div class="mb-3">
+            <span class="text-sm" style="font-weight: 500; ${statusColorMsg}">${hebrewStatus}</span>
+          </div>
+      `;
         
       return `
         <div class="card course-card">
@@ -94,15 +109,7 @@ export default async function renderLearnerDashboard(container) {
             </div>
           </div>
           
-          <div class="progress-section mb-3">
-            <div class="flex justify-between text-sm mb-1">
-              <span style="font-weight: 500; ${statusColorMsg}">${hebrewStatus}</span>
-              <span>${course.progress}%</span>
-            </div>
-            <div class="progress-bar-bg">
-              <div class="progress-bar-fill ${course.progress === 100 ? 'bg-success' : ''}" style="width: ${course.progress}%; ${course.progress === 100 ? 'background: hsl(var(--color-success));' : ''}"></div>
-            </div>
-          </div>
+          ${progressHtml}
           
           <div class="flex justify-between items-center text-sm mb-4" style="color: hsl(var(--text-muted)); display: ${course.score ? 'flex' : 'none'};">
             <span>ציון סופי: <strong style="color: ${course.score >= 80 ? 'hsl(var(--color-success))' : 'hsl(var(--color-danger))'};">${course.score || '-'}</strong></span>

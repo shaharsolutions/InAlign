@@ -840,18 +840,41 @@ export default async function renderAdminUsers(container) {
   
   const bulkInput = container.querySelector('#bulk-excel-input');
   const bulkMsg = container.querySelector('#bulk-msg');
+  let templateDownloadUrl = null;
 
   container.querySelector('#download-template-btn').addEventListener('click', () => {
+    if (templateDownloadUrl) {
+      URL.revokeObjectURL(templateDownloadUrl);
+      templateDownloadUrl = null;
+    }
+
     const headers = [['שם מלא', 'אימייל', 'טלפון', 'סיסמה', 'תפקיד (learner/org_admin)', 'שיוך לקבוצה']];
     if (isSuperAdmin) {
       headers[0].push('מזהה ארגון (Org ID)');
     }
-    
+
     const worksheet = XLSX.utils.aoa_to_sheet(headers);
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, 'תבנית עובדים');
-    XLSX.writeFile(workbook, 'lms_users_template.xlsx');
-    showToast('התבנית הורדה בהצלחה');
+    const workbookBytes = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
+    const blob = new Blob([workbookBytes], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    templateDownloadUrl = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = templateDownloadUrl;
+    link.download = 'lms_users_template.xlsx';
+    link.style.display = 'none';
+    document.body.appendChild(link);
+    link.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, view: window }));
+    setTimeout(() => link.remove(), 0);
+
+    bulkMsg.style.color = 'hsl(var(--color-success))';
+    bulkMsg.innerHTML = `
+      התבנית מוכנה.
+      <a href="${templateDownloadUrl}" download="lms_users_template.xlsx" style="color: hsl(var(--color-primary)); font-weight: 800; text-decoration: underline;">
+        לחץ כאן אם ההורדה לא התחילה
+      </a>
+    `;
+    showToast('התבנית מוכנה להורדה');
   });
 
   container.querySelector('#upload-bulk-btn').addEventListener('click', () => {

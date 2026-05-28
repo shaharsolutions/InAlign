@@ -1,0 +1,777 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>מדריך שימוש ללומדים - InAlign LMS</title>
+  <link href="https://fonts.googleapis.com/css2?family=Assistant:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css" rel="stylesheet">
+  <style>
+    :root {
+      --ink: #172033;
+      --muted: #5d6b82;
+      --line: #d9e1ee;
+      --paper: #ffffff;
+      --wash: #f5f7fb;
+      --blue: #2563eb;
+      --green: #15966b;
+      --amber: #b7791f;
+      --red: #c2413d;
+      --shadow: 0 10px 30px rgba(23, 32, 51, 0.08);
+      --radius: 8px;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: Assistant, Arial, sans-serif;
+      background: var(--wash);
+      color: var(--ink);
+      line-height: 1.65;
+    }
+
+    .layout {
+      min-height: 100vh;
+      display: grid;
+      grid-template-columns: 300px minmax(0, 1fr);
+    }
+
+    aside {
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      overflow-y: auto;
+      background: #101827;
+      color: #eef4ff;
+      padding: 22px;
+      border-left: 1px solid rgba(255,255,255,0.1);
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-weight: 800;
+      font-size: 1.28rem;
+      margin-bottom: 20px;
+    }
+
+    .brand i { color: #7dd3fc; font-size: 1.8rem; }
+
+    .search {
+      position: relative;
+      margin-bottom: 18px;
+    }
+
+    .search i {
+      position: absolute;
+      top: 50%;
+      right: 12px;
+      transform: translateY(-50%);
+      color: #9fb0c9;
+    }
+
+    .search input {
+      width: 100%;
+      border: 1px solid rgba(255,255,255,0.14);
+      background: rgba(255,255,255,0.08);
+      color: #fff;
+      border-radius: var(--radius);
+      padding: 11px 38px 11px 12px;
+      font: inherit;
+      outline: none;
+    }
+
+    .search input::placeholder { color: #aebbd0; }
+
+    nav {
+      display: grid;
+      gap: 7px;
+    }
+
+    .nav-btn {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      width: 100%;
+      border: 0;
+      border-radius: var(--radius);
+      background: transparent;
+      color: #d8e2f2;
+      padding: 11px 12px;
+      text-align: right;
+      font: inherit;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .nav-btn:hover,
+    .nav-btn.active {
+      background: rgba(125, 211, 252, 0.14);
+      color: #fff;
+    }
+
+    .nav-btn i { font-size: 1.25rem; color: #9edfff; }
+
+    .side-note {
+      margin-top: 20px;
+      padding: 14px;
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: var(--radius);
+      color: #c8d3e5;
+      font-size: 0.92rem;
+      background: rgba(255,255,255,0.05);
+    }
+
+    main {
+      padding: 34px clamp(18px, 4vw, 58px) 70px;
+      max-width: 1220px;
+      width: 100%;
+    }
+
+    .hero {
+      display: grid;
+      gap: 20px;
+      margin-bottom: 28px;
+      padding-bottom: 24px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(2rem, 4vw, 3.35rem);
+      line-height: 1.05;
+      letter-spacing: 0;
+    }
+
+    .lead {
+      margin: 0;
+      max-width: 920px;
+      color: var(--muted);
+      font-size: 1.15rem;
+    }
+
+    .quick-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .pill,
+    .action-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      border-radius: var(--radius);
+      border: 1px solid var(--line);
+      background: var(--paper);
+      padding: 9px 12px;
+      font: inherit;
+      font-weight: 700;
+      color: var(--ink);
+      box-shadow: 0 2px 8px rgba(23, 32, 51, 0.04);
+      text-decoration: none;
+    }
+
+    .action-btn { cursor: pointer; }
+
+    .action-btn.primary {
+      background: var(--blue);
+      color: #fff;
+      border-color: var(--blue);
+    }
+
+    section {
+      display: none;
+      animation: show 0.22s ease-out;
+    }
+
+    section.active { display: block; }
+
+    @keyframes show {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    h2 {
+      margin: 0 0 12px;
+      font-size: 1.75rem;
+      line-height: 1.2;
+    }
+
+    h3 {
+      margin: 0 0 8px;
+      font-size: 1.18rem;
+      line-height: 1.25;
+    }
+
+    .section-intro {
+      margin: 0 0 20px;
+      color: var(--muted);
+      max-width: 980px;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 16px;
+      align-items: start;
+    }
+
+    .card {
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 20px;
+      min-width: 0;
+    }
+
+    .card.full { grid-column: 1 / -1; }
+    .muted { color: var(--muted); }
+    .hidden-by-search { display: none !important; }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      overflow: hidden;
+      border-radius: var(--radius);
+      border: 1px solid var(--line);
+      background: #fff;
+    }
+
+    th,
+    td {
+      padding: 12px 14px;
+      border-bottom: 1px solid var(--line);
+      text-align: right;
+      vertical-align: top;
+    }
+
+    th {
+      background: #edf3ff;
+      font-weight: 800;
+    }
+
+    tr:last-child td { border-bottom: 0; }
+
+    ol,
+    ul {
+      margin: 0;
+      padding-right: 22px;
+    }
+
+    li + li { margin-top: 7px; }
+
+    .callout {
+      border-radius: var(--radius);
+      padding: 14px 16px;
+      border: 1px solid var(--line);
+      background: #f8fbff;
+      color: var(--ink);
+    }
+
+    .callout.good {
+      border-color: rgba(21, 150, 107, 0.35);
+      background: rgba(21, 150, 107, 0.08);
+    }
+
+    .callout.warn {
+      border-color: rgba(183, 121, 31, 0.35);
+      background: rgba(183, 121, 31, 0.09);
+    }
+
+    .callout.danger {
+      border-color: rgba(194, 65, 61, 0.35);
+      background: rgba(194, 65, 61, 0.08);
+    }
+
+    .steps {
+      display: grid;
+      gap: 12px;
+      counter-reset: steps;
+    }
+
+    .step {
+      counter-increment: steps;
+      display: grid;
+      grid-template-columns: 44px 1fr;
+      gap: 12px;
+      align-items: start;
+      padding: 14px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: #fff;
+    }
+
+    .step::before {
+      content: counter(steps);
+      display: grid;
+      place-items: center;
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      background: var(--blue);
+      color: #fff;
+      font-weight: 800;
+    }
+
+    .checklist {
+      display: grid;
+      gap: 9px;
+    }
+
+    .check-row {
+      display: flex;
+      gap: 10px;
+      align-items: flex-start;
+      padding: 11px 12px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: #fff;
+      cursor: pointer;
+    }
+
+    .check-row input {
+      margin-top: 6px;
+      width: 18px;
+      height: 18px;
+      accent-color: var(--green);
+      flex: 0 0 auto;
+    }
+
+    .check-row.done span {
+      color: var(--muted);
+      text-decoration: line-through;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      border-radius: 999px;
+      padding: 3px 8px;
+      font-size: 0.88rem;
+      font-weight: 800;
+      white-space: nowrap;
+    }
+
+    .b-green { background: rgba(21, 150, 107, 0.12); color: var(--green); }
+    .b-amber { background: rgba(183, 121, 31, 0.14); color: var(--amber); }
+    .b-red { background: rgba(194, 65, 61, 0.12); color: var(--red); }
+
+    .course-preview {
+      display: grid;
+      gap: 12px;
+    }
+
+    .mini-course {
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 14px;
+      background: #fff;
+    }
+
+    .progress {
+      height: 10px;
+      border-radius: 999px;
+      background: #e8eef7;
+      overflow: hidden;
+      margin-top: 8px;
+    }
+
+    .progress span {
+      display: block;
+      height: 100%;
+      border-radius: inherit;
+      background: var(--blue);
+    }
+
+    footer {
+      margin-top: 44px;
+      padding-top: 18px;
+      border-top: 1px solid var(--line);
+      color: var(--muted);
+      text-align: center;
+    }
+
+    @media (max-width: 900px) {
+      .layout { display: block; }
+      aside {
+        position: relative;
+        height: auto;
+      }
+      main { padding: 22px 16px 44px; }
+      .grid { grid-template-columns: 1fr; }
+    }
+
+    @media print {
+      aside,
+      .quick-actions { display: none; }
+      body { background: #fff; }
+      .layout { display: block; }
+      main { max-width: none; padding: 0; }
+      section { display: block !important; break-before: page; }
+      .card { box-shadow: none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="layout">
+    <aside>
+      <div class="brand"><i class='bx bx-book-reader'></i><span>InAlign LMS</span></div>
+      <div class="search">
+        <i class='bx bx-search'></i>
+        <input id="searchInput" type="search" placeholder="חיפוש פעולה, מסך או מושג">
+      </div>
+      <nav aria-label="ניווט במדריך">
+        <button class="nav-btn active" data-section="overview"><i class='bx bx-map'></i> תמונת לומד</button>
+        <button class="nav-btn" data-section="quick-start"><i class='bx bx-rocket'></i> התחלה מהירה</button>
+        <button class="nav-btn" data-section="login"><i class='bx bx-log-in'></i> כניסה למערכת</button>
+        <button class="nav-btn" data-section="dashboard"><i class='bx bx-home'></i> אזור אישי</button>
+        <button class="nav-btn" data-section="course-player"><i class='bx bx-play-circle'></i> פתיחת לומדה</button>
+        <button class="nav-btn" data-section="progress"><i class='bx bx-line-chart'></i> התקדמות וציונים</button>
+        <button class="nav-btn" data-section="support"><i class='bx bx-wrench'></i> תקלות נפוצות</button>
+      </nav>
+      <div class="side-note">
+        מדריך שימוש קצר וברור ללומדים במערכת.
+      </div>
+    </aside>
+
+    <main>
+      <header class="hero">
+        <div>
+          <h1>מדריך שימוש ללומדים</h1>
+          <p class="lead">
+            מדריך מעשי לביצוע לומדות במערכת InAlign: כניסה למערכת, צפייה בלומדות שהוקצו,
+            התחלת למידה, שמירה ויציאה, מעקב אחר התקדמות וטיפול בתקלות נפוצות.
+          </p>
+        </div>
+        <div class="quick-actions">
+          <button class="action-btn primary" data-jump="quick-start"><i class='bx bx-play-circle'></i> התחל מהצ'קליסט</button>
+          <a class="action-btn" href="index.html#/learner"><i class='bx bx-book-open'></i> פתיחת אזור לומד</a>
+          <button class="action-btn" onclick="window.print()"><i class='bx bx-printer'></i> הדפסה / PDF</button>
+          <span class="pill"><i class='bx bx-calendar'></i> עודכן: 28 במאי 2026</span>
+        </div>
+      </header>
+
+      <section id="overview" class="active searchable">
+        <h2>תמונת לומד</h2>
+        <p class="section-intro">
+          הלומד רואה רק את סביבת הלמידה האישית שלו: הודעות מהארגון, רשימת לומדות שהוקצו,
+          סטטוס ביצוע, התקדמות אם דווחה, ציון אם קיים וכפתור התחלה או המשך למידה.
+        </p>
+        <div class="grid">
+          <div class="card">
+            <h3><i class='bx bx-check-circle'></i> מה עושים במערכת</h3>
+            <ul>
+              <li>נכנסים עם אימייל וסיסמה שקיבלת מהארגון.</li>
+              <li>קוראים את הודעת הפתיחה אם קיימת.</li>
+              <li>פותחים לומדה שהוקצתה לך.</li>
+              <li>מבצעים את הלמידה בתוך הנגן.</li>
+              <li>לוחצים "שמור וצא" בסיום או כאשר רוצים להמשיך אחר כך.</li>
+            </ul>
+          </div>
+          <div class="card">
+            <h3><i class='bx bx-info-circle'></i> מה רואים באזור האישי</h3>
+            <ul>
+              <li>לומדות חובה לביצוע.</li>
+              <li>לומדות שנמצאות בתהליך.</li>
+              <li>לומדות שהושלמו ב-30 הימים האחרונים.</li>
+              <li>כרטיס לכל לומדה עם סטטוס, התקדמות וציון אם יש.</li>
+            </ul>
+          </div>
+          <div class="card full">
+            <h3>מפת מסכים ללומד</h3>
+            <table>
+              <thead><tr><th>מסך</th><th>מה עושים בו</th><th>קישור</th></tr></thead>
+              <tbody>
+                <tr><td>כניסה למערכת</td><td>הזנת אימייל וסיסמה, הצגת סיסמה במקרה הצורך, כניסה לאזור האישי.</td><td><a href="index.html#/login">index.html#/login</a></td></tr>
+                <tr><td>לוח למידה אישי</td><td>צפייה בכל הלומדות שהוקצו לך ובסטטוס הביצוע.</td><td><a href="index.html#/learner">index.html#/learner</a></td></tr>
+                <tr><td>נגן לומדה</td><td>ביצוע הלומדה בפועל, שמירת התקדמות ויציאה מסודרת.</td><td><a href="index.html#/player">index.html#/player</a></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <section id="quick-start" class="searchable">
+        <h2>התחלה מהירה</h2>
+        <p class="section-intro">
+          אם זו הפעם הראשונה שלך במערכת, אפשר לעבוד לפי הרשימה הבאה. הסימון נשמר בדפדפן המקומי שלך בלבד.
+        </p>
+        <div class="grid">
+          <div class="card full">
+            <h3>צ'קליסט ללומד</h3>
+            <div class="quick-actions" style="margin-bottom: 12px;">
+              <button type="button" class="action-btn" id="resetChecklistBtn"><i class='bx bx-reset'></i> איפוס סימונים</button>
+              <span class="pill"><i class='bx bx-save'></i> הסימון נשמר בדפדפן המקומי</span>
+            </div>
+            <div class="checklist" id="learnerChecklist">
+              <label class="check-row"><input type="checkbox"><span>ודא שקיבלת אימייל וסיסמה מהארגון.</span></label>
+              <label class="check-row"><input type="checkbox"><span>היכנס למסך ההתחברות והזן את פרטי הגישה.</span></label>
+              <label class="check-row"><input type="checkbox"><span>קרא את הודעת הארגון בראש אזור הלמידה, אם מופיעה.</span></label>
+              <label class="check-row"><input type="checkbox"><span>בדוק אילו לומדות מופיעות כטרם הותחל או בתהליך.</span></label>
+              <label class="check-row"><input type="checkbox"><span>פתח את הלומדה הראשונה באמצעות "התחל עכשיו" או "המשך למידה".</span></label>
+              <label class="check-row"><input type="checkbox"><span>בסיום או בהפסקה לחץ "שמור וצא" בנגן הלומדה.</span></label>
+              <label class="check-row"><input type="checkbox"><span>חזור לאזור האישי ובדוק שהסטטוס או ההתקדמות עודכנו.</span></label>
+            </div>
+          </div>
+          <div class="card full">
+            <h3>תהליך עבודה מומלץ</h3>
+            <div class="steps">
+              <div class="step"><div><h3>התחבר למערכת</h3><p>הזן כתובת אימייל וסיסמה. אם הסיסמה לא ברורה, השתמש בכפתור הצגת הסיסמה.</p></div></div>
+              <div class="step"><div><h3>בחר לומדה</h3><p>באזור האישי בחר לומדה עם כפתור "התחל עכשיו", "המשך למידה" או "סקור מחדש".</p></div></div>
+              <div class="step"><div><h3>בצע את הלמידה</h3><p>עבוד בתוך חלון הלומדה לפי ההוראות שמופיעות בתוכן עצמו.</p></div></div>
+              <div class="step"><div><h3>שמור וצא</h3><p>לחץ על הכפתור בראש הנגן כדי לשמור את ההתקדמות ולחזור לאזור האישי.</p></div></div>
+              <div class="step"><div><h3>בדוק סטטוס</h3><p>ודא שהכרטיס עודכן ל"בתהליך" או "הושלם", בהתאם לדיווח של הלומדה.</p></div></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="login" class="searchable">
+        <h2>כניסה למערכת</h2>
+        <p class="section-intro">
+          מסך הכניסה מיועד לכל המשתמשים. לאחר התחברות מוצלחת, לומדים מועברים אוטומטית לאזור הלמידה האישי.
+        </p>
+        <div class="grid">
+          <div class="card">
+            <h3>איך נכנסים</h3>
+            <ol>
+              <li>פתח את קישור המערכת שקיבלת מהארגון.</li>
+              <li>הזן כתובת דוא"ל בשדה האימייל.</li>
+              <li>הזן סיסמה בשדה הסיסמה.</li>
+              <li>אם צריך, לחץ על אייקון העין כדי לראות את הסיסמה שהקלדת.</li>
+              <li>לחץ "כניסה למערכת".</li>
+            </ol>
+          </div>
+          <div class="card">
+            <h3>אם הכניסה נכשלה</h3>
+            <p class="muted">בדוק שאין שגיאת הקלדה באימייל או בסיסמה. אם עדיין לא מצליחים להיכנס, פנה לאחראי ההדרכה בארגון כדי לוודא שהמשתמש שלך קיים ופעיל.</p>
+          </div>
+          <div class="card full">
+            <div class="callout warn">
+              כפתור "שכחתי סיסמה?" עשוי להופיע במסך, אך אם הארגון לא הפעיל תהליך איפוס עצמאי יש לפנות למנהל ההדרכה או לתמיכה הארגונית.
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="dashboard" class="searchable">
+        <h2>אזור אישי</h2>
+        <p class="section-intro">
+          לוח הלמידה האישי מציג את כל הלומדות שהוקצו לך ואת המצב הנוכחי שלהן. אם אין לומדות מוקצות,
+          תופיע הודעה שאין כרגע לומדות שצריך לבצע.
+        </p>
+        <div class="grid">
+          <div class="card">
+            <h3>כרטיסי סטטוס בראש העמוד</h3>
+            <table>
+              <thead><tr><th>כרטיס</th><th>משמעות</th></tr></thead>
+              <tbody>
+                <tr><td>לומדות חובה לביצוע</td><td>לומדות שעדיין לא התחלת או שעדיין לא הושלמו.</td></tr>
+                <tr><td>בתהליך למידה</td><td>לומדות שכבר נפתחו ונשמרה בהן פעילות.</td></tr>
+                <tr><td>הושלמו (30 יום)</td><td>לומדות שסומנו כהושלמו בתקופה האחרונה.</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="card">
+            <h3>כפתורי פעולה בלומדה</h3>
+            <ul>
+              <li><strong>התחל עכשיו:</strong> הלומדה עדיין לא נפתחה.</li>
+              <li><strong>המשך למידה:</strong> קיימת התקדמות קודמת וניתן להמשיך.</li>
+              <li><strong>סקור מחדש:</strong> הלומדה הושלמה ואפשר לפתוח אותה שוב לצפייה.</li>
+            </ul>
+          </div>
+          <div class="card full">
+            <h3>דוגמה לכרטיסי לומדות</h3>
+            <div class="course-preview">
+              <div class="mini-course">
+                <strong>בטיחות בעבודה</strong>
+                <p class="muted">סטטוס: בתהליך | התקדמות: 65%</p>
+                <div class="progress"><span style="width: 65%;"></span></div>
+              </div>
+              <div class="mini-course">
+                <strong>היכרות עם הארגון</strong>
+                <p class="muted">סטטוס: הושלם | ציון סופי: 92</p>
+                <div class="progress"><span style="width: 100%; background: var(--green);"></span></div>
+              </div>
+              <div class="mini-course">
+                <strong>רגולציה שנתית</strong>
+                <p class="muted">סטטוס: טרם הותחל | אחוז התקדמות: לא דווח</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="course-player" class="searchable">
+        <h2>פתיחת לומדה ונגן הקורס</h2>
+        <p class="section-intro">
+          נגן הלומדה פותח את התוכן בתוך חלון ייעודי. המערכת מחברת את הלומדה למעקב התקדמות, זמן למידה, ציון וסטטוס כאשר הלומדה מדווחת נתונים.
+        </p>
+        <div class="grid">
+          <div class="card">
+            <h3>מה קורה בפתיחה</h3>
+            <ol>
+              <li>המערכת טוענת את נתוני הקורס וההתקדמות הקיימת.</li>
+              <li>מופיעה הודעה "טוען את הלומדה".</li>
+              <li>הלומדה נטענת בתוך iFrame.</li>
+              <li>לאחר שהלומדה מוכנה, אפשר להתחיל ללמוד.</li>
+            </ol>
+          </div>
+          <div class="card">
+            <h3>שמירה ויציאה</h3>
+            <p class="muted">בסיום למידה או לפני סגירת העמוד, לחץ על "שמור וצא" בראש הנגן. הפעולה שומרת את המצב האחרון וחוזרת לאזור האישי.</p>
+          </div>
+          <div class="card">
+            <h3>אם הלומדה נפתחת במקום האחרון</h3>
+            <p class="muted">חלק מהלומדות יודעות לשמור מיקום פנימי. במקרה כזה הלומדה עשויה להמשיך מהמקום האחרון שבו עצרת.</p>
+          </div>
+          <div class="card">
+            <h3>אם הלומדה איטית</h3>
+            <p class="muted">המתן לסיום הטעינה. לומדות כבדות עשויות לכלול סרטונים, תמונות או בדיקות פנימיות של קובץ הקורס.</p>
+          </div>
+          <div class="card full">
+            <div class="callout good">
+              מומלץ לא לסגור את לשונית הדפדפן באמצע למידה. השתמש בכפתור "שמור וצא" כדי להבטיח שהמערכת קיבלה את הנתונים האחרונים.
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="progress" class="searchable">
+        <h2>התקדמות, סטטוס וציונים</h2>
+        <p class="section-intro">
+          נתוני ההתקדמות מגיעים מהלומדה עצמה. לכן ייתכנו הבדלים בין לומדות שונות: חלק מדווחות אחוז מדויק,
+          חלק מדווחות רק השלמה, וחלק מדווחות גם ציון.
+        </p>
+        <div class="grid">
+          <div class="card full">
+            <h3>משמעות הנתונים</h3>
+            <table>
+              <thead><tr><th>שדה</th><th>מה הוא אומר</th><th>למה ייתכן שלא יופיע</th></tr></thead>
+              <tbody>
+                <tr><td>טרם הותחל</td><td>הלומדה עדיין לא נפתחה או שלא נשמרה פעילות.</td><td>לא רלוונטי.</td></tr>
+                <tr><td>בתהליך</td><td>הלומדה נפתחה ונשמרה פעילות למידה.</td><td>עשוי להשתנות רק לאחר שמירה או יציאה.</td></tr>
+                <tr><td>הושלם</td><td>הלומדה דיווחה שהושלמה או שהושג תנאי סיום.</td><td>אם לא סיימת את כל שלבי הלומדה.</td></tr>
+                <tr><td>אחוז התקדמות</td><td>אחוז שהלומדה דיווחה למערכת.</td><td>חלק מהלומדות אינן מדווחות אחוז.</td></tr>
+                <tr><td>ציון סופי</td><td>ציון מבחן או הערכה מתוך הלומדה.</td><td>אם אין מבחן או שהלומדה לא מדווחת ציון.</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="card">
+            <h3>מתי הנתונים מתעדכנים</h3>
+            <p class="muted">המערכת שומרת התקדמות במהלך הלמידה, בעת פעולות שמדווחות מהלומדה, ובמיוחד כאשר לוחצים "שמור וצא".</p>
+          </div>
+          <div class="card">
+            <h3>כאשר כתוב "לא דווח אחוז"</h3>
+            <p class="muted">זה לא בהכרח תקלה. המשמעות היא שהלומדה לא שלחה אחוז מדויק, ולכן המערכת לא מציגה הערכה מלאכותית.</p>
+          </div>
+          <div class="card full">
+            <div class="callout warn">
+              אם סיימת לומדה אבל היא עדיין לא מסומנת כהושלמה, פתח אותה שוב ובדוק אם יש כפתור סיום פנימי בתוך הלומדה. לאחר מכן לחץ "שמור וצא".
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="support" class="searchable">
+        <h2>תקלות נפוצות</h2>
+        <div class="grid">
+          <div class="card">
+            <h3>לא רואים לומדות באזור האישי</h3>
+            <p class="muted">ייתכן שעדיין לא הוקצו לך לומדות. פנה לאחראי ההדרכה בארגון ובקש לוודא שיוך ישיר או שיוך דרך קבוצה.</p>
+          </div>
+          <div class="card">
+            <h3>לומדה לא נטענת</h3>
+            <p class="muted">נסה לרענן את העמוד או לפתוח שוב מהאזור האישי. אם הבעיה חוזרת, שלח לאחראי ההדרכה את שם הלומדה והודעת השגיאה אם מופיעה.</p>
+          </div>
+          <div class="card">
+            <h3>התקדמות לא התעדכנה</h3>
+            <p class="muted">ודא שלחצת "שמור וצא". חלק מהלומדות מעדכנות התקדמות רק אחרי מעבר מסך, סיום פרק או לחיצה על כפתור סיום פנימי.</p>
+          </div>
+          <div class="card">
+            <h3>שכחתי סיסמה</h3>
+            <p class="muted">פנה לאחראי ההדרכה או לתמיכה הארגונית. הם יכולים לבדוק את המשתמש ולעדכן סיסמה בהתאם למדיניות הארגון.</p>
+          </div>
+          <div class="card">
+            <h3>הציון לא מופיע</h3>
+            <p class="muted">לא בכל לומדה יש ציון. גם כאשר יש מבחן, הציון יופיע רק אם הלומדה מדווחת אותו למערכת.</p>
+          </div>
+          <div class="card">
+            <h3>הלומדה נפתחת מחדש מההתחלה</h3>
+            <p class="muted">חלק מהלומדות אינן שומרות מיקום פנימי. במקרה כזה המערכת עדיין יכולה להציג סטטוס, זמן או השלמה אם דווחו.</p>
+          </div>
+          <div class="card full">
+            <div class="callout danger">
+              אל תמסור את הסיסמה שלך למשתמש אחר. אם יש צורך בעזרה, שתף צילום מסך ללא פרטי סיסמה או פנה לגורם האחראי בארגון.
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <footer>
+        מדריך שימוש ללומדים במערכת InAlign LMS.
+      </footer>
+    </main>
+  </div>
+
+  <script>
+    const sectionButtons = document.querySelectorAll('.nav-btn');
+    const sections = document.querySelectorAll('main section');
+
+    function activateSection(id) {
+      sections.forEach(section => section.classList.toggle('active', section.id === id));
+      sectionButtons.forEach(btn => btn.classList.toggle('active', btn.dataset.section === id));
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      history.replaceState(null, '', '#' + id);
+    }
+
+    sectionButtons.forEach(btn => {
+      btn.addEventListener('click', () => activateSection(btn.dataset.section));
+    });
+
+    document.querySelectorAll('[data-jump]').forEach(btn => {
+      btn.addEventListener('click', () => activateSection(btn.dataset.jump));
+    });
+
+    const hash = decodeURIComponent(location.hash.replace('#', ''));
+    if (hash && document.getElementById(hash)) activateSection(hash);
+
+    const searchInput = document.getElementById('searchInput');
+    searchInput.addEventListener('input', () => {
+      const q = searchInput.value.trim().toLowerCase();
+      document.querySelectorAll('.searchable .card, .searchable .step, .searchable .callout').forEach(el => {
+        if (!q) {
+          el.classList.remove('hidden-by-search');
+          return;
+        }
+        el.classList.toggle('hidden-by-search', !el.innerText.toLowerCase().includes(q));
+      });
+    });
+
+    const checklist = document.getElementById('learnerChecklist');
+    const resetChecklistBtn = document.getElementById('resetChecklistBtn');
+    const saved = JSON.parse(localStorage.getItem('inalignLearnerChecklist') || '[]');
+    checklist.querySelectorAll('input[type="checkbox"]').forEach((box, index) => {
+      box.checked = !!saved[index];
+      box.closest('.check-row').classList.toggle('done', box.checked);
+      box.addEventListener('change', () => {
+        const state = Array.from(checklist.querySelectorAll('input[type="checkbox"]')).map(input => input.checked);
+        localStorage.setItem('inalignLearnerChecklist', JSON.stringify(state));
+        box.closest('.check-row').classList.toggle('done', box.checked);
+      });
+    });
+    resetChecklistBtn.addEventListener('click', () => {
+      checklist.querySelectorAll('input[type="checkbox"]').forEach(input => {
+        input.checked = false;
+        input.closest('.check-row').classList.remove('done');
+      });
+      localStorage.removeItem('inalignLearnerChecklist');
+    });
+  </script>
+</body>
+</html>

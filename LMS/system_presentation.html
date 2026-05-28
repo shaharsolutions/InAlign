@@ -1,0 +1,976 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>הצגת מערכת InAlign LMS</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css" rel="stylesheet">
+  <style>
+    :root {
+      --ink: #102033;
+      --muted: #5d6b7d;
+      --line: #d8e0ea;
+      --soft: #f4f7fb;
+      --panel: #ffffff;
+      --primary: #0066ff;
+      --primary-dark: #004bbd;
+      --green: #1a7f64;
+      --amber: #a76700;
+      --shadow: 0 16px 42px rgba(16, 32, 51, 0.11);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    :target {
+      scroll-margin-top: 22px;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      color: var(--ink);
+      background:
+        linear-gradient(180deg, rgba(0, 102, 255, 0.09), rgba(255, 255, 255, 0) 310px),
+        var(--soft);
+      font-family: "Heebo", "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    a {
+      color: inherit;
+      text-decoration: none;
+    }
+
+    .shell {
+      width: min(1160px, calc(100% - 32px));
+      margin: 0 auto;
+      padding: 34px 0 46px;
+    }
+
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 18px;
+      margin-bottom: 28px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      min-width: 0;
+    }
+
+    .brand-mark {
+      width: 46px;
+      height: 46px;
+      display: grid;
+      place-items: center;
+      border-radius: 8px;
+      color: #fff;
+      background: var(--primary);
+      box-shadow: 0 10px 24px rgba(0, 102, 255, 0.24);
+      flex: 0 0 auto;
+    }
+
+    .brand-mark i {
+      font-size: 26px;
+    }
+
+    .brand-title {
+      margin: 0;
+      font-size: clamp(1.35rem, 3vw, 2rem);
+      line-height: 1.1;
+      font-weight: 800;
+    }
+
+    .brand-subtitle {
+      margin: 3px 0 0;
+      color: var(--muted);
+      font-size: 0.98rem;
+    }
+
+    .home-link {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      min-height: 42px;
+      padding: 0 16px;
+      border-radius: 8px;
+      background: var(--ink);
+      color: #fff;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+
+    .hero {
+      display: grid;
+      grid-template-columns: minmax(0, 1.18fr) minmax(290px, 0.82fr);
+      gap: 22px;
+      align-items: stretch;
+      margin-bottom: 24px;
+    }
+
+    .hero-main,
+    .hero-side,
+    .section {
+      background: rgba(255, 255, 255, 0.92);
+      border: 1px solid rgba(216, 224, 234, 0.9);
+      border-radius: 8px;
+      box-shadow: var(--shadow);
+    }
+
+    .hero-main {
+      padding: clamp(24px, 4vw, 42px);
+    }
+
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 14px;
+      color: var(--primary-dark);
+      font-weight: 800;
+    }
+
+    .eyebrow i {
+      font-size: 20px;
+    }
+
+    h1 {
+      margin: 0;
+      max-width: 760px;
+      font-size: clamp(2rem, 5vw, 4.1rem);
+      line-height: 1.02;
+      letter-spacing: 0;
+    }
+
+    .lead {
+      max-width: 730px;
+      margin: 18px 0 0;
+      color: var(--muted);
+      font-size: clamp(1.05rem, 2vw, 1.25rem);
+      line-height: 1.65;
+    }
+
+    .quick-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 26px;
+    }
+
+    .action {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      min-height: 44px;
+      padding: 0 16px;
+      border-radius: 8px;
+      border: 1px solid var(--line);
+      background: #fff;
+      color: var(--ink);
+      font-weight: 800;
+    }
+
+    .action.primary {
+      border-color: var(--primary);
+      background: var(--primary);
+      color: #fff;
+    }
+
+    .hero-side {
+      padding: 22px;
+      display: grid;
+      align-content: center;
+      gap: 14px;
+    }
+
+    .metric {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 16px 0;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .metric:last-child {
+      border-bottom: 0;
+    }
+
+    .metric span {
+      color: var(--muted);
+      font-weight: 600;
+    }
+
+    .metric strong {
+      font-size: 2rem;
+      line-height: 1;
+      color: var(--primary-dark);
+    }
+
+    .section {
+      margin-top: 22px;
+      padding: 24px;
+    }
+
+    .section-header {
+      display: flex;
+      align-items: end;
+      justify-content: space-between;
+      gap: 18px;
+      margin-bottom: 18px;
+    }
+
+    h2 {
+      margin: 0;
+      font-size: clamp(1.35rem, 2vw, 1.75rem);
+    }
+
+    .section-note {
+      margin: 4px 0 0;
+      color: var(--muted);
+      line-height: 1.55;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 14px;
+    }
+
+    .link-card {
+      display: grid;
+      grid-template-columns: 42px minmax(0, 1fr);
+      gap: 12px;
+      min-height: 116px;
+      padding: 16px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fff;
+      transition: transform 160ms ease, border-color 160ms ease, box-shadow 160ms ease;
+    }
+
+    .link-card:hover,
+    .link-card:focus-visible {
+      transform: translateY(-2px);
+      border-color: rgba(0, 102, 255, 0.45);
+      box-shadow: 0 12px 28px rgba(16, 32, 51, 0.1);
+      outline: none;
+    }
+
+    .icon {
+      width: 42px;
+      height: 42px;
+      display: grid;
+      place-items: center;
+      border-radius: 8px;
+      color: var(--primary-dark);
+      background: #e9f1ff;
+    }
+
+    .icon i {
+      font-size: 23px;
+    }
+
+    .link-title {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin: 0 0 6px;
+      font-size: 1.05rem;
+      font-weight: 800;
+    }
+
+    .link-text {
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.48;
+      font-size: 0.95rem;
+    }
+
+    .tag-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 7px;
+      margin-top: 12px;
+    }
+
+    .tag {
+      display: inline-flex;
+      align-items: center;
+      min-height: 24px;
+      padding: 0 9px;
+      border-radius: 999px;
+      background: #eef2f7;
+      color: #435266;
+      font-size: 0.78rem;
+      font-weight: 700;
+    }
+
+    .tag.admin {
+      background: #e8f7f2;
+      color: var(--green);
+    }
+
+    .tag.super {
+      background: #fff3df;
+      color: var(--amber);
+    }
+
+    .doc-list {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 14px;
+    }
+
+    .visual-docs {
+      display: grid;
+      gap: 18px;
+      margin-top: 18px;
+    }
+
+    .visual-doc {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fff;
+      overflow: hidden;
+    }
+
+    .visual-doc-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 18px 20px;
+      border-bottom: 1px solid var(--line);
+      background: linear-gradient(90deg, #f8fbff, #ffffff);
+    }
+
+    .visual-doc-title {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin: 0;
+      font-size: 1.2rem;
+      font-weight: 800;
+    }
+
+    .visual-doc-title i {
+      width: 36px;
+      height: 36px;
+      display: grid;
+      place-items: center;
+      border-radius: 8px;
+      color: #fff;
+      background: var(--primary);
+      font-size: 21px;
+    }
+
+    .source-link {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 7px;
+      min-height: 36px;
+      padding: 0 12px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      color: var(--primary-dark);
+      background: #fff;
+      font-weight: 800;
+      white-space: nowrap;
+    }
+
+    .visual-doc-body {
+      padding: 20px;
+    }
+
+    .diagram-flow {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 12px;
+      align-items: stretch;
+    }
+
+    .flow-node,
+    .security-node {
+      position: relative;
+      min-height: 138px;
+      padding: 16px;
+      border: 1px solid #dfe7f2;
+      border-radius: 8px;
+      background: #fbfdff;
+    }
+
+    .flow-node:not(:last-child)::after {
+      content: "";
+      position: absolute;
+      top: 50%;
+      left: -13px;
+      width: 13px;
+      height: 2px;
+      background: var(--primary);
+      transform: translateY(-50%);
+    }
+
+    .node-number {
+      display: inline-grid;
+      place-items: center;
+      width: 28px;
+      height: 28px;
+      margin-bottom: 10px;
+      border-radius: 50%;
+      color: #fff;
+      background: var(--primary-dark);
+      font-family: "Inter", sans-serif;
+      font-weight: 800;
+      font-size: 0.85rem;
+    }
+
+    .node-title {
+      margin: 0 0 7px;
+      font-weight: 800;
+    }
+
+    .node-text {
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.45;
+      font-size: 0.92rem;
+    }
+
+    .architecture-map {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr) minmax(0, 1fr);
+      gap: 14px;
+      margin-top: 16px;
+    }
+
+    .map-column {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #ffffff;
+      padding: 14px;
+    }
+
+    .map-column h4 {
+      margin: 0 0 10px;
+      font-size: 1rem;
+    }
+
+    .map-column ul {
+      margin: 0;
+      padding: 0 18px 0 0;
+      color: var(--muted);
+      line-height: 1.7;
+    }
+
+    .security-grid {
+      display: grid;
+      grid-template-columns: 1fr 1.15fr 1fr;
+      gap: 14px;
+      align-items: stretch;
+    }
+
+    .security-center {
+      display: grid;
+      place-items: center;
+      min-height: 230px;
+      padding: 20px;
+      border-radius: 8px;
+      color: #fff;
+      background: linear-gradient(145deg, #102033, #0066ff);
+      text-align: center;
+    }
+
+    .security-center i {
+      display: block;
+      margin-bottom: 10px;
+      font-size: 44px;
+    }
+
+    .security-center strong {
+      display: block;
+      font-size: 1.55rem;
+      line-height: 1.2;
+    }
+
+    .security-center span {
+      display: block;
+      margin-top: 8px;
+      color: rgba(255, 255, 255, 0.82);
+      line-height: 1.5;
+    }
+
+    .security-stack {
+      display: grid;
+      gap: 12px;
+    }
+
+    .security-node {
+      min-height: auto;
+      display: grid;
+      grid-template-columns: 36px minmax(0, 1fr);
+      gap: 10px;
+      align-items: start;
+    }
+
+    .security-node i {
+      width: 36px;
+      height: 36px;
+      display: grid;
+      place-items: center;
+      border-radius: 8px;
+      color: var(--green);
+      background: #e8f7f2;
+      font-size: 20px;
+    }
+
+    .recommendations {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 10px;
+      margin-top: 16px;
+    }
+
+    .recommendation {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 62px;
+      padding: 10px;
+      border-radius: 8px;
+      background: #fff7eb;
+      color: var(--amber);
+      text-align: center;
+      font-weight: 800;
+      line-height: 1.25;
+    }
+
+    .footer-note {
+      margin: 20px 0 0;
+      color: var(--muted);
+      text-align: center;
+      font-size: 0.92rem;
+    }
+
+    @media (max-width: 900px) {
+      .hero,
+      .grid,
+      .doc-list,
+      .diagram-flow,
+      .architecture-map,
+      .security-grid,
+      .recommendations {
+        grid-template-columns: 1fr;
+      }
+
+      .topbar,
+      .section-header,
+      .visual-doc-head {
+        align-items: flex-start;
+        flex-direction: column;
+      }
+
+      .flow-node:not(:last-child)::after {
+        top: auto;
+        left: 50%;
+        bottom: -13px;
+        width: 2px;
+        height: 13px;
+        transform: translateX(-50%);
+      }
+    }
+
+    @media (max-width: 520px) {
+      .shell {
+        width: min(100% - 22px, 1160px);
+        padding-top: 22px;
+      }
+
+      .home-link,
+      .action {
+        width: 100%;
+      }
+
+      .link-card {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <header class="topbar">
+      <div class="brand">
+        <div class="brand-mark" aria-hidden="true"><i class="bx bx-hive"></i></div>
+        <div>
+          <p class="brand-title">InAlign LMS</p>
+          <p class="brand-subtitle">עמוד הצגת מערכת, ניווט ומדריכים</p>
+        </div>
+      </div>
+      <a class="home-link" href="index.html#/login">
+        <i class="bx bx-log-in"></i>
+        כניסה למערכת
+      </a>
+    </header>
+
+    <section class="hero" aria-labelledby="hero-title">
+      <div class="hero-main">
+        <div class="eyebrow"><i class="bx bx-map-alt"></i> מפת מערכת מלאה</div>
+        <h1 id="hero-title">כל עמודי המערכת והמדריכים במקום אחד</h1>
+        <p class="lead">
+          קובץ זה מרכז את מסכי InAlign LMS לפי תפקידים, יחד עם מדריכי השימוש ומסמכי המערכת.
+          הקישורים למסכי האפליקציה נפתחים דרך `index.html` ומפנים לנתיבי ה-hash של המערכת.
+        </p>
+        <div class="quick-actions" aria-label="קישורים מהירים">
+          <a class="action primary" href="index.html#/learner"><i class="bx bx-book-open"></i> אזור לומד</a>
+          <a class="action" href="index.html#/admin"><i class="bx bx-pie-chart-alt"></i> דשבורד מנהל</a>
+          <a class="action" href="user_guide.html"><i class="bx bx-help-circle"></i> מדריך מלא</a>
+          <a class="action" href="user_guide_learners.html"><i class="bx bx-book-reader"></i> מדריך לומדים</a>
+          <a class="action" href="user_guide_training_managers.html"><i class="bx bx-user-voice"></i> מדריך מנהלי הדרכה</a>
+        </div>
+      </div>
+
+      <aside class="hero-side" aria-label="סיכום תכולה">
+        <div class="metric">
+          <span>נתיבי אפליקציה</span>
+          <strong>11</strong>
+        </div>
+        <div class="metric">
+          <span>מדריכי HTML</span>
+          <strong>3</strong>
+        </div>
+        <div class="metric">
+          <span>מסמכי מערכת</span>
+          <strong>3</strong>
+        </div>
+      </aside>
+    </section>
+
+    <section class="section" aria-labelledby="pages-title">
+      <div class="section-header">
+        <div>
+          <h2 id="pages-title">עמודי המערכת</h2>
+          <p class="section-note">כל הנתיבים המוגדרים ב-Router של האפליקציה.</p>
+        </div>
+      </div>
+
+      <div class="grid">
+        <a class="link-card" href="index.html#/login">
+          <span class="icon"><i class="bx bx-log-in-circle"></i></span>
+          <span>
+            <span class="link-title">כניסה למערכת <i class="bx bx-link-external"></i></span>
+            <p class="link-text">מסך התחברות למשתמשים, מנהלים ומנהלי-על.</p>
+            <span class="tag-row"><span class="tag">ציבורי</span></span>
+          </span>
+        </a>
+
+        <a class="link-card" href="index.html#/">
+          <span class="icon"><i class="bx bx-home"></i></span>
+          <span>
+            <span class="link-title">עמוד ברירת מחדל <i class="bx bx-link-external"></i></span>
+            <p class="link-text">מפנה לתצוגת הלומד כאשר נכנסים לשורש האפליקציה.</p>
+            <span class="tag-row"><span class="tag">כל המשתמשים</span></span>
+          </span>
+        </a>
+
+        <a class="link-card" href="index.html#/learner">
+          <span class="icon"><i class="bx bx-book-open"></i></span>
+          <span>
+            <span class="link-title">האזור האישי שלי <i class="bx bx-link-external"></i></span>
+            <p class="link-text">תצוגת לומד עם לומדות זמינות, התקדמות והמשך למידה.</p>
+            <span class="tag-row"><span class="tag">לומד</span><span class="tag admin">מנהל</span></span>
+          </span>
+        </a>
+
+        <a class="link-card" href="index.html#/player">
+          <span class="icon"><i class="bx bx-play-circle"></i></span>
+          <span>
+            <span class="link-title">נגן לומדה <i class="bx bx-link-external"></i></span>
+            <p class="link-text">מסך הפעלת לומדת SCORM. בדרך כלל נפתח עם מזהה לומדה מהאזור האישי.</p>
+            <span class="tag-row"><span class="tag">SCORM</span><span class="tag">למידה</span></span>
+          </span>
+        </a>
+
+        <a class="link-card" href="index.html#/admin">
+          <span class="icon"><i class="bx bx-pie-chart-alt"></i></span>
+          <span>
+            <span class="link-title">דשבורד מנהל <i class="bx bx-link-external"></i></span>
+            <p class="link-text">תמונת מצב ניהולית על למידה, עובדים, קורסים והתקדמות.</p>
+            <span class="tag-row"><span class="tag admin">admin</span><span class="tag admin">org_admin</span><span class="tag super">super_admin</span></span>
+          </span>
+        </a>
+
+        <a class="link-card" href="index.html#/admin/scorm">
+          <span class="icon"><i class="bx bx-upload"></i></span>
+          <span>
+            <span class="link-title">ניהול לומדות <i class="bx bx-link-external"></i></span>
+            <p class="link-text">העלאה, ניהול וארגון של חבילות SCORM ותכני הדרכה.</p>
+            <span class="tag-row"><span class="tag admin">admin</span><span class="tag admin">org_admin</span><span class="tag super">super_admin</span></span>
+          </span>
+        </a>
+
+        <a class="link-card" href="index.html#/admin/users">
+          <span class="icon"><i class="bx bx-group"></i></span>
+          <span>
+            <span class="link-title">ניהול עובדים <i class="bx bx-link-external"></i></span>
+            <p class="link-text">יצירה, עדכון וניהול משתמשים, תפקידים ושיוכים ארגוניים.</p>
+            <span class="tag-row"><span class="tag admin">admin</span><span class="tag admin">org_admin</span><span class="tag super">super_admin</span></span>
+          </span>
+        </a>
+
+        <a class="link-card" href="index.html#/admin/groups">
+          <span class="icon"><i class="bx bx-network-chart"></i></span>
+          <span>
+            <span class="link-title">ניהול קבוצות <i class="bx bx-link-external"></i></span>
+            <p class="link-text">קבוצות עובדים, שיוך לומדים והקצאת תכנים לפי קבוצה.</p>
+            <span class="tag-row"><span class="tag admin">admin</span><span class="tag admin">org_admin</span><span class="tag super">super_admin</span></span>
+          </span>
+        </a>
+
+        <a class="link-card" href="index.html#/admin/settings">
+          <span class="icon"><i class="bx bx-cog"></i></span>
+          <span>
+            <span class="link-title">הגדרות <i class="bx bx-link-external"></i></span>
+            <p class="link-text">הגדרות ארגון, מיתוג, פרטי מערכת והרשאות רלוונטיות.</p>
+            <span class="tag-row"><span class="tag admin">admin</span><span class="tag admin">org_admin</span><span class="tag super">super_admin</span></span>
+          </span>
+        </a>
+
+        <a class="link-card" href="index.html#/superadmin/orgs">
+          <span class="icon"><i class="bx bx-building-house"></i></span>
+          <span>
+            <span class="link-title">ניהול ארגונים <i class="bx bx-link-external"></i></span>
+            <p class="link-text">יצירה וניהול של ארגונים, מעבר בין ארגונים ותפעול מנהל-על.</p>
+            <span class="tag-row"><span class="tag super">super_admin</span></span>
+          </span>
+        </a>
+
+        <a class="link-card" href="index.html#/superadmin/assignments">
+          <span class="icon"><i class="bx bx-link"></i></span>
+          <span>
+            <span class="link-title">הקצאת לומדות <i class="bx bx-link-external"></i></span>
+            <p class="link-text">הקצאת לומדות ויחסי תוכן ברמת מנהל-על.</p>
+            <span class="tag-row"><span class="tag super">super_admin</span></span>
+          </span>
+        </a>
+      </div>
+    </section>
+
+    <section class="section" aria-labelledby="guides-title">
+      <div class="section-header">
+        <div>
+          <h2 id="guides-title">מדריכים ומסמכי מערכת</h2>
+          <p class="section-note">מדריכי שימוש, סקירות ותיעוד טכני הקיימים בפרויקט.</p>
+        </div>
+      </div>
+
+      <div class="doc-list">
+        <a class="link-card" href="user_guide.html">
+          <span class="icon"><i class="bx bx-help-circle"></i></span>
+          <span>
+            <span class="link-title">מדריך שימוש אינטראקטיבי <i class="bx bx-link-external"></i></span>
+            <p class="link-text">מדריך מלא לתפעול המערכת עבור מנהל ראשי, מנהל מערכת ומנהל הדרכה.</p>
+            <span class="tag-row"><span class="tag">מדריך HTML</span></span>
+          </span>
+        </a>
+
+        <a class="link-card" href="user_guide_learners.html">
+          <span class="icon"><i class="bx bx-book-reader"></i></span>
+          <span>
+            <span class="link-title">מדריך שימוש ללומדים <i class="bx bx-link-external"></i></span>
+            <p class="link-text">מדריך ללומד: כניסה, אזור אישי, פתיחת לומדה, שמירה, התקדמות ותקלות נפוצות.</p>
+            <span class="tag-row"><span class="tag">מדריך HTML</span></span>
+          </span>
+        </a>
+
+        <a class="link-card" href="user_guide_training_managers.html">
+          <span class="icon"><i class="bx bx-user-voice"></i></span>
+          <span>
+            <span class="link-title">מדריך למנהלי הדרכה <i class="bx bx-link-external"></i></span>
+            <p class="link-text">מדריך ממוקד לניהול הדרכה בארגון: תוכן, עובדים, קבוצות, שיוכים ודוחות.</p>
+            <span class="tag-row"><span class="tag">מדריך HTML</span></span>
+          </span>
+        </a>
+
+        <a class="link-card" href="docs/security_report.html">
+          <span class="icon"><i class="bx bx-shield-quarter"></i></span>
+          <span>
+            <span class="link-title">סקירת אבטחת מידע <i class="bx bx-link-external"></i></span>
+            <p class="link-text">דוח HTML להצגת שכבות אבטחה, אימות, הרשאות והמלצות חיזוק.</p>
+            <span class="tag-row"><span class="tag">דוח HTML</span></span>
+          </span>
+        </a>
+
+        <a class="link-card" href="#security-visual">
+          <span class="icon"><i class="bx bx-file-find"></i></span>
+          <span>
+            <span class="link-title">סקירת אבטחה טכנית <i class="bx bx-down-arrow-alt"></i></span>
+            <p class="link-text">המסמך המקורי זמין לפתיחה, והתקציר שלו מוצג למטה כתרשים אבטחה.</p>
+            <span class="tag-row"><span class="tag">מקור Markdown</span><span class="tag">תרשים בהמשך</span></span>
+          </span>
+        </a>
+
+        <a class="link-card" href="#architecture-visual">
+          <span class="icon"><i class="bx bx-sitemap"></i></span>
+          <span>
+            <span class="link-title">ארכיטקטורה <i class="bx bx-down-arrow-alt"></i></span>
+            <p class="link-text">המסמך המקורי זמין לפתיחה, והמבנה המרכזי שלו מוצג למטה כתרשים מערכת.</p>
+            <span class="tag-row"><span class="tag">מקור Markdown</span><span class="tag">תרשים בהמשך</span></span>
+          </span>
+        </a>
+      </div>
+
+      <div class="visual-docs" aria-label="תרשימים מתוך מסמכי Markdown">
+        <article class="visual-doc" id="architecture-visual" aria-labelledby="architecture-visual-title">
+          <div class="visual-doc-head">
+            <h3 class="visual-doc-title" id="architecture-visual-title">
+              <i class="bx bx-sitemap"></i>
+              תרשים ארכיטקטורה מתוך ARCHITECTURE.md
+            </h3>
+            <a class="source-link" href="docs/ARCHITECTURE.md"><i class="bx bx-file"></i> פתיחת המקור</a>
+          </div>
+          <div class="visual-doc-body">
+            <div class="diagram-flow" aria-label="זרימת מערכת">
+              <div class="flow-node">
+                <span class="node-number">1</span>
+                <p class="node-title">כניסה ואימות</p>
+                <p class="node-text">Supabase Auth מנהל משתמשים, סשנים והרשאות כניסה למערכת.</p>
+              </div>
+              <div class="flow-node">
+                <span class="node-number">2</span>
+                <p class="node-title">SPA בדפדפן</p>
+                <p class="node-text">Vite, HTML, CSS ו-Vanilla JS מספקים ממשק RTL רספונסיבי.</p>
+              </div>
+              <div class="flow-node">
+                <span class="node-number">3</span>
+                <p class="node-title">ניהול ולמידה</p>
+                <p class="node-text">פורטל מנהל לניהול תכנים ומשתמשים, ופורטל לומד להפעלת לומדות.</p>
+              </div>
+              <div class="flow-node">
+                <span class="node-number">4</span>
+                <p class="node-title">SCORM Player</p>
+                <p class="node-text">נגן ייעודי טוען לומדה ב-iFrame ומאזין לקריאות SCORM.</p>
+              </div>
+              <div class="flow-node">
+                <span class="node-number">5</span>
+                <p class="node-title">נתונים ודוחות</p>
+                <p class="node-text">Supabase שומר קורסים, שיוכים והתקדמות, ומאפשר ייצוא ודוחות.</p>
+              </div>
+            </div>
+
+            <div class="architecture-map" aria-label="מפת שכבות המערכת">
+              <div class="map-column">
+                <h4>צד לומד</h4>
+                <ul>
+                  <li>דשבורד לומדות אישיות</li>
+                  <li>סטטוס, ציון והתקדמות</li>
+                  <li>נגן קורס SCORM</li>
+                </ul>
+              </div>
+              <div class="map-column">
+                <h4>שכבת Backend ונתונים</h4>
+                <ul>
+                  <li>profiles, courses, enrollments</li>
+                  <li>progress_records / learning_attempts</li>
+                  <li>Storage לחבילות SCORM</li>
+                </ul>
+              </div>
+              <div class="map-column">
+                <h4>צד מנהל</h4>
+                <ul>
+                  <li>דשבורד ניהולי</li>
+                  <li>ניהול לומדות ומשתמשים</li>
+                  <li>מעקב, סינון וייצוא דוחות</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </article>
+
+        <article class="visual-doc" id="security-visual" aria-labelledby="security-visual-title">
+          <div class="visual-doc-head">
+            <h3 class="visual-doc-title" id="security-visual-title">
+              <i class="bx bx-shield-quarter"></i>
+              תרשים אבטחה מתוך security_review.md
+            </h3>
+            <a class="source-link" href="docs/security_review.md"><i class="bx bx-file"></i> פתיחת המקור</a>
+          </div>
+          <div class="visual-doc-body">
+            <div class="security-grid" aria-label="שכבות אבטחה">
+              <div class="security-stack">
+                <div class="security-node">
+                  <i class="bx bx-key"></i>
+                  <span>
+                    <p class="node-title">Authentication</p>
+                    <p class="node-text">Supabase Auth, JWT וניהול סיסמאות מוצפן.</p>
+                  </span>
+                </div>
+                <div class="security-node">
+                  <i class="bx bx-id-card"></i>
+                  <span>
+                    <p class="node-title">RBAC</p>
+                    <p class="node-text">Super Admin, Org Admin ולומד, כל אחד עם פעולות מתאימות.</p>
+                  </span>
+                </div>
+              </div>
+
+              <div class="security-center">
+                <span>
+                  <i class="bx bx-lock-alt"></i>
+                  <strong>Defense in Depth</strong>
+                  <span>אכיפה משולבת בדפדפן, ב-Router, ב-UI ובמסד הנתונים.</span>
+                </span>
+              </div>
+
+              <div class="security-stack">
+                <div class="security-node">
+                  <i class="bx bx-data"></i>
+                  <span>
+                    <p class="node-title">RLS ו-Multi-Tenancy</p>
+                    <p class="node-text">PostgreSQL מבודד נתוני ארגונים ומונע גישה לנתונים זרים.</p>
+                  </span>
+                </div>
+                <div class="security-node">
+                  <i class="bx bx-window"></i>
+                  <span>
+                    <p class="node-title">Frontend Guards</p>
+                    <p class="node-text">Route Guards, הסתרת פעולות רגישות ובידוד לומדות ב-iFrame.</p>
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <div class="recommendations" aria-label="המלצות אבטחה">
+              <div class="recommendation">2FA למנהלים</div>
+              <div class="recommendation">מדיניות סיסמאות</div>
+              <div class="recommendation">Content Security Policy</div>
+              <div class="recommendation">Rate Limiting</div>
+              <div class="recommendation">בדיקות חדירות תקופתיות</div>
+            </div>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <p class="footer-note">
+      הערה: חלק מהעמודים דורשים משתמש מחובר והרשאות מתאימות. אם אין הרשאה, ה-Router יעביר למסך הכניסה או יציג חסימה.
+    </p>
+  </main>
+</body>
+</html>
