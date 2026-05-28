@@ -1,18 +1,20 @@
 import { logout } from '../auth.js'
 import { applyOrganizationStyles } from '../lib/ui.js'
 
+import { isAdminRole, isSuperAdminRole } from '../lib/roles.js'
+
 export function renderNavbar(user) {
   const nav = document.createElement('nav')
   nav.className = 'navbar'
   
   // Decide links based on role
   let linksStr = ''
-  if (user.role === 'super_admin') {
+  if (isSuperAdminRole(user.role)) {
     linksStr += `<a href="#/superadmin/orgs" class="nav-link"><i class='bx bx-building-house'></i> ניהול ארגונים</a>`
     linksStr += `<a href="#/admin/users" class="nav-link"><i class='bx bx-group'></i> ניהול עובדים</a>`
     linksStr += `<a href="#/superadmin/assignments" class="nav-link"><i class='bx bx-link'></i> הקצאת לומדות</a>`
     linksStr += `<a href="#/admin/settings" class="nav-link"><i class='bx bx-cog'></i> הגדרות</a>`
-  } else if (user.role === 'admin' || user.role === 'org_admin') {
+  } else if (isAdminRole(user.role)) {
     linksStr += `<a href="#/admin" class="nav-link"><i class='bx bx-pie-chart-alt'></i> דשבורד מנהל</a>`
     linksStr += `<a href="#/admin/scorm" class="nav-link"><i class='bx bx-upload'></i> ניהול לומדות</a>`
     linksStr += `<a href="#/admin/users" class="nav-link"><i class='bx bx-user'></i> ניהול עובדים</a>`

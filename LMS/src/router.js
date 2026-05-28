@@ -1,6 +1,7 @@
 import { getCurrentUserSync as getUser } from './auth.js'
 import { renderNavbar } from './components/navbar.js'
 import { getRoute } from './routes.js'
+import { isAdminRole, isSuperAdminRole } from './lib/roles.js'
 
 export function initRouter(container) {
   // Listen to hash changes
@@ -31,8 +32,8 @@ async function navigate(container) {
 
   // 3. Special Case: Already logged in user trying to access Login page
   if (user && hash === '#/login') {
-    if (user.role === 'super_admin') window.location.hash = '#/superadmin/orgs'
-    else if (user.role === 'org_admin' || user.role === 'admin') window.location.hash = '#/admin'
+    if (isSuperAdminRole(user.role)) window.location.hash = '#/superadmin/orgs'
+    else if (isAdminRole(user.role)) window.location.hash = '#/admin'
     else window.location.hash = '#/learner'
     return
   }

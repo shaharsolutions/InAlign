@@ -1,11 +1,12 @@
 import { supabase } from '../lib/supabase.js'
+import { ROLE_LEARNER, ROLE_ORG_ADMIN, ROLE_SUPER_ADMIN } from '../lib/roles.js'
 
 // Mock Data Fallback
 let mockCurrentUser = null;
 const MOCK_PROFILES = {
-  'admin@test.com': { id: 'usr-1', org_id: 'org-1', role: 'super_admin', full_name: 'מנהל על מרכזי' },
-  'org@test.com': { id: 'usr-2', org_id: 'org-2', role: 'org_admin', full_name: 'מנהל הדרכה הייטק', org_color: '#198754' },
-  'learner@test.com': { id: 'usr-3', org_id: 'org-2', role: 'learner', full_name: 'ישראל הלומד ציבורי', org_color: '#198754' }
+  'admin@test.com': { id: 'usr-1', org_id: 'org-1', role: ROLE_SUPER_ADMIN, full_name: 'מנהל על מרכזי' },
+  'org@test.com': { id: 'usr-2', org_id: 'org-2', role: ROLE_ORG_ADMIN, full_name: 'מנהל הדרכה הייטק', org_color: '#198754' },
+  'learner@test.com': { id: 'usr-3', org_id: 'org-2', role: ROLE_LEARNER, full_name: 'ישראל הלומד ציבורי', org_color: '#198754' }
 };
 
 export async function checkAuth() {

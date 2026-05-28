@@ -2,6 +2,7 @@ import { saveLearnerProgress, fetchCourseProgress } from '../api/progressApi.js'
 import { fetchCourseById } from '../api/coursesApi.js'
 import { getCurrentUserSync } from '../api/authApi.js'
 import { parseScormTime, formatScorm12Time } from '../lib/scormUtils.js'
+import { clampProgress } from '../lib/progressUtils.js'
 
 // Aggressive global cleanup for intervals
 if (window._lmsHeartbeat) clearInterval(window._lmsHeartbeat);
@@ -36,7 +37,7 @@ export default async function renderPlayer(container) {
     const runtime = {
       courseId: courseId,
       status: existingProgress?.status || 'not_started',
-      progress: parseInt(existingProgress?.progress_percent || 0),
+      progress: clampProgress(existingProgress?.progress_percent || 0),
       score: parseInt(existingProgress?.score || 0),
       baseTimeSeconds: parseInt(existingProgress?.time_spent_seconds || 0),
       sessionTimeSeconds: 0,
@@ -44,6 +45,7 @@ export default async function renderPlayer(container) {
       suspendData: existingProgress?.suspend_data || '',
       location: existingProgress?.lesson_location || '',
       lastSync: 0,
+      hasExplicitProgress: existingProgress?.status === 'completed' || parseInt(existingProgress?.progress_percent || 0) > 0,
       isExiting: false
     };
 
@@ -64,9 +66,12 @@ export default async function renderPlayer(container) {
         
         if (runtime.status === 'not_started' && totalTime > 15) runtime.status = 'in_progress';
         
-        let finalProgress = runtime.progress;
-        if (runtime.status === 'in_progress' && finalProgress < 5) finalProgress = 5;
-        if (runtime.status === 'completed') finalProgress = 100;
+        let finalProgress = runtime.hasExplicitProgress ? runtime.progress : null;
+        if (runtime.status === 'completed') {
+          finalProgress = 100;
+          runtime.hasExplicitProgress = true;
+        }
+        if (finalProgress !== null) runtime.progress = Math.max(runtime.progress, finalProgress);
 
         pendingUpdates = { 
           status: runtime.status,
@@ -130,6 +135,8 @@ export default async function renderPlayer(container) {
       Initialize: (n) => { 
           console.warn("[InAlign] SCORM Initialize called");
           API._initialized = true; 
+          runtime.scormInitialized = true;
+          window.dispatchEvent(new CustomEvent('lms:scorm-ready', { detail: { courseId: runtime.courseId } }));
           return "true"; 
       },
       LMSInitialize: (n) => API.Initialize(n),
@@ -145,7 +152,7 @@ export default async function renderPlayer(container) {
         else if (key.includes('location')) val = runtime.location || "";
         else if (key.includes('suspend_data')) val = runtime.suspendData || "";
         else if (key.includes('score.raw')) val = String(runtime.score || 0);
-        else if (key.includes('progress_measure')) val = String(runtime.progress / 100);
+        else if (key.includes('progress_measure')) val = runtime.hasExplicitProgress ? String(runtime.progress / 100) : "";
         else if (key.includes('entry')) val = (runtime.baseTimeSeconds > 5 || runtime.location) ? "resume" : "ab-initio";
         else if (key.includes('total_time')) val = formatScorm12Time(runtime.baseTimeSeconds);
         
@@ -176,11 +183,11 @@ export default async function renderPlayer(container) {
         }
         else if (key.includes('progress_measure')) {
             const p = Math.round(parseFloat(v) * 100);
-            if (!isNaN(p) && p !== runtime.progress) { runtime.progress = p; changed = true; }
+            if (!isNaN(p) && p !== runtime.progress) { runtime.progress = p; runtime.hasExplicitProgress = true; changed = true; }
         }
         else if (key.includes('progress_percent')) {
             const p = parseInt(v);
-            if (!isNaN(p) && p !== runtime.progress) { runtime.progress = p; changed = true; }
+            if (!isNaN(p) && p !== runtime.progress) { runtime.progress = p; runtime.hasExplicitProgress = true; changed = true; }
         }
         else if (key.includes('session_time')) {
             runtime.sessionTimeSeconds = parseScormTime(v);
@@ -230,19 +237,83 @@ export default async function renderPlayer(container) {
 
         <div class="player-content">
           <div class="player-frame-wrapper">
-            <div id="iframe-loader" style="position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; background: #000; z-index: 10;">
-              <div style="text-align: center;">
-                <i class='bx bx-loader-alt bx-spin' style="font-size: 3.5rem; color: #3b82f6;"></i>
-                <p style="color: #94a3b8; margin-top: 1rem; font-weight: 500;">טוען את הלומדה...</p>
+            <div id="iframe-loader" class="scorm-loading-overlay" aria-live="polite" aria-busy="true">
+              <div class="scorm-loading-card">
+                <div class="scorm-loading-mark">
+                  <i class='bx bx-shield-quarter'></i>
+                </div>
+                <h3>טוען את הלומדה</h3>
+                <p id="iframe-loader-status">מכין את סביבת הלמידה...</p>
+                <div class="scorm-loading-bar">
+                  <span></span>
+                </div>
               </div>
             </div>
-            <iframe id="scorm-iframe" style="width: 100%; height: 100%; border:0; opacity:0; transition: opacity 0.5s ease;"></iframe>
+            <iframe id="scorm-iframe" title="${course.title}" style="width: 100%; height: 100%; border:0; opacity:0; transition: opacity 0.5s ease;"></iframe>
           </div>
         </div>
       </div>
     `;
 
     const iframe = document.getElementById('scorm-iframe');
+    const loader = document.getElementById('iframe-loader');
+    const loaderStatus = document.getElementById('iframe-loader-status');
+    let loaderHidden = false;
+    let iframeLoaded = false;
+    let scormReady = false;
+    let fallbackTimer = null;
+
+    const setLoaderStatus = (text) => {
+      if (loaderStatus) loaderStatus.textContent = text;
+    };
+
+    const hideLoader = () => {
+      if (loaderHidden) return;
+      loaderHidden = true;
+      if (fallbackTimer) clearTimeout(fallbackTimer);
+      setLoaderStatus('הלומדה מוכנה');
+      iframe.style.opacity = '1';
+      if (loader) {
+        loader.setAttribute('aria-busy', 'false');
+        loader.classList.add('is-loaded');
+        setTimeout(() => loader.remove(), 650);
+      }
+    };
+
+    const waitForIframeDocument = async () => {
+      const maxAttempts = 40;
+      for (let attempt = 0; attempt < maxAttempts; attempt++) {
+        try {
+          const doc = iframe.contentDocument;
+          if (doc?.readyState === 'complete' && doc.body?.children?.length > 0) return true;
+        } catch (e) {
+          return true;
+        }
+        await new Promise(resolve => setTimeout(resolve, 150));
+      }
+      return false;
+    };
+
+    const maybeHideLoader = () => {
+      if (!iframeLoaded) return;
+      if (scormReady || runtime.scormInitialized) {
+        hideLoader();
+        return;
+      }
+
+      fallbackTimer = setTimeout(() => {
+        if (!loaderHidden && iframeLoaded) hideLoader();
+      }, 3500);
+    };
+
+    const onScormReady = (event) => {
+      if (event.detail?.courseId !== runtime.courseId) return;
+      scormReady = true;
+      setLoaderStatus('מחבר את הלומדה למערכת...');
+      maybeHideLoader();
+    };
+
+    window.addEventListener('lms:scorm-ready', onScormReady);
     
     if (!course.fileUrl) {
         throw new Error("לא נמצאו קבצי לומדה עבור קורס זה. ייתכן שההעלאה נכשלה או שהקבצים נמחקו.");
@@ -273,18 +344,23 @@ export default async function renderPlayer(container) {
         await window.navigator.serviceWorker.ready;
     }
 
-    iframe.src = proxyUrl;
-    
-    // Quick-Show: If it's already in cache, it might load almost instantly
-    iframe.onload = () => { 
-        document.getElementById('iframe-loader').style.opacity = '0';
-        setTimeout(() => {
-            if (document.getElementById('iframe-loader')) document.getElementById('iframe-loader').style.display = 'none';
-        }, 500);
-        iframe.style.opacity = '1'; 
+    iframe.onload = async () => {
+        setLoaderStatus('מסיים טעינה...');
+        await waitForIframeDocument();
+        iframeLoaded = true;
+        maybeHideLoader();
     };
 
+    iframe.onerror = () => {
+        setLoaderStatus('לא הצלחנו לטעון את הלומדה. נסה לרענן את העמוד.');
+        if (loader) loader.classList.add('has-error');
+    };
+
+    setLoaderStatus('טוען קבצי לומדה...');
+    iframe.src = proxyUrl;
+
     document.getElementById('scorm-save-exit').addEventListener('click', async () => { 
+        window.removeEventListener('lms:scorm-ready', onScormReady);
         try { iframe.contentWindow.dispatchEvent(new Event('unload')); } catch(e) {}
         await handleExit("manual_exit");
     });

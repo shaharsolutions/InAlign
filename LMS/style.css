@@ -647,6 +647,109 @@ h1, h2, h3, h4, h5, h6 {
   justify-content: center;
 }
 
+.scorm-loading-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f8fafc;
+  color: #1e293b;
+  opacity: 1;
+  transition: opacity 0.55s ease, visibility 0.55s ease;
+}
+
+.scorm-loading-overlay.is-loaded {
+  opacity: 0;
+  visibility: hidden;
+}
+
+.scorm-loading-card {
+  width: min(340px, calc(100% - 40px));
+  text-align: center;
+  padding: 32px 28px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  box-shadow: 0 18px 45px rgba(15, 23, 42, 0.12);
+}
+
+.scorm-loading-mark {
+  width: 72px;
+  height: 72px;
+  margin: 0 auto 22px;
+  border-radius: 50%;
+  position: relative;
+  display: grid;
+  place-items: center;
+  background: #f8fafc;
+  border: 1px solid #dbeafe;
+}
+
+.scorm-loading-mark::before {
+  content: "";
+  position: absolute;
+  inset: -5px;
+  border-radius: 50%;
+  border: 2px solid #dbeafe;
+  border-top-color: #2563eb;
+  animation: scormSpin 1.25s linear infinite;
+}
+
+.scorm-loading-mark i {
+  font-size: 2rem;
+  color: #1d4ed8;
+  position: relative;
+  z-index: 1;
+}
+
+.scorm-loading-card h3 {
+  margin: 0;
+  font-size: 1.15rem;
+  color: #0f172a;
+  font-weight: 700;
+}
+
+.scorm-loading-card p {
+  margin: 8px 0 22px;
+  color: #64748b;
+  font-weight: 500;
+  font-size: 0.92rem;
+}
+
+.scorm-loading-bar {
+  height: 4px;
+  overflow: hidden;
+  border-radius: 0;
+  background: #e2e8f0;
+}
+
+.scorm-loading-bar span {
+  display: block;
+  width: 36%;
+  height: 100%;
+  border-radius: 0;
+  background: #2563eb;
+  animation: scormBar 1.55s ease-in-out infinite;
+}
+
+.scorm-loading-overlay.has-error .scorm-loading-mark::before,
+.scorm-loading-overlay.has-error .scorm-loading-bar span {
+  animation-play-state: paused;
+  background: #ef4444;
+  border-top-color: #ef4444;
+}
+
+@keyframes scormSpin {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes scormBar {
+  0% { transform: translateX(150%); }
+  100% { transform: translateX(-260%); }
+}
+
 @media (max-width: 768px) {
   .player-header {
     padding: 8px 16px;

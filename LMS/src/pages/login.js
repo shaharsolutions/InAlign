@@ -1,5 +1,6 @@
 import { login } from '../auth.js'
 import { applyOrganizationStyles } from '../lib/ui.js'
+import { isAdminRole, isSuperAdminRole } from '../lib/roles.js'
 
 export default function renderLogin(container) {
   container.innerHTML = `
@@ -92,8 +93,8 @@ export default function renderLogin(container) {
       applyOrganizationStyles(user);
 
       // Navigate on success based on role
-      if (user.role === 'super_admin') window.location.hash = '#/superadmin/orgs'
-      else if (user.role === 'org_admin') window.location.hash = '#/admin'
+      if (isSuperAdminRole(user.role)) window.location.hash = '#/superadmin/orgs'
+      else if (isAdminRole(user.role)) window.location.hash = '#/admin'
       else window.location.hash = '#/learner'
     } catch (err) {
       document.getElementById('login-error').innerHTML = err.message

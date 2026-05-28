@@ -31,6 +31,9 @@ export default async function renderAdminScorm(container) {
             <div class="form-group" style="text-align: right;">
                <label class="form-label" for="course-file">קובץ SCORM (ZIP) <span style="color: hsl(var(--color-danger));">*</span></label>
                <input class="form-control" type="file" id="course-file" accept=".zip" required>
+               <p class="text-muted text-sm" style="margin: 0.5rem 0 0;">
+                 מומלץ להעלות לומדה מסוג SCORM 1.2, כקובץ ZIP יחיד בפורמט HTML5. לומדות SCORM 2004 פשוטות עשויות לפעול, אך התמיכה בהן חלקית.
+               </p>
             </div>
             
             <button type="submit" class="btn btn-primary w-full justify-center mt-4">
@@ -156,14 +159,20 @@ export default async function renderAdminScorm(container) {
     const submitBtn = form.querySelector('button[type="submit"]')
     submitBtn.disabled = true
     submitBtn.innerHTML = `<i class='bx bx-loader-alt bx-spin'></i> מעלה...`
+    msg.textContent = 'מעלה ומפרסם לומדה. מומלץ להשתמש בחבילת SCORM 1.2 לקבלת שמירת התקדמות יציבה.'
+    msg.style.color = 'hsl(var(--color-muted))'
     
     try {
       await uploadCourse(courseData, file)
       showToast('הלומדה הועלתה בהצלחה');
+      msg.textContent = 'הלומדה הועלתה ופורסמה בהצלחה. מומלץ לפתוח תצוגה מקדימה ולבדוק שמירת התקדמות.'
+      msg.style.color = 'hsl(var(--color-success))'
       await renderTable()
       form.reset()
     } catch (err) {
       showToast(err.message, 'error');
+      msg.textContent = `שגיאה בהעלאת הלומדה: ${err.message}`
+      msg.style.color = 'hsl(var(--color-danger))'
     } finally {
       submitBtn.disabled = false
       submitBtn.innerHTML = `<i class='bx bx-cloud-upload'></i> העלה ופרסם לומדה`

@@ -1,3 +1,5 @@
+import { ROLE_ADMIN, ROLE_LEARNER, ROLE_ORG_ADMIN } from './roles.js'
+
 /**
  * Shared UI Components and Helpers
  */
@@ -249,6 +251,7 @@ export async function showEditProgressModal({ record, onSave, onDelete }) {
     
     const dbStatus = getStatusValue(record.status);
     const scoreVal = (record.score === '-' || record.score === null) ? '' : record.score;
+    const progressVal = (record.progress === null || record.progress === undefined) ? '' : record.progress;
 
     modal.innerHTML = `
       <div class="card slide-up" style="max-width: 500px; width: 95%; padding: 2rem; border-top: 5px solid hsl(var(--color-primary));">
@@ -275,7 +278,7 @@ export async function showEditProgressModal({ record, onSave, onDelete }) {
             <div class="grid grid-cols-2 gap-4">
                 <div class="form-group">
                     <label class="form-label">התקדמות (%)</label>
-                    <input type="number" class="form-control" id="edit-progress" min="0" max="100" value="${record.progress}">
+                    <input type="number" class="form-control" id="edit-progress" min="0" max="100" value="${progressVal}" placeholder="לא דווח">
                 </div>
                 <div class="form-group">
                     <label class="form-label">ציון</label>
@@ -328,7 +331,7 @@ export async function showEditProgressModal({ record, onSave, onDelete }) {
             
             const updates = {
                 status: modal.querySelector('#edit-status').value,
-                progress: modal.querySelector('#edit-progress').value,
+                progress: modal.querySelector('#edit-progress').value || null,
                 score: modal.querySelector('#edit-score').value || null
             };
             
@@ -548,8 +551,9 @@ export async function showBulkRoleModal({ users, onAssign }) {
                 <label class="form-label">בחר תפקיד במערכת</label>
                 <select class="form-control" id="bulk-role-select" required style="height: 48px;">
                     <option value="">-- בחר תפקיד --</option>
-                    <option value="learner">לומד (Learner)</option>
-                    <option value="org_admin">מנהל הדרכה (Admin)</option>
+                    <option value="${ROLE_LEARNER}">לומד</option>
+                    <option value="${ROLE_ORG_ADMIN}">מנהל הדרכה</option>
+                    <option value="${ROLE_ADMIN}">Admin</option>
                 </select>
             </div>
             

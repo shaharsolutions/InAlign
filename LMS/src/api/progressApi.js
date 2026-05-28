@@ -1,5 +1,7 @@
 import { supabase } from '../lib/supabase.js'
 import { getCurrentUserSync } from './authApi.js'
+import { isManagementRole, isSuperAdminRole } from '../lib/roles.js'
+import { getDisplayProgress } from '../lib/progressUtils.js'
 
 let MOCK_RECORDS = [
   { id: '1', user_id: 'usr-3', user_name: 'ישראל הלומד ציבורי', course_id: 'c1', course_title: 'הדרכת אבטחת מידע בארגון - Q1', status: 'הושלם', progress_percent: 100, score: 95, time_spent_seconds: 1500, time: '25 דקות', date: '01/03/2026', org_id: 'org-2' },
@@ -8,8 +10,8 @@ let MOCK_RECORDS = [
 
 export async function fetchOrgProgress(explicitOrgId = null) {
   const user = getCurrentUserSync();
-  // Allow org_admin OR super_admin to fetch progress report
-  if (!user || (user.role !== 'org_admin' && user.role !== 'super_admin')) throw new Error("אין הרשאה");
+  // Allow Admin OR Super Admin to fetch progress reports
+  if (!user || !isManagementRole(user.role)) throw new Error("אין הרשאה");
 
   const orgToFetch = explicitOrgId || user.orgId;
   console.log(`[InAlign] Fetching progress report. User: ${user.id}, Role: ${user.role}, Requested Org: ${orgToFetch}`);
@@ -35,35 +37,41 @@ export async function fetchOrgProgress(explicitOrgId = null) {
 
     return data
       .filter(r => r.profiles?.role !== 'super_admin')
-      .map(r => ({
-      id: r.id,
-      user_id: r.user_id,
-      course_id: r.course_id,
-      user_name: r.profiles?.full_name,
-      course_title: r.courses?.title,
-      status: (function(status, seconds) {
+      .map(r => {
+        const status = (function(status) {
           if (status === 'completed') return 'הושלם';
-          if (status === 'in_progress' || parseInt(seconds || 0) > 60) return 'בתהליך';
+          if (status === 'in_progress') return 'בתהליך';
           return 'לא התחיל';
-      })(r.status, r.time_spent_seconds),
-      progress: r.progress_percent || 0,
-      score: (r.score !== null && r.score !== undefined) ? r.score : '-',
-      time: (function(s) {
-          const seconds = parseInt(s || 0);
-          if (seconds < 1) return '0 דקות';
-          if (seconds < 60) return 'פחות מדקה';
-          const mins = Math.round(seconds / 60);
-          return (mins === 0 ? 'פחות מדקה' : mins + ' דקות');
-      })(r.time_spent_seconds),
-      date: r.completed_at ? new Date(r.completed_at).toLocaleDateString('he-IL') : '-'
-    }));
+        })(r.status);
+        const displayProgress = getDisplayProgress(r.progress_percent, r.status);
+        return {
+          id: r.id,
+          user_id: r.user_id,
+          course_id: r.course_id,
+          user_name: r.profiles?.full_name,
+          course_title: r.courses?.title,
+          status,
+          progress: displayProgress,
+          progressKnown: displayProgress !== null,
+          score: (r.score !== null && r.score !== undefined) ? r.score : '-',
+          time: (function(s) {
+              const seconds = parseInt(s || 0);
+              if (seconds < 1) return '0 דקות';
+              if (seconds < 60) return 'פחות מדקה';
+              const mins = Math.round(seconds / 60);
+              return (mins === 0 ? 'פחות מדקה' : mins + ' דקות');
+          })(r.time_spent_seconds),
+          date: r.completed_at ? new Date(r.completed_at).toLocaleDateString('he-IL') : '-'
+        };
+      });
   } else {
-    const mockData = (user.role === 'super_admin') ? MOCK_RECORDS : MOCK_RECORDS.filter(r => r.org_id === user.orgId);
+    const mockData = isSuperAdminRole(user.role) ? MOCK_RECORDS : MOCK_RECORDS.filter(r => r.org_id === user.orgId);
     return mockData.map(r => ({
         ...r,
         user_id: r.user_id,
         course_id: r.course_id,
-        progress: r.progress_percent,
+        progress: getDisplayProgress(r.progress_percent, r.status === 'הושלם' ? 'completed' : r.status),
+        progressKnown: getDisplayProgress(r.progress_percent, r.status === 'הושלם' ? 'completed' : r.status) !== null,
         time: Math.round((r.time_spent_seconds || 0) / 60) + ' דקות'
     }));
   }
@@ -77,7 +85,7 @@ export async function fetchLearnerAssignments() {
     let courses = [];
     let courseIds = [];
 
-    if (user.role === 'super_admin') {
+    if (isSuperAdminRole(user.role)) {
         // 1. Super Admin sees ALL published courses
         const { data, error } = await supabase
             .from('courses')
@@ -143,14 +151,16 @@ export async function fetchLearnerAssignments() {
     return courses.map(course => {
       const prog = progresses?.find(p => p.course_id === course.id);
       const status = (prog?.status === 'completed') ? 'completed' : 
-                    ((prog?.status === 'in_progress' || (prog?.time_spent_seconds || 0) > 60) ? 'in_progress' : 'not_started');
-      
+                    (prog?.status === 'in_progress' ? 'in_progress' : 'not_started');
+      const progress = getDisplayProgress(prog?.progress_percent, status);
+
       return {
         id: course.id,
         title: course.title,
         desc: course.description || course.desc,
         status: status,
-        progress: prog?.progress_percent || 0,
+        progress,
+        progressKnown: progress !== null,
         score: prog?.score || null,
         image: course.image || 'bx-book'
       };
@@ -161,12 +171,15 @@ export async function fetchLearnerAssignments() {
     const courses = await fetchCourses()
     return courses.map(c => {
       const prog = MOCK_RECORDS.find(r => r.course_id === c.id && r.user_id === user.id);
+      const status = prog ? (prog.status === 'הושלם' ? 'completed' : 'in_progress') : 'not_started';
+      const progress = getDisplayProgress(prog?.progress_percent, status);
       return {
         id: c.id,
         title: c.title,
         desc: c.desc || c.description,
-        status: prog ? (prog.status === 'הושלם' ? 'completed' : 'in_progress') : 'not_started',
-        progress: prog ? prog.progress_percent : 0,
+        status,
+        progress,
+        progressKnown: progress !== null,
         score: prog ? prog.score : null,
         image: c.image || 'bx-book'
       };
@@ -218,7 +231,7 @@ export async function saveLearnerProgress(courseId, updates) {
       }
 
       const progressObj = {
-        progress_percent: parseInt(updates.progress || 0),
+        progress_percent: (updates.progress === null || updates.progress === undefined || updates.progress === '') ? null : parseInt(updates.progress),
         status: updates.status,
         time_spent_seconds: parseInt(updates.time || 0),
         score: (updates.score !== undefined) ? parseInt(updates.score) : null,
@@ -260,13 +273,13 @@ export async function saveLearnerProgress(courseId, updates) {
 
 export async function adminUpdateLearnerProgress(userId, courseId, updates) {
     const adminUser = getCurrentUserSync();
-    if (!adminUser || (adminUser.role !== 'admin' && adminUser.role !== 'org_admin' && adminUser.role !== 'super_admin')) {
+    if (!adminUser || !isManagementRole(adminUser.role)) {
         throw new Error("אין הרשאת ניהול לביצוע פעולה זו");
     }
 
     if (supabase) {
         const progressObj = {
-            progress_percent: parseInt(updates.progress),
+            progress_percent: (updates.progress === null || updates.progress === undefined || updates.progress === '') ? null : parseInt(updates.progress),
             status: updates.status,
             score: updates.score !== null ? parseInt(updates.score) : null,
             last_accessed: new Date().toISOString()
@@ -288,7 +301,7 @@ export async function adminUpdateLearnerProgress(userId, courseId, updates) {
     } else {
         const record = MOCK_RECORDS.find(r => r.user_id === userId && r.course_id === courseId);
         if (record) {
-            record.progress_percent = parseInt(updates.progress);
+            record.progress_percent = (updates.progress === null || updates.progress === undefined || updates.progress === '') ? null : parseInt(updates.progress);
             record.status = updates.status === 'completed' ? 'הושלם' : updates.status === 'in_progress' ? 'בתהליך' : 'לא התחיל';
             record.score = updates.score !== null ? parseInt(updates.score) : null;
         }
@@ -314,7 +327,7 @@ export async function bulkAssignCourses(userIds, courseId) {
             course_id: courseId,
             org_id: course.org_id,
             status: 'not_started',
-            progress_percent: 0,
+            progress_percent: null,
             last_accessed: new Date().toISOString()
         }));
 

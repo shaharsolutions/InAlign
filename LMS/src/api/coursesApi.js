@@ -1,5 +1,6 @@
 import { supabase } from '../lib/supabase.js'
 import { getCurrentUserSync } from './authApi.js'
+import { isAdminRole, isManagementRole, isSuperAdminRole } from '../lib/roles.js'
 import JSZip from 'https://esm.sh/jszip'
 
 let MOCK_COURSES = [
@@ -13,7 +14,7 @@ export async function fetchCourses() {
   if (!user) throw new Error("לא מחובר");
 
   if (supabase) {
-    if (user.role === 'super_admin') {
+    if (isSuperAdminRole(user.role)) {
       const { data, error } = await supabase.from('courses').select('*');
       if (error) throw new Error(error.message);
       return data;
@@ -26,7 +27,7 @@ export async function fetchCourses() {
         return [];
     }
 
-    if (user.role === 'org_admin') {
+    if (isAdminRole(user.role)) {
       const { data, error } = await supabase.from('courses').select('*').eq('org_id', effectiveOrgId);
       if (error) throw new Error(error.message);
       return data;
@@ -39,21 +40,21 @@ export async function fetchCourses() {
     }
   } else {
     const effectiveOrgId = user.orgId || user.org_id;
-    if (user.role === 'super_admin') return [...MOCK_COURSES];
+    if (isSuperAdminRole(user.role)) return [...MOCK_COURSES];
     return MOCK_COURSES.filter(c => c.org_id === effectiveOrgId);
   }
 }
 
 export async function uploadCourse(courseData, file) {
   const user = getCurrentUserSync();
-  if (!user || (user.role !== 'org_admin' && user.role !== 'super_admin')) throw new Error("אין הרשאה");
+  if (!user || !isManagementRole(user.role)) throw new Error("אין הרשאה");
 
   if (supabase) {
     const courseId = crypto.randomUUID();
     let effectiveOrgId = user.orgId || user.org_id;
 
     // Hotfix for Super Admin with no associated orgId
-    if (!effectiveOrgId && user.role === 'super_admin') {
+    if (!effectiveOrgId && isSuperAdminRole(user.role)) {
         try {
             const { data: orgs } = await supabase.from('organizations').select('id').limit(1);
             if (orgs && orgs.length > 0) effectiveOrgId = orgs[0].id;

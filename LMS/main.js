@@ -1,6 +1,7 @@
 import { initRouter } from './src/router.js'
 import { checkAuth, onAuthStatusChange } from './src/auth.js'
 import { applyOrganizationStyles, showAlert, showConfirmModal, showPrompt } from './src/lib/ui.js'
+import { roleLabel } from './src/lib/roles.js'
 
 document.addEventListener('DOMContentLoaded', async () => {
   const appContainer = document.getElementById('app')
@@ -29,7 +30,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         `;
         banner.innerHTML = `
             <i class='bx bxs-user-voice' style="font-size: 1.25rem;"></i>
-            <span>מצב התחזות: הנך צופה במערכת כ-<strong>${user.fullName || user.full_name}</strong> (${user.role === 'org_admin' ? 'מנהל הדרכה' : 'לומד'})</span>
+            <span>מצב התחזות: הנך צופה במערכת כ-<strong>${user.fullName || user.full_name}</strong> (${roleLabel(user.role)})</span>
             <button class="btn btn-primary btn-sm" id="stop-impersonation-btn" style="padding: 4px 12px; font-size: 0.85rem; height: auto;">הפסק התחזות וחזור לחשבון שלי</button>
         `;
         document.body.prepend(banner);

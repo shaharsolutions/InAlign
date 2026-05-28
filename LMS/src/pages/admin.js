@@ -122,12 +122,12 @@ export default async function renderAdminDashboard(container) {
             </span>
           </td>
           <td>
-            <div class="flex items-center gap-2">
+            ${r.progressKnown ? `<div class="flex items-center gap-2">
               <div class="progress-bar-bg" style="width: 60px; margin: 0; height: 8px;">
                 <div class="progress-bar-fill" style="width: ${r.progress}%; ${r.status === 'הושלם' ? 'background: hsl(var(--color-success));' : ''}"></div>
               </div>
               <span class="text-sm text-muted">${r.progress}%</span>
-            </div>
+            </div>` : `<span class="text-sm text-muted">לא דווח</span>`}
           </td>
           <td>${r.score}</td>
           <td>${r.time}</td>
@@ -225,7 +225,7 @@ export default async function renderAdminDashboard(container) {
           'שם הלומד': r.user_name || 'משתמש לא ידוע',
           'שם הלומדה': r.course_title || 'קורס שנמחק',
           'סטטוס': r.status,
-          'התקדמות (%)': r.progress,
+          'התקדמות (%)': r.progressKnown ? r.progress : '',
           'ציון': r.score || '-',
           'זמן למידה': r.time,
           'תאריך מועד': r.date

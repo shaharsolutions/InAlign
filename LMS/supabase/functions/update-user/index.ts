@@ -6,6 +6,10 @@ const corsHeaders = {
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 }
 
+const SUPER_ADMIN_ROLE = 'super_admin'
+const ADMIN_ROLES = ['admin', 'org_admin']
+const PRIMARY_SUPER_ADMIN_EMAIL = (Deno.env.get('SUPER_ADMIN_EMAIL') || 'shaharsolutions@gmail.com').toLowerCase()
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
@@ -46,21 +50,36 @@ Deno.serve(async (req) => {
         .eq('id', callerId)
         .single()
 
-      if (callerError || (callerData.role !== 'org_admin' && callerData.role !== 'super_admin')) {
+      if (callerError || (callerData.role !== SUPER_ADMIN_ROLE && !ADMIN_ROLES.includes(callerData.role))) {
         throw new Error('Unauthorized to perform this action')
       }
       
-      // If Org Admin, verify they own the user
-      if (callerData.role === 'org_admin' && callerData.org_id !== finalOrgId) {
+      // Admins can manage only users from their own organization and cannot appoint admins.
+      if (callerData.role !== SUPER_ADMIN_ROLE && callerData.org_id !== finalOrgId) {
          throw new Error('Unauthorized to edit users from other organizations')
       }
+
+      if (callerData.role !== SUPER_ADMIN_ROLE && (existingProfile.role === SUPER_ADMIN_ROLE || ADMIN_ROLES.includes(existingProfile.role))) {
+        throw new Error('Only Super Admin can edit admins')
+      }
+
+      if (callerData.role !== SUPER_ADMIN_ROLE && (role === SUPER_ADMIN_ROLE || ADMIN_ROLES.includes(role))) {
+        throw new Error('Only Super Admin can appoint admins')
+      }
+    }
+
+    const finalRole = role || existingProfile.role
+    const finalEmail = (email || existingProfile.email || '').toLowerCase()
+
+    if (finalRole === SUPER_ADMIN_ROLE && finalEmail !== PRIMARY_SUPER_ADMIN_EMAIL) {
+      throw new Error('Only the primary owner email can be assigned as Super Admin')
     }
 
     // 1. Update Auth payload
     const userMetadataUpdate = { 
         full_name: fullName || existingProfile.full_name, 
         phone: phone || existingProfile.phone, 
-        role: role || existingProfile.role, 
+        role: finalRole, 
         org_id: finalOrgId 
     }
     
@@ -96,7 +115,7 @@ Deno.serve(async (req) => {
         email: email || authData.user.email || existingProfile.email,
         full_name: fullName || existingProfile.full_name,
         phone: (phone !== undefined) ? (phone || null) : existingProfile.phone,
-        role: role || existingProfile.role,
+        role: finalRole,
         org_id: finalOrgId,
       })
 
@@ -113,4 +132,3 @@ Deno.serve(async (req) => {
     })
   }
 })
-

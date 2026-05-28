@@ -1,8 +1,9 @@
 import { supabase } from '../lib/supabase.js'
 import { getCurrentUserSync } from './authApi.js'
+import { ROLE_LEARNER, ROLE_ORG_ADMIN, isAdminRole, isManagementRole, isSuperAdminRole } from '../lib/roles.js'
 
 let MOCK_USERS = [
-  { id: 'usr-2', full_name: 'דוד המנהל', role: 'org_admin', email: 'org@test.com', status: 'פעיל', org_id: 'org-2', created_at: '01/01/2026' },
+  { id: 'usr-2', full_name: 'דוד המנהל', role: ROLE_ORG_ADMIN, email: 'org@test.com', status: 'פעיל', org_id: 'org-2', created_at: '01/01/2026' },
   { id: 'usr-3', full_name: 'ישראל הלומד ציבורי', role: 'learner', email: 'learner@test.com', status: 'פעיל', org_id: 'org-2', created_at: '10/01/2026' },
   { id: 'usr-4', full_name: 'דינה כהן - מוקד', role: 'learner', email: 'dina@test.com', status: 'ממתין', org_id: 'org-2', created_at: '15/02/2026' }
 ]
@@ -31,7 +32,7 @@ function formatPhoneForDisplay(phone) {
 export async function fetchUsers() {
   const currentUser = getCurrentUserSync();
   console.log(`[LMS] fetchUsers - Current User:`, currentUser);
-  if (!currentUser || (currentUser.role !== 'org_admin' && currentUser.role !== 'super_admin')) throw new Error("אין הרשאה");
+  if (!currentUser || !isManagementRole(currentUser.role)) throw new Error("אין הרשאה");
 
   if (supabase) {
     let query = supabase
@@ -49,7 +50,7 @@ export async function fetchUsers() {
       `);
       
     // Filter by org ONLY for non-super admins
-    if (currentUser.role !== 'super_admin') {
+    if (!isSuperAdminRole(currentUser.role)) {
         if (currentUser.orgId) {
             query = query.eq('org_id', currentUser.orgId);
         } else {
@@ -57,8 +58,8 @@ export async function fetchUsers() {
         }
     }
     
-    if (currentUser.role !== 'super_admin') {
-        query = query.neq('role', 'super_admin');
+    if (!isSuperAdminRole(currentUser.role)) {
+        query = query.not('role', 'in', '(super_admin,admin,org_admin)');
     } else {
         // Even for Super Admin, hide the main one
         query = query.neq('email', 'shaharsolutions@gmail.com');
@@ -125,14 +126,15 @@ export async function fetchUsers() {
         };
     });
   } else {
-    if (currentUser.role === 'super_admin') return MOCK_USERS;
-    return MOCK_USERS.filter(u => u.org_id === currentUser.org_id);
+    if (isSuperAdminRole(currentUser.role)) return MOCK_USERS;
+    const effectiveOrgId = currentUser.orgId || currentUser.org_id;
+    return MOCK_USERS.filter(u => u.org_id === effectiveOrgId && !isManagementRole(u.role));
   }
 }
 
 export async function bulkCreateUsers(usersData) {
   const currentUser = getCurrentUserSync();
-  if (!currentUser || (currentUser.role !== 'org_admin' && currentUser.role !== 'super_admin')) throw new Error("אין הרשאה");
+  if (!currentUser || !isManagementRole(currentUser.role)) throw new Error("אין הרשאה");
 
   if (supabase) {
     const { data, error } = await supabase.functions.invoke('create-user', {
@@ -163,7 +165,7 @@ export async function bulkCreateUsers(usersData) {
         id: 'usr-' + Math.random().toString(36).substr(2, 4),
         full_name: u.fullName,
         email: u.email,
-        role: u.role || 'learner',
+        role: u.role || ROLE_LEARNER,
         org_id: currentUser.org_id,
         status: 'פעיל',
         created_at: new Date().toLocaleDateString('he-IL')
@@ -178,7 +180,10 @@ export async function bulkCreateUsers(usersData) {
 export async function createUser(userData) {
 
   const currentUser = getCurrentUserSync();
-  if (!currentUser || (currentUser.role !== 'org_admin' && currentUser.role !== 'super_admin')) throw new Error("אין הרשאה");
+  if (!currentUser || !isManagementRole(currentUser.role)) throw new Error("אין הרשאה");
+  if (!isSuperAdminRole(currentUser.role) && isAdminRole(userData.role)) {
+    throw new Error("רק Super Admin רשאי ליצור מנהלי מערכת");
+  }
 
   if (supabase) {
     const { data, error } = await supabase.functions.invoke('create-user', {
@@ -187,7 +192,7 @@ export async function createUser(userData) {
         password: userData.password,
         fullName: userData.fullName,
         phone: formatPhoneToE164(userData.phone),
-        role: userData.role || 'learner',
+        role: userData.role || ROLE_LEARNER,
         orgId: userData.orgId || currentUser.orgId,
         callerId: currentUser.id
       }
@@ -212,7 +217,7 @@ export async function createUser(userData) {
       id: 'usr-' + Date.now().toString().slice(-4),
       full_name: userData.fullName,
       email: userData.email,
-      role: userData.role || 'learner',
+      role: userData.role || ROLE_LEARNER,
       org_id: currentUser.org_id,
       status: 'פעיל',
       created_at: new Date().toLocaleDateString('he-IL')
@@ -224,7 +229,10 @@ export async function createUser(userData) {
 
 export async function updateUser(userId, userData) {
   const currentUser = getCurrentUserSync();
-  if (!currentUser || (currentUser.role !== 'org_admin' && currentUser.role !== 'super_admin')) throw new Error("אין הרשאה");
+  if (!currentUser || !isManagementRole(currentUser.role)) throw new Error("אין הרשאה");
+  if (!isSuperAdminRole(currentUser.role) && isAdminRole(userData.role)) {
+    throw new Error("רק Super Admin רשאי למנות מנהלי מערכת");
+  }
 
   if (supabase) {
     const finalOrgId = userData.orgId || currentUser.orgId;
@@ -237,7 +245,7 @@ export async function updateUser(userId, userData) {
         fullName: userData.fullName,
         email: userData.email,
         phone: formatPhoneToE164(userData.phone),
-        role: userData.role || 'learner',
+        role: userData.role || ROLE_LEARNER,
         orgId: finalOrgId,
         callerId: currentUser.id
       }
@@ -283,7 +291,7 @@ export async function updateUser(userId, userData) {
     const userIndex = MOCK_USERS.findIndex(u => u.id === userId);
     if (userIndex !== -1) {
       MOCK_USERS[userIndex].full_name = userData.fullName;
-      MOCK_USERS[userIndex].role = userData.role || 'learner';
+      MOCK_USERS[userIndex].role = userData.role || ROLE_LEARNER;
       if (userData.orgId) MOCK_USERS[userIndex].org_id = userData.orgId;
     }
     return true;
@@ -292,7 +300,7 @@ export async function updateUser(userId, userData) {
 
 export async function bulkDeleteUsers(userIds) {
   const currentUser = getCurrentUserSync();
-  if (!currentUser || (currentUser.role !== 'org_admin' && currentUser.role !== 'super_admin')) throw new Error("אין הרשאה");
+  if (!currentUser || !isManagementRole(currentUser.role)) throw new Error("אין הרשאה");
 
   if (supabase) {
     const { data, error } = await supabase.functions.invoke('delete-user', {
@@ -321,7 +329,7 @@ export async function bulkDeleteUsers(userIds) {
 export async function deleteUser(userId) {
 
   const currentUser = getCurrentUserSync();
-  if (!currentUser || (currentUser.role !== 'org_admin' && currentUser.role !== 'super_admin')) throw new Error("אין הרשאה");
+  if (!currentUser || !isManagementRole(currentUser.role)) throw new Error("אין הרשאה");
 
   if (supabase) {
     const { data, error } = await supabase.functions.invoke('delete-user', {
@@ -349,7 +357,7 @@ export async function deleteUser(userId) {
 
 export async function bulkUpdateUsersOrg(userIds, newOrgId) {
     const currentUser = getCurrentUserSync();
-    if (!currentUser || currentUser.role !== 'super_admin') throw new Error("רק מנהל על רשאי להעביר עובדים בין ארגונים");
+    if (!currentUser || !isSuperAdminRole(currentUser.role)) throw new Error("רק מנהל על רשאי להעביר עובדים בין ארגונים");
 
     if (!userIds || userIds.length === 0) return true;
 
@@ -391,7 +399,7 @@ export async function bulkUpdateUsersOrg(userIds, newOrgId) {
 
 export async function bulkUpdateUsersRole(userIds, newRole) {
     const currentUser = getCurrentUserSync();
-    if (!currentUser || currentUser.role !== 'super_admin') throw new Error("רק מנהל על רשאי לשנות תפקידים באופן גורף");
+    if (!currentUser || !isSuperAdminRole(currentUser.role)) throw new Error("רק מנהל על רשאי לשנות תפקידים באופן גורף");
 
     if (!userIds || userIds.length === 0) return true;
 

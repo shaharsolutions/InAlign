@@ -1,6 +1,7 @@
 import { fetchOrganizations, createOrganization, updateOrganization, deleteOrganization } from '../api/orgApi.js'
 import { resetOrgProgress } from '../api/progressApi.js'
 import { showConfirmModal, showToast, applyOrganizationStyles } from '../lib/ui.js'
+import { ROLE_ORG_ADMIN } from '../lib/roles.js'
 
 export default async function renderSuperAdminOrgs(container) {
   container.innerHTML = `
@@ -186,7 +187,7 @@ export default async function renderSuperAdminOrgs(container) {
       if (!user) return;
       user.originalRole = user.role;
       user.originalOrgId = user.orgId;
-      user.role = 'org_admin';
+      user.role = ROLE_ORG_ADMIN;
       user.orgId = enterBtn.dataset.id;
       user.orgName = enterBtn.dataset.name;
       applyOrganizationStyles(user);

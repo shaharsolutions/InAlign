@@ -6,11 +6,12 @@ import { getCurrentUserSync } from '../api/authApi.js'
 import { showConfirmModal, showToast, showBulkGroupModal, showBulkOrgModal, showBulkRoleModal, showCustomModal } from '../lib/ui.js'
 import { fetchOrganizations } from '../api/orgApi.js'
 import { fetchCourses } from '../api/coursesApi.js'
+import { ROLE_ADMIN, ROLE_LEARNER, ROLE_ORG_ADMIN, isAdminRole, isSuperAdminRole, roleLabel } from '../lib/roles.js'
 import * as XLSX from 'https://cdn.jsdelivr.net/npm/xlsx@0.18.5/+esm'
 
 export default async function renderAdminUsers(container) {
   const currentUser = getCurrentUserSync();
-  const isSuperAdmin = currentUser?.role === 'super_admin';
+  const isSuperAdmin = isSuperAdminRole(currentUser?.role);
   let organizations = [];
   let allUsers = []; // Store all fetched users for filtering
 
@@ -123,8 +124,11 @@ export default async function renderAdminUsers(container) {
             <div class="form-group mb-0 flex-1" style="text-align: right; min-width: 150px;">
                <label class="form-label" for="user-role" style="font-size: 0.85rem; margin-bottom: 0.2rem;">תפקיד במערכת</label>
                <select class="form-control" id="user-role" style="height: 44px; padding-top: 0; padding-bottom: 0;">
-                  <option value="learner">לומד (Learner)</option>
-                  <option value="org_admin">מנהל הדרכה (Admin)</option>
+                  <option value="${ROLE_LEARNER}">לומד</option>
+                  ${isSuperAdmin ? `
+                    <option value="${ROLE_ORG_ADMIN}">מנהל הדרכה</option>
+                    <option value="${ROLE_ADMIN}">Admin</option>
+                  ` : ''}
                </select>
             </div>
             
@@ -168,8 +172,9 @@ export default async function renderAdminUsers(container) {
               <select id="filter-role" class="form-control" 
                 style="height: 46px !important; padding: 0 1rem !important; line-height: 46px !important; border: 1px solid hsl(var(--border-color)) !important; box-sizing: border-box !important; appearance: auto;">
                 <option value="">כל התפקידים</option>
-                <option value="learner">עובד / לומד</option>
-                <option value="org_admin">מנהל הדרכה</option>
+                <option value="${ROLE_LEARNER}">עובד / לומד</option>
+                <option value="${ROLE_ORG_ADMIN}">מנהל הדרכה</option>
+                <option value="${ROLE_ADMIN}">Admin</option>
               </select>
             </div>
             
@@ -299,7 +304,7 @@ export default async function renderAdminUsers(container) {
                 ${u.email || '-'} <br>
                 <span class="text-xs text-muted nowrap">
                   ${u.phone || 'אין טלפון'} • 
-                  ${u.role === 'org_admin' ? 'מנהל הדרכה' : u.role === 'super_admin' ? 'מנהל על' : 'עובד / לומד'}
+                  ${roleLabel(u.role)}
                 </span>
              </td>
              ${isSuperAdmin ? `<td class="nowrap"><span class="text-sm">${u.org_name || '-'}</span></td>` : ''}
@@ -411,7 +416,7 @@ export default async function renderAdminUsers(container) {
         const userId = e.currentTarget.getAttribute('data-id');
         const name = e.currentTarget.getAttribute('data-name');
         const courses = JSON.parse(e.currentTarget.getAttribute('data-courses'));
-        const canManage = isSuperAdmin || currentUser?.role === 'org_admin';
+        const canManage = isSuperAdmin || isAdminRole(currentUser?.role);
         
         let availableCourses = [];
         if (canManage) {
@@ -647,7 +652,7 @@ export default async function renderAdminUsers(container) {
 
     if (isSuperAdmin) {
         userData.orgId = document.getElementById('user-org').value;
-        if (!userData.orgId && userData.role !== 'super_admin') {
+        if (!userData.orgId && !isSuperAdminRole(userData.role)) {
             msg.style.color = 'hsl(var(--color-danger))';
             msg.innerHTML = 'עליך לבחור ארגון עבור משתמש שאינו מנהל על.';
             return;
@@ -848,11 +853,11 @@ export default async function renderAdminUsers(container) {
       templateDownloadUrl = null;
     }
 
-    const headers = [['שם מלא', 'אימייל', 'טלפון', 'סיסמה', 'תפקיד (learner/org_admin)', 'שיוך לקבוצה']];
+    const headers = [['שם מלא', 'אימייל', 'טלפון', 'סיסמה', isSuperAdmin ? 'תפקיד (learner/org_admin/admin)' : 'תפקיד (learner)', 'שיוך לקבוצה']];
     if (isSuperAdmin) {
       headers[0].push('מזהה ארגון (Org ID)');
     }
-
+    
     const worksheet = XLSX.utils.aoa_to_sheet(headers);
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, 'תבנית עובדים');
@@ -914,7 +919,7 @@ export default async function renderAdminUsers(container) {
           const email = (row['אימייל'] || row['Email'])?.toString().trim().toLowerCase();
           const phone = row['טלפון'] || row['Phone'];
           const password = row['סיסמה'] || row['Password'] || 'Lms123456'; 
-          const role = row['תפקיד (learner/org_admin)'] || row['Role'] || 'learner';
+          const role = row['תפקיד (learner/org_admin/admin)'] || row['תפקיד (learner/admin)'] || row['תפקיד (learner/org_admin)'] || row['Role'] || ROLE_LEARNER;
           const orgId = row['מזהה ארגון (Org ID)'] || row['Org ID'];
           const groupName = (row['שיוך לקבוצה'] || row['Group Name'])?.toString().trim();
 

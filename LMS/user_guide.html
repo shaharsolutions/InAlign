@@ -1,684 +1,960 @@
 <!DOCTYPE html>
 <html lang="he" dir="rtl">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>מרכז התמיכה וההדרכה - מערכת InAlign</title>
-    <link href="https://fonts.googleapis.com/css2?family=Assistant:wght@300;400;600;700;800&display=swap" rel="stylesheet">
-    <link href='https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css' rel='stylesheet'>
-    <style>
-        :root {
-            --primary: #2563eb;
-            --primary-light: #eff6ff;
-            --secondary: #64748b;
-            --success: #10b981;
-            --accent: #f59e0b;
-            --bg-main: #f8fafc;
-            --sidebar-bg: #ffffff;
-            --card-bg: rgba(255, 255, 255, 0.8);
-            --border-color: #e2e8f0;
-            --text-dark: #0f172a;
-            --text-muted: #64748b;
-            --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
-            --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
-            --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
-            --radius: 16px;
-        }
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>מדריך שימוש אינטראקטיבי - InAlign LMS</title>
+  <link href="https://fonts.googleapis.com/css2?family=Assistant:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css" rel="stylesheet">
+  <style>
+    :root {
+      --ink: #172033;
+      --muted: #5d6b82;
+      --line: #d9e1ee;
+      --paper: #ffffff;
+      --wash: #f5f7fb;
+      --blue: #2563eb;
+      --green: #15966b;
+      --amber: #b7791f;
+      --red: #c2413d;
+      --violet: #6d4aff;
+      --shadow: 0 10px 30px rgba(23, 32, 51, 0.08);
+      --radius: 8px;
+    }
 
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            transition: all 0.2s ease;
-        }
+    * { box-sizing: border-box; }
 
-        body {
-            font-family: 'Assistant', sans-serif;
-            background-color: var(--bg-main);
-            color: var(--text-dark);
-            display: flex;
-            min-height: 100vh;
-            overflow-x: hidden;
-        }
+    body {
+      margin: 0;
+      font-family: Assistant, Arial, sans-serif;
+      background: var(--wash);
+      color: var(--ink);
+      line-height: 1.65;
+    }
 
-        /* Sidebar */
-        .sidebar {
-            width: 280px;
-            background: var(--sidebar-bg);
-            border-left: 1px solid var(--border-color);
-            padding: 2rem 1.5rem;
-            position: fixed;
-            height: 100vh;
-            right: 0;
-            top: 0;
-            z-index: 100;
-            box-shadow: var(--shadow-md);
-        }
+    a { color: inherit; }
 
-        .logo {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            font-size: 1.5rem;
-            font-weight: 800;
-            color: var(--primary);
-            margin-bottom: 2.5rem;
-        }
+    .layout {
+      min-height: 100vh;
+      display: grid;
+      grid-template-columns: 300px minmax(0, 1fr);
+    }
 
-        .nav-menu {
-            list-style: none;
-        }
+    aside {
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      overflow-y: auto;
+      background: #101827;
+      color: #eef4ff;
+      padding: 22px;
+      border-left: 1px solid rgba(255,255,255,0.1);
+    }
 
-        .nav-item {
-            margin-bottom: 8px;
-        }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-weight: 800;
+      font-size: 1.28rem;
+      margin-bottom: 20px;
+    }
 
-        .nav-link {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            padding: 12px 16px;
-            text-decoration: none;
-            color: var(--secondary);
-            border-radius: 12px;
-            font-weight: 600;
-            cursor: pointer;
-        }
+    .brand i { color: #7dd3fc; font-size: 1.8rem; }
 
-        .nav-link:hover, .nav-link.active {
-            background: var(--primary-light);
-            color: var(--primary);
-        }
+    .search {
+      position: relative;
+      margin-bottom: 18px;
+    }
 
-        .nav-link i {
-            font-size: 1.4rem;
-        }
+    .search i {
+      position: absolute;
+      top: 50%;
+      right: 12px;
+      transform: translateY(-50%);
+      color: #9fb0c9;
+    }
 
-        /* Main Content */
-        .main-content {
-            flex: 1;
-            margin-right: 280px;
-            padding: 2rem 3rem;
-        }
+    .search input {
+      width: 100%;
+      border: 1px solid rgba(255,255,255,0.14);
+      background: rgba(255,255,255,0.08);
+      color: #fff;
+      border-radius: var(--radius);
+      padding: 11px 38px 11px 12px;
+      font: inherit;
+      outline: none;
+    }
 
-        /* Search Header */
-        .page-header {
-            margin-bottom: 3rem;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
+    .search input::placeholder { color: #aebbd0; }
 
-        .search-box {
-            position: relative;
-            width: 400px;
-        }
+    nav {
+      display: grid;
+      gap: 7px;
+    }
 
-        .search-box input {
-            width: 100%;
-            padding: 12px 45px 12px 15px;
-            border-radius: 50px;
-            border: 1px solid var(--border-color);
-            background: white;
-            font-family: inherit;
-            font-size: 1rem;
-            box-shadow: var(--shadow-sm);
-        }
+    .nav-btn {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      width: 100%;
+      border: 0;
+      border-radius: var(--radius);
+      background: transparent;
+      color: #d8e2f2;
+      padding: 11px 12px;
+      text-align: right;
+      font: inherit;
+      font-weight: 700;
+      cursor: pointer;
+    }
 
-        .search-box input:focus {
-            outline: none;
-            border-color: var(--primary);
-            box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.1);
-        }
+    .nav-btn:hover,
+    .nav-btn.active {
+      background: rgba(125, 211, 252, 0.14);
+      color: #fff;
+    }
 
-        .search-box i {
-            position: absolute;
-            right: 15px;
-            top: 50%;
-            transform: translateY(-50%);
-            color: var(--secondary);
-            font-size: 1.2rem;
-        }
+    .nav-btn i { font-size: 1.25rem; color: #9edfff; }
 
-        /* Section Styling */
-        .section {
-            display: none;
-            animation: fadeIn 0.4s ease-out;
-        }
+    .side-note {
+      margin-top: 20px;
+      padding: 14px;
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: var(--radius);
+      color: #c8d3e5;
+      font-size: 0.92rem;
+      background: rgba(255,255,255,0.05);
+    }
 
-        .section.active {
-            display: block;
-        }
+    main {
+      padding: 34px clamp(18px, 4vw, 58px) 70px;
+      max-width: 1220px;
+      width: 100%;
+    }
 
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
+    .hero {
+      display: grid;
+      gap: 20px;
+      margin-bottom: 28px;
+      padding-bottom: 24px;
+      border-bottom: 1px solid var(--line);
+    }
 
-        h1 {
-            font-size: 2.5rem;
-            font-weight: 800;
-            margin-bottom: 1rem;
-            background: linear-gradient(135deg, var(--primary), #6366f1);
-            -webkit-background-clip: text;
-            background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
+    h1 {
+      margin: 0;
+      font-size: clamp(2rem, 4vw, 3.4rem);
+      line-height: 1.05;
+      letter-spacing: 0;
+    }
 
-        h2 {
-            font-size: 1.8rem;
-            font-weight: 700;
-            margin: 2rem 0 1rem;
-            color: var(--text-dark);
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
+    .lead {
+      margin: 0;
+      max-width: 920px;
+      color: var(--muted);
+      font-size: 1.15rem;
+    }
 
-        .subtitle {
-            font-size: 1.2rem;
-            color: var(--text-muted);
-            margin-bottom: 2.5rem;
-        }
+    .quick-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+    }
 
-        /* Cards Grid */
-        .grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-            gap: 2rem;
-        }
+    .pill,
+    .action-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      border-radius: var(--radius);
+      border: 1px solid var(--line);
+      background: var(--paper);
+      padding: 9px 12px;
+      font: inherit;
+      font-weight: 700;
+      color: var(--ink);
+      box-shadow: 0 2px 8px rgba(23, 32, 51, 0.04);
+    }
 
-        .card {
-            background: var(--card-bg);
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
-            border: 1px solid rgba(255, 255, 255, 0.5);
-            border-radius: var(--radius);
-            padding: 2rem;
-            box-shadow: var(--shadow-md);
-            position: relative;
-            overflow: hidden;
-        }
+    .action-btn {
+      cursor: pointer;
+    }
 
-        .card:hover {
-            transform: translateY(-8px);
-            box-shadow: var(--shadow-lg);
-            border-color: var(--primary);
-        }
+    .action-btn.primary {
+      background: var(--blue);
+      color: #fff;
+      border-color: var(--blue);
+    }
 
-        .card::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            right: 0;
-            width: 4px;
-            height: 100%;
-            background: var(--primary);
-            opacity: 0.1;
-        }
+    section {
+      display: none;
+      animation: show 0.22s ease-out;
+    }
 
-        .card-icon {
-            width: 54px;
-            height: 54px;
-            background: var(--primary-light);
-            color: var(--primary);
-            border-radius: 12px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.8rem;
-            margin-bottom: 1.5rem;
-        }
+    section.active { display: block; }
 
-        .card h3 {
-            font-size: 1.4rem;
-            font-weight: 700;
-            margin-bottom: 1rem;
-        }
+    @keyframes show {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
 
-        .card p {
-            color: var(--text-muted);
-            line-height: 1.7;
-            font-size: 1.05rem;
-        }
+    h2 {
+      margin: 0 0 12px;
+      font-size: 1.75rem;
+      line-height: 1.2;
+    }
 
-        /* Steps */
-        .steps-container {
-            margin-top: 2rem;
-        }
+    h3 {
+      margin: 0 0 8px;
+      font-size: 1.18rem;
+      line-height: 1.25;
+    }
 
-        .step-item {
-            display: flex;
-            gap: 20px;
-            margin-bottom: 2rem;
-            padding: 1.5rem;
-            background: white;
-            border-radius: 16px;
-            border: 1px solid var(--border-color);
-        }
+    h4 {
+      margin: 20px 0 8px;
+      font-size: 1rem;
+    }
 
-        .step-count {
-            width: 40px;
-            height: 40px;
-            background: var(--primary);
-            color: white;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: 800;
-            flex-shrink: 0;
-            box-shadow: 0 4px 10px rgba(37, 99, 235, 0.3);
-        }
+    .section-intro {
+      margin: 0 0 20px;
+      color: var(--muted);
+      max-width: 920px;
+    }
 
-        .step-content {
-            flex: 1;
-        }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(12, 1fr);
+      gap: 16px;
+    }
 
-        .step-content h4 {
-            font-size: 1.2rem;
-            margin-bottom: 8px;
-            font-weight: 700;
-            color: var(--primary);
-        }
+    .card {
+      grid-column: span 6;
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 18px;
+      box-shadow: var(--shadow);
+    }
 
-        .step-content p {
-            line-height: 1.6;
-            color: var(--text-muted);
-        }
+    .card.full { grid-column: 1 / -1; }
+    .card.third { grid-column: span 4; }
 
-        .step-content ul {
-            margin-top: 10px;
-            padding-right: 20px;
-            color: var(--text-muted);
-        }
+    .toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin: 0 0 16px;
+    }
 
-        /* Tips */
-        .tips-panel {
-            background: linear-gradient(135deg, #1e293b, #0f172a);
-            color: white;
-            padding: 2.5rem;
-            border-radius: 20px;
-            margin-top: 3rem;
-            display: flex;
-            gap: 2rem;
-            align-items: center;
-        }
+    .tab {
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--paper);
+      padding: 9px 12px;
+      font: inherit;
+      font-weight: 700;
+      cursor: pointer;
+    }
 
-        .tips-panel i {
-            font-size: 4rem;
-            color: var(--accent);
-        }
+    .tab.active {
+      background: #eaf1ff;
+      color: var(--blue);
+      border-color: #bcd0ff;
+    }
 
-        .tips-list {
-            list-style: none;
-        }
+    .role-panel { display: none; }
+    .role-panel.active { display: block; }
 
-        .tips-list li {
-            position: relative;
-            padding-right: 25px;
-            margin-bottom: 12px;
-        }
+    .steps {
+      display: grid;
+      gap: 12px;
+      counter-reset: step;
+    }
 
-        .tips-list li::before {
-            content: '✓';
-            position: absolute;
-            right: 0;
-            color: var(--success);
-            font-weight: bold;
-        }
+    .step {
+      display: grid;
+      grid-template-columns: 42px minmax(0, 1fr);
+      gap: 12px;
+      align-items: start;
+      padding: 14px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: #fff;
+    }
 
-        .badge-info {
-            background: var(--primary-light);
-            color: var(--primary);
-            padding: 4px 12px;
-            border-radius: 20px;
-            font-size: 0.85rem;
-            font-weight: 600;
-            display: inline-block;
-            margin-bottom: 10px;
-        }
+    .step::before {
+      counter-increment: step;
+      content: counter(step);
+      width: 34px;
+      height: 34px;
+      display: grid;
+      place-items: center;
+      border-radius: var(--radius);
+      background: #eaf1ff;
+      color: var(--blue);
+      font-weight: 800;
+    }
 
-        /* Responsive */
-        @media (max-width: 1024px) {
-            .sidebar { width: 80px; padding: 2rem 0.5rem; }
-            .nav-text, .logo span { display: none; }
-            .main-content { margin-right: 80px; padding: 2rem; }
-            .search-box { width: 100%; }
-            .page-header { flex-direction: column; gap: 1rem; }
-        }
-    </style>
+    .step p { margin: 0; color: var(--muted); }
+
+    .checklist {
+      display: grid;
+      gap: 8px;
+    }
+
+    .check-row {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      padding: 11px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: #fff;
+    }
+
+    .check-row input {
+      width: 18px;
+      height: 18px;
+      margin-top: 4px;
+      accent-color: var(--green);
+    }
+
+    .check-row.done span {
+      text-decoration: line-through;
+      color: var(--muted);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      background: #fff;
+      border-radius: var(--radius);
+      overflow: hidden;
+      border: 1px solid var(--line);
+    }
+
+    th,
+    td {
+      padding: 12px;
+      border-bottom: 1px solid var(--line);
+      vertical-align: top;
+      text-align: right;
+    }
+
+    th {
+      background: #eef3f9;
+      font-weight: 800;
+      color: #23324c;
+      white-space: nowrap;
+    }
+
+    tr:last-child td { border-bottom: 0; }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      border-radius: 999px;
+      padding: 3px 9px;
+      font-size: 0.82rem;
+      font-weight: 800;
+      white-space: nowrap;
+    }
+
+    .b-blue { background: #eaf1ff; color: var(--blue); }
+    .b-green { background: #e7f7ef; color: var(--green); }
+    .b-amber { background: #fff4d8; color: var(--amber); }
+    .b-red { background: #ffe8e7; color: var(--red); }
+    .b-violet { background: #efeaff; color: var(--violet); }
+
+    details {
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: #fff;
+      margin-bottom: 10px;
+      overflow: hidden;
+    }
+
+    summary {
+      cursor: pointer;
+      font-weight: 800;
+      padding: 13px 15px;
+      background: #fbfcff;
+    }
+
+    details > div {
+      padding: 0 15px 15px;
+      color: var(--muted);
+    }
+
+    .callout {
+      border-radius: var(--radius);
+      padding: 14px 16px;
+      border: 1px solid var(--line);
+      background: #fff;
+    }
+
+    .callout.warn {
+      border-color: #f4cf7a;
+      background: #fff9e9;
+    }
+
+    .callout.good {
+      border-color: #9bd8bd;
+      background: #eefbf5;
+    }
+
+    .callout.danger {
+      border-color: #f1aaa7;
+      background: #fff1f0;
+    }
+
+    .muted { color: var(--muted); }
+    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; direction: ltr; unicode-bidi: embed; }
+    .hidden-by-search { display: none !important; }
+
+    footer {
+      margin-top: 40px;
+      padding-top: 20px;
+      border-top: 1px solid var(--line);
+      color: var(--muted);
+      font-size: 0.92rem;
+    }
+
+    @media (max-width: 900px) {
+      .layout { grid-template-columns: 1fr; }
+      aside {
+        position: relative;
+        height: auto;
+      }
+      main { padding: 22px 16px 46px; }
+      .card,
+      .card.third { grid-column: 1 / -1; }
+      .step { grid-template-columns: 1fr; }
+      table { display: block; overflow-x: auto; }
+    }
+
+    @media print {
+      body { background: #fff; }
+      aside, .quick-actions, .toolbar { display: none; }
+      .layout { display: block; }
+      main { max-width: none; padding: 0; }
+      section { display: block !important; break-before: page; }
+      .card { box-shadow: none; }
+    }
+  </style>
 </head>
 <body>
-
-    <aside class="sidebar">
-        <div class="logo">
-            <i class='bx bxs-graduation'></i>
-            <span>InAlign Guide</span>
-        </div>
-        <ul class="nav-menu">
-            <li class="nav-item">
-                <a class="nav-link active" onclick="showSection('overview')">
-                    <i class='bx bx-home-alt'></i>
-                    <span class="nav-text">סקירה כללית</span>
-                </a>
-            </li>
-            <li class="nav-item">
-                <a class="nav-link" onclick="showSection('manager')">
-                    <i class='bx bx-briefcase'></i>
-                    <span class="nav-text">מדריך למנהלים</span>
-                </a>
-            </li>
-            <li class="nav-item">
-                <a class="nav-link" onclick="showSection('learner')">
-                    <i class='bx bx-user'></i>
-                    <span class="nav-text">מדריך ללומדים</span>
-                </a>
-            </li>
-            <li class="nav-item">
-                <a class="nav-link" onclick="showSection('faq')">
-                    <i class='bx bx-help-circle'></i>
-                    <span class="nav-text">טיפים ותמיכה</span>
-                </a>
-            </li>
-        </ul>
+  <div class="layout">
+    <aside>
+      <div class="brand"><i class='bx bx-layer'></i><span>InAlign LMS</span></div>
+      <div class="search">
+        <i class='bx bx-search'></i>
+        <input id="searchInput" type="search" placeholder="חיפוש פעולה, מסך או מושג">
+      </div>
+      <nav aria-label="ניווט במדריך">
+        <button class="nav-btn active" data-section="overview"><i class='bx bx-map'></i> תמונת מערכת</button>
+        <button class="nav-btn" data-section="onboarding"><i class='bx bx-building-house'></i> הקמת ארגון חדש</button>
+        <button class="nav-btn" data-section="roles"><i class='bx bx-id-card'></i> הרשאות ותפקידים</button>
+        <button class="nav-btn" data-section="orgs"><i class='bx bx-buildings'></i> ארגונים ומיתוג</button>
+        <button class="nav-btn" data-section="courses"><i class='bx bx-package'></i> לומדות והדרכות</button>
+        <button class="nav-btn" data-section="users"><i class='bx bx-user-plus'></i> משתמשים ועובדים</button>
+        <button class="nav-btn" data-section="groups"><i class='bx bx-group'></i> קבוצות והקצאות</button>
+        <button class="nav-btn" data-section="reports"><i class='bx bx-line-chart'></i> דוחות ומעקב</button>
+        <button class="nav-btn" data-section="operations"><i class='bx bx-wrench'></i> תפעול ופתרון תקלות</button>
+      </nav>
+      <div class="side-note">
+        מדריך תפעולי למנהלים בלבד: מנהל ראשי, מנהל מערכת ומנהל הדרכה.
+      </div>
     </aside>
 
-    <main class="main-content">
-        <header class="page-header">
-            <div class="search-box">
-                <i class='bx bx-search'></i>
-                <input type="text" id="searchInput" placeholder="חפש במדריך..." onkeyup="searchContent()">
+    <main>
+      <header class="hero">
+        <div>
+          <h1>מדריך שימוש אינטראקטיבי למערכת InAlign</h1>
+          <p class="lead">
+            מדריך מעשי להפעלת מערכת ה-LMS בצד הניהול: הקמת ארגון חדש, טעינת לומדות,
+            יצירת משתמשים, חלוקה לקבוצות, שיוך הדרכות, מעקב התקדמות וייצוא דוחות.
+          </p>
+        </div>
+        <div class="quick-actions">
+          <button class="action-btn primary" data-jump="onboarding"><i class='bx bx-rocket'></i> התחל הקמת לקוח חדש</button>
+          <button class="action-btn" onclick="window.print()"><i class='bx bx-printer'></i> הדפסה / PDF</button>
+          <span class="pill"><i class='bx bx-calendar'></i> עודכן: 27 במאי 2026</span>
+        </div>
+      </header>
+
+      <section id="overview" class="active searchable">
+        <h2>תמונת מערכת</h2>
+        <p class="section-intro">
+          InAlign היא מערכת למידה ארגונית לניהול הדרכות, עובדים, קבוצות, שיוכים, התקדמות ודוחות.
+          המדריך מסביר איך לעבוד במערכת דרך המסכים והכפתורים, ללא צורך בגישה למערכות טכניות.
+        </p>
+        <div class="grid">
+          <div class="card third">
+            <h3><i class='bx bx-shield-quarter'></i> מנהל ראשי</h3>
+            <p class="muted">מנהל ראשי יוצר ארגונים, נכנס לסביבת ארגון, מנהל משתמשים מכל הארגונים, מעביר עובדים בין ארגונים, משנה תפקידים ומנהל הקצאות כלל מערכתיות.</p>
+          </div>
+          <div class="card third">
+            <h3><i class='bx bx-user-voice'></i> מנהל הדרכה ארגוני</h3>
+            <p class="muted">מנהל את סביבת הארגון שלו: עובדים, קבוצות, לומדות, קטגוריות, מיתוג, הודעת פתיחה, שיוכים ודוחות התקדמות.</p>
+          </div>
+          <div class="card third">
+            <h3><i class='bx bx-user-check'></i> מנהל מערכת</h3>
+            <p class="muted">תפקיד ניהול נוסף למשתמשים שצריכים לנהל למידה בארגון. יצירה ומינוי של מנהלים נשארים בשליטת מנהל ראשי בלבד.</p>
+          </div>
+          <div class="card full">
+            <h3>מסכי המערכת המרכזיים</h3>
+            <table>
+              <thead><tr><th>מסך</th><th>נתיב</th><th>מי משתמש בו</th><th>פעולות עיקריות</th></tr></thead>
+              <tbody>
+                <tr><td>התחברות</td><td>מסך הכניסה</td><td>מנהלים</td><td>כניסה עם אימייל וסיסמה.</td></tr>
+                <tr><td>תצוגת לומד לבדיקה</td><td>תצוגת לומד</td><td>מנהלים</td><td>בדיקה מנהלית של מה עובד רואה לאחר שיוך לומדות.</td></tr>
+                <tr><td>דשבורד ודוחות</td><td>דשבורד מנהל</td><td>מנהלים</td><td>סטטיסטיקות, טבלת התקדמות, עריכת רישום, מחיקת רישום וייצוא.</td></tr>
+                <tr><td>ניהול לומדות</td><td>ניהול לומדות</td><td>מנהלים</td><td>העלאת קובץ הדרכה, בחירת קטגוריה, תצוגה מקדימה, מחיקת לומדה.</td></tr>
+                <tr><td>ניהול משתמשים</td><td>ניהול עובדים</td><td>מנהלים</td><td>יצירה, עריכה, מחיקה, יבוא Excel, שיוך ישיר, קבוצות, התחזות ואיפוס נתונים.</td></tr>
+                <tr><td>ניהול קבוצות</td><td>ניהול קבוצות</td><td>מנהלים</td><td>יצירת קבוצות, שיוך עובדים, שיוך לומדות לקבוצה, הסרה ועריכת שם.</td></tr>
+                <tr><td>הגדרות</td><td>הגדרות</td><td>מנהלים</td><td>מיתוג, הודעת ברוכים הבאים, שיוך אוטומטי לעובד חדש וקטגוריות.</td></tr>
+                <tr><td>ארגונים</td><td>ניהול ארגונים</td><td>מנהל ראשי</td><td>יצירת ארגון, עריכה, כניסה לסביבת ארגון, איפוס ומחיקה.</td></tr>
+                <tr><td>הקצאות לארגונים</td><td>הקצאת לומדות</td><td>מנהל ראשי</td><td>שיוך לומדה לארגון וביטול שיוך.</td></tr>
+                <tr><td>תצוגה מקדימה של לומדה</td><td>נפתחת מכפתור הניגון בלומדה</td><td>מנהלים</td><td>בדיקה שהלומדה נטענת ושנתוני התקדמות נרשמים בדוחות.</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <section id="onboarding" class="searchable">
+        <h2>הקמת ארגון חדש</h2>
+        <p class="section-intro">
+          זה המסלול המומלץ כאשר ארגון חדש שוכר שימוש במערכת. הסדר חשוב: קודם סביבת ארגון,
+          אחר כך קטגוריות ולומדות, אחר כך קבוצות ומשתמשים, ולבסוף שיוכים ובדיקת לומד.
+        </p>
+
+        <div class="grid">
+          <div class="card full">
+            <h3>צ'קליסט הטמעה</h3>
+            <div class="flex flex-wrap justify-between items-center gap-2" style="margin-bottom: 12px;">
+              <p class="muted" style="margin: 0;">סמן משימות בזמן עבודה. הסימון נשמר בדפדפן המקומי של המדריך.</p>
+              <button type="button" class="action-btn" id="resetChecklistBtn">
+                <i class='bx bx-reset'></i> איפוס סימונים
+              </button>
             </div>
-            <div style="font-weight: 600; color: var(--secondary);">עדכון אחרון: מרץ 2026</div>
-        </header>
-
-        <!-- Section: Overview -->
-        <section id="overview" class="section active">
-            <h1>ברוכים הבאים למרכז ההדרכה</h1>
-            <p class="subtitle">הכלים המתקדמים ביותר לניהול למידה בארגון שלך.</p>
-            
-            <div class="grid">
-                <div class="card">
-                    <div class="card-icon"><i class='bx bx-layer'></i></div>
-                    <h3>ניהול רב-ארגוני</h3>
-                    <p>המערכת תומכת במבנה Multi-tenancy המאפשר לכל ארגון או מחלקה לנהל את המידע שלהם בנפרד ובאופן מאובטח לחלוטין.</p>
-                </div>
-                <div class="card">
-                    <div class="card-icon"><i class='bx bx-palette'></i></div>
-                    <h3>מיתוג ארגוני מלא</h3>
-                    <p>כל ארגון יכול להתאים את המערכת לזהות המיתוגית שלו – צבעי המערכת, לוגו ייחודי והודעות פתיחה מותאמות אישית.</p>
-                </div>
-                <div class="card">
-                    <div class="card-icon"><i class='bx bx-data'></i></div>
-                    <h3>תקן SCORM בינלאומי</h3>
-                    <p>תמיכה מלאה בתקני SCORM 1.2 ו-2004 המאפשרים למידה אינטראקטיבית, שמירת התקדמות ומעקב ציונים מפורט.</p>
-                </div>
-                <div class="card">
-                    <div class="card-icon"><i class='bx bx-mobile-alt'></i></div>
-                    <h3>נגישות מלאה</h3>
-                    <p>המערכת מותאמת באופן מלא לעבודה מכל מכשיר - מחשב, טאבלט או סמארטפון, ומאפשרות למידה מכל מקום.</p>
-                </div>
+            <div class="checklist" id="onboardingChecklist">
+              <label class="check-row"><input type="checkbox"><span>יצירת ארגון חדש במסך מנהל ראשי כולל שם, צבע ראשי ולוגו.</span></label>
+              <label class="check-row"><input type="checkbox"><span>כניסה לסביבת הארגון דרך כפתור "למערכת" ובדיקת מיתוג.</span></label>
+              <label class="check-row"><input type="checkbox"><span>הגדרת בעלי התפקידים בארגון: מנהל ראשי, מנהל מערכת, מנהל הדרכה ולומדים.</span></label>
+              <label class="check-row"><input type="checkbox"><span>בדיקה עם איש התמיכה שהארגון מוכן להעלאת לומדות וקבצי הדרכה.</span></label>
+              <label class="check-row"><input type="checkbox"><span>הגדרת קטגוריות לומדות במסך הגדרות.</span></label>
+              <label class="check-row"><input type="checkbox"><span>העלאת לומדות כקבצי ZIP ובדיקת תצוגה מקדימה.</span></label>
+              <label class="check-row"><input type="checkbox"><span>כתיבת הודעת ברוכים הבאים ובחירת לומדות לשיוך אוטומטי לעובדים חדשים.</span></label>
+              <label class="check-row"><input type="checkbox"><span>יצירת קבוצות לפי מחלקות, תפקידים או מחזורי הכשרה.</span></label>
+              <label class="check-row"><input type="checkbox"><span>יצירת מנהלי מערכת על ידי מנהל ראשי בלבד, ואז יבוא עובדים באקסל או יצירה ידנית.</span></label>
+              <label class="check-row"><input type="checkbox"><span>שיוך עובדים לקבוצות ושיוך לומדות לקבוצות.</span></label>
+              <label class="check-row"><input type="checkbox"><span>בדיקת משתמש לומד באמצעות התחזות או חשבון בדיקה.</span></label>
+              <label class="check-row"><input type="checkbox"><span>בדיקת דוח התקדמות וייצוא CSV/PDF לאחר ביצוע לומדת ניסיון.</span></label>
             </div>
-        </section>
+          </div>
 
-        <!-- Section: Manager -->
-        <section id="manager" class="section">
-            <h1>מדריך מקיף למנהלי הדרכה</h1>
-            <p class="subtitle">ניהול משתמשים, הקצאת תכנים, ניהול קבוצות והפקת דוחות ביצועים מתקדמים.</p>
-
-            <!-- Chapter 1: Courses -->
-            <h2><i class='bx bx-cloud-upload'></i> 1. ניהול והעלאת לומדות (SCORM)</h2>
-            <p class="text-muted mb-4">תהליך העלאת תכני למידה למערכת ופרסומם ללומדים.</p>
-            
-            <div class="steps-container">
-                <div class="step-item">
-                    <div class="step-count">1</div>
-                    <div class="step-content">
-                        <h4>הכנת הקובץ</h4>
-                        <p>וודאו שהלומדה מיוצאת כקובץ **ZIP** תואם תקן SCORM (1.2 או 2004). המערכת תזהה אוטומטית את קובץ המניפסט (imsmanifest.xml).</p>
-                    </div>
-                </div>
-                <div class="step-item">
-                    <div class="step-count">2</div>
-                    <div class="step-content">
-                        <h4>מילוי פרטי הלומדה</h4>
-                        <p>במסך "ניהול לומדות", הזינו את שם הלומדה, תיאור קצר (יוצג ללומדים) ובחרו קטגוריה רלוונטית (לדוגמה: אבטחת מידע, משאבי אנוש).</p>
-                    </div>
-                </div>
-                <div class="step-item">
-                    <div class="step-count">3</div>
-                    <div class="step-content">
-                        <h4>העלאה ופרסום</h4>
-                        <p>לחצו על "העלה ופרסם". המערכת תפרק את הקובץ, תשמור את המשאבים בענן ותהפוך את הלומדה לזמינה להקצאה.</p>
-                        <ul class="text-sm">
-                            <li>ניתן לצפות בתצוגה מקדימה לפני ההקצאה ע"י לחיצה על כפתור ה-Play.</li>
-                            <li>במידה והלומדה עודכנה, יש למחוק את הישנה ולהעלות גרסה חדשה.</li>
-                        </ul>
-                    </div>
-                </div>
+          <div class="card full">
+            <h3>תהליך מומלץ צעד אחר צעד</h3>
+            <div class="steps">
+              <div class="step"><div><h3>פתח סביבת ארגון</h3><p>היכנס כמנהל ראשי אל "ניהול ארגונים", מלא שם ארגון, קישור ללוגו וצבע ראשי. לחץ "פתח סביבת הדרכה".</p></div></div>
+              <div class="step"><div><h3>היכנס לארגון</h3><p>בטבלת הארגונים לחץ "למערכת". המערכת מעבירה אותך למצב מנהל הדרכה של אותו ארגון ומחילה את המיתוג שלו.</p></div></div>
+              <div class="step"><div><h3>ודא שהסביבה מוכנה</h3><p>לפני העלאת לומדות ראשונה, בקש מאיש התמיכה לוודא שהסביבה מוכנה לקבלת קבצי הדרכה. אין צורך לבצע פעולה טכנית בעצמך.</p></div></div>
+              <div class="step"><div><h3>הכן קטגוריות ותוכן</h3><p>ב"הגדרות מערכת" צור קטגוריות כמו חובה, בטיחות, רגולציה, קליטת עובד חדש או מחלקה. לאחר מכן עבור ל"ניהול לומדות" והעלה את קבצי ה-ZIP.</p></div></div>
+              <div class="step"><div><h3>הגדר onboarding</h3><p>ב"הגדרות מערכת" כתוב הודעת ברוכים הבאים עד 5 שורות ובחר לומדות שיוקצו אוטומטית לכל עובד חדש.</p></div></div>
+              <div class="step"><div><h3>בנה קבוצות</h3><p>ב"ניהול קבוצות" צור קבוצות לפי צורך תפעולי: כל העובדים, הנהלה, מכירות, מוקד, עובדים חדשים או מחזור הדרכה.</p></div></div>
+              <div class="step"><div><h3>הוסף משתמשים</h3><p>מנהל ראשי יוצר או ממנה מנהלי מערכת ומנהלי הדרכה. לאחר מכן מנהלי הארגון יכולים ליצור ולייבא לומדים.</p></div></div>
+              <div class="step"><div><h3>שייך לומדות בפועל</h3><p>הדרך שמופיעה ללומדים היא שיוך דרך קבוצות, שיוך ישיר לעובד או שיוך אוטומטי לעובד חדש. השתמש באחת משלוש הדרכים האלה כדי לוודא שהלומדה מופיעה בלוח הלומד.</p></div></div>
+              <div class="step"><div><h3>בצע בדיקת קצה לקצה</h3><p>התחזה למשתמש בדיקה, פתח לומדה, בצע כמה מסכים, לחץ "שמור וצא", חזור לדוח הניהול ובדוק שהסטטוס, ההתקדמות והזמן נשמרו.</p></div></div>
             </div>
+          </div>
 
-            <!-- Chapter 2: Groups -->
-            <h2><i class='bx bx-group'></i> 2. ניהול קבוצות למידה</h2>
-            <p class="text-muted mb-4">קבוצות הן הכלי היעיל ביותר לניהול למידה מחלקתית או נושאית.</p>
-
-            <div class="steps-container">
-                <div class="step-item">
-                    <div class="step-count">1</div>
-                    <div class="step-content">
-                        <h4>יצירת קבוצה</h4>
-                        <p>הזינו שם לקבוצה (לדוגמה: "צוות מכירות", "הנהלה") ולחצו על "צור קבוצה".</p>
-                    </div>
-                </div>
-                <div class="step-item">
-                    <div class="step-count">2</div>
-                    <div class="step-content">
-                        <h4>שיוך עובדים לקבוצה</h4>
-                        <p>לחצו על כפתור הניהול (גלגל שיניים) ליד שם הקבוצה. תחת "עובדים בקבוצה", לחצו על "הוסף עובד" ובחרו את העובדים הרצויים מהרשימה הארגונית.</p>
-                    </div>
-                </div>
-                <div class="step-item">
-                    <div class="step-count">3</div>
-                    <div class="step-content">
-                        <h4>הקצאת לומדות לקבוצה</h4>
-                        <p>באותו מסך ניהול קבוצה, תחת "לומדות שהוקצו", לחצו על "הקצה לומדה". כל עובד שמשוייך לקבוצה זו יקבל אוטומטית את הלומדה ללוח הלמידה שלו.</p>
-                        <div class="badge-info mt-2">טיפ: שיוך עובד חדש לקבוצה קיימת יקצה לו באופן אוטומטי את כל הלומדות המשוייכות לקבוצה.</div>
-                    </div>
-                </div>
+          <div class="card full">
+            <div class="callout warn">
+              <strong>חשוב:</strong> במסך מנהל ראשי יש "הקצאת לומדות לארגונים", אבל כדי שלומדה תופיע בפועל לעובד,
+              יש לשייך אותה דרך קבוצות, שיוך ישיר או שיוך אוטומטי לעובדים חדשים. לכן לאחר שיוך ארגוני,
+              בצע גם שיוך תפעולי באחד המסלולים האלה.
             </div>
+          </div>
+        </div>
+      </section>
 
-            <!-- Chapter 3: Users -->
-            <h2><i class='bx bx-user-plus'></i> 3. ניהול עובדים (משתמשים)</h2>
-            <p class="text-muted mb-4">יצירה, עריכה וניהול הרשאות של הלומדים בארגון.</p>
+      <section id="roles" class="searchable">
+        <h2>הרשאות ותפקידים</h2>
+        <p class="section-intro">בחר תפקיד כדי לראות את הפעולות הזמינות לו.</p>
+        <div class="toolbar" role="tablist">
+          <button class="tab active" data-role="super">מנהל ראשי</button>
+          <button class="tab" data-role="systemAdmin">מנהל מערכת</button>
+          <button class="tab" data-role="orgAdmin">מנהל הדרכה</button>
+        </div>
 
-            <div class="steps-container">
-                <div class="step-item">
-                    <div class="step-count">1</div>
-                    <div class="step-content">
-                        <h4>יצירת משתמש בודד</h4>
-                        <p>הזינו שם מלא, אימייל, טלפון וסיסמה ראשונית. בחרו תפקיד: **לומד** (גישה לתכנים בלבד) או **מנהל הדרכה** (גישה לממשק הניהול).</p>
-                    </div>
-                </div>
-                <div class="step-item">
-                    <div class="step-count">2</div>
-                    <div class="step-content">
-                        <h4>הקצאת קורסים מרוכזת</h4>
-                        <p>בטבלת המשתמשים, ניתן ללחוץ על "לומדות משוייכות" ליד כל משתמש. ייפתח חלון (Modal) המאפשר לנהל את כל ההקצאות הישירות לאותו משתמש במקום אחד – הוספה או הסרה של לומדות במהירות.</p>
-                    </div>
-                </div>
-                <div class="step-item">
-                    <div class="step-count">3</div>
-                    <div class="step-content">
-                        <h4>פעולות קבוצתיות (Bulk Actions)</h4>
-                        <p>ניתן לסמן מספר משתמשים בטבלה ולבצע פעולות משותפות כגון: שיוך קבוצתי, מחיקה או שינוי תפקיד באופן גורף.</p>
-                    </div>
-                </div>
+        <div class="role-panel active" id="role-super">
+          <div class="card full">
+            <h3>מנהל ראשי</h3>
+            <table>
+              <thead><tr><th>תחום</th><th>פעולות</th></tr></thead>
+              <tbody>
+                <tr><td>ארגונים</td><td>יצירה, עריכה, צבע ולוגו, כניסה לארגון, איפוס נתוני למידה, מחיקה מלאה.</td></tr>
+                <tr><td>משתמשים</td><td>ניהול כל המשתמשים, סינון לפי ארגון, העברה בין ארגונים, שינוי תפקיד גורף, התחזות.</td></tr>
+                <tr><td>דוחות</td><td>צפייה בכל הארגונים או סינון לארגון אחד.</td></tr>
+                <tr><td>קטגוריות</td><td>בחירת ארגון ואז ניהול קטגוריות עבורו.</td></tr>
+                <tr><td>הקצאות</td><td>שיוך לומדה לארגון וביטול שיוך.</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="role-panel" id="role-systemAdmin">
+          <div class="card full">
+            <h3>מנהל מערכת</h3>
+            <p class="muted">תפקיד ניהולי למשתמשים שצריכים לנהל למידה בארגון. הוא אינו מחליף את המנהל הראשי: רק מנהל ראשי רשאי ליצור, למנות או למחוק משתמשים בעלי תפקידי ניהול.</p>
+            <table>
+              <thead><tr><th>תחום</th><th>פעולות</th></tr></thead>
+              <tbody>
+                <tr><td>דוחות ולומדות</td><td>גישה לדשבורד, לומדות, משתמשים, קבוצות והגדרות עבור הארגון שאליו הוא משויך.</td></tr>
+                <tr><td>עובדים</td><td>ניהול לומדים בארגון בלבד. יצירה או מינוי של מנהלים חסומים למי שאינו מנהל ראשי.</td></tr>
+                <tr><td>מגבלה</td><td>לא יכול ליצור מנהלים אחרים, למנות מנהלים או למחוק מנהלים קיימים.</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="role-panel" id="role-orgAdmin">
+          <div class="card full">
+            <h3>מנהל הדרכה ארגוני</h3>
+            <p class="muted">מנהל הדרכה עובד בתוך ארגון מסוים. הוא יכול לנהל למידה ועובדים רגילים בארגון שלו, אך אינו רשאי ליצור או למנות מנהלים.</p>
+            <table>
+              <thead><tr><th>תחום</th><th>פעולות</th></tr></thead>
+              <tbody>
+                <tr><td>עובדים</td><td>יצירת לומדים, עריכה, מחיקה, יבוא Excel, שיוך לקבוצה, שיוך לומדה ישיר ואיפוס התקדמות.</td></tr>
+                <tr><td>קבוצות</td><td>יצירה, עריכת שם, מחיקה, הוספת עובדים, הסרת עובדים, שיוך והסרת לומדות.</td></tr>
+                <tr><td>לומדות</td><td>העלאת קובץ הדרכה, בחירת קטגוריה, פרסום מיידי, תצוגה מקדימה ומחיקה.</td></tr>
+                <tr><td>הגדרות</td><td>שם ארגון, צבע, לוגו, הודעת ברוכים הבאים, שיוך אוטומטי, קטגוריות.</td></tr>
+                <tr><td>דוחות</td><td>עריכת סטטוס/התקדמות/ציון, מחיקת רישום, ייצוא CSV/PDF.</td></tr>
+                <tr><td>מגבלה</td><td>אינו יכול ליצור, למחוק או לערוך משתמשים בעלי תפקידי ניהול.</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      </section>
+
+      <section id="orgs" class="searchable">
+        <h2>ארגונים, מיתוג והגדרות</h2>
+        <div class="grid">
+          <div class="card">
+            <h3>יצירת ארגון</h3>
+            <p class="muted">מסך: "ניהול ארגונים". מלא שם, קישור לוגו וצבע ראשי. הצבע משמש למיתוג סביבת הארגון.</p>
+          </div>
+          <div class="card">
+            <h3>כניסה לסביבת ארגון</h3>
+            <p class="muted">לחיצה על "למערכת" בטבלת הארגונים מעבירה את המנהל הראשי לצפייה וניהול של אותו ארגון. לחזרה, השתמש בכפתור "חזור לניהול הראשי" בסרגל העליון.</p>
+          </div>
+          <div class="card">
+            <h3>מי רשאי למנות מנהלים</h3>
+            <p class="muted">רק מנהל ראשי רשאי ליצור או למנות משתמשים בעלי תפקידי ניהול. אם צריך להוסיף מנהל מערכת או מנהל הדרכה, יש לפנות למנהל הראשי.</p>
+          </div>
+          <div class="card">
+            <h3>עריכת ארגון</h3>
+            <p class="muted">לחץ על כפתור העריכה בטבלת הארגונים. הטופס למעלה מתחלף למצב עריכה, ואז ניתן לשנות שם, לוגו וצבע.</p>
+          </div>
+          <div class="card">
+            <h3>איפוס או מחיקה</h3>
+            <p class="muted">איפוס מוחק את כל נתוני הלמידה של הארגון. מחיקה מוחקת את הארגון לצמיתות. שתי הפעולות דורשות אישור ומיועדות למצבי הקמה מחדש או סיום התקשרות.</p>
+          </div>
+          <div class="card full">
+            <h3>הגדרות מתוך סביבת הארגון</h3>
+            <table>
+              <thead><tr><th>הגדרה</th><th>איך מבצעים</th><th>השפעה</th></tr></thead>
+              <tbody>
+                <tr><td>שם הארגון</td><td>הגדרות מערכת - מיתוג ועיצוב הארגון.</td><td>מופיע בסרגל ובמקומות שבהם מוצג הארגון.</td></tr>
+                <tr><td>צבע ראשי</td><td>בחירת צבע או הזנת HEX.</td><td>מחיל צבעי מותג על כפתורים ורכיבים.</td></tr>
+                <tr><td>לוגו</td><td>הדבק URL לתמונה.</td><td>מוצג בממשק אם הקישור זמין לציבור.</td></tr>
+                <tr><td>הודעת ברוכים הבאים</td><td>טקסט עד 5 שורות.</td><td>מופיע בראש דשבורד הלומד ודשבורד המנהל.</td></tr>
+                <tr><td>שיוך אוטומטי</td><td>סמן לומדות ברשימת checkbox.</td><td>לומדות אלה מיועדות להצטרף לכל עובד חדש שנוצר בארגון.</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="card full">
+            <h3>לפני העלאת לומדות ראשונה</h3>
+            <p class="muted">אם זו סביבת ארגון חדשה, מומלץ לבצע העלאת לומדה קצרה לבדיקה. אם ההעלאה או התצוגה המקדימה לא עובדות, פנה לאיש התמיכה עם שם הארגון ושם הקובץ שניסית להעלות.</p>
+          </div>
+        </div>
+      </section>
+
+      <section id="courses" class="searchable">
+        <h2>ניהול לומדות והדרכות</h2>
+        <p class="section-intro">במסך זה מעלים קובצי הדרכה, מסווגים אותם לפי קטגוריה, בודקים שהם נפתחים, ומוחקים לומדות שאינן דרושות.</p>
+        <div class="grid">
+          <div class="card full">
+            <h3>לפני העלאה ראשונה</h3>
+            <p class="muted">ודא מול איש התמיכה שהסביבה מוכנה להעלאת קבצי הדרכה. אם אינך בטוח איזה קובץ להעלות, בקש מספק התוכן קובץ ZIP תקין למערכת למידה.</p>
+            <div class="callout good" style="margin-top: 12px;">
+              גרסת SCORM מומלצת: SCORM 1.2, כקובץ ZIP יחיד בפורמט HTML5. זו הגרסה היציבה ביותר לנגן הלומדות הקיים, כולל שמירת סטטוס, ציון, מיקום אחרון ונתוני חזרה ללומדה. SCORM 2004 עשוי לעבוד בלומדות פשוטות, אך התמיכה בו חלקית.
             </div>
-
-            <!-- Chapter 4: Reports -->
-            <h2><i class='bx bx-line-chart'></i> 4. דוחות ומעקב למידה</h2>
-            <p class="text-muted mb-4">ניתוח נתונים בזמן אמת וייצוא לצורך בקרה ארגונית.</p>
-
-            <div class="grid" style="margin-top: 1rem;">
-                <div class="card">
-                    <div class="card-icon"><i class='bx bx-pie-chart-alt'></i></div>
-                    <h3>סטטיסטיקה חיה</h3>
-                    <p>צפו בכמות הלומדים הפעילים, אחוז ההשלמות וזמן הלמידה הממוצע ברמת הארגון או הקבוצה.</p>
-                </div>
-                <div class="card">
-                    <div class="card-icon"><i class='bx bx-export'></i></div>
-                    <h3>ייצוא נתונים</h3>
-                    <p>ייצאו דוחות מפורטים בפורמט **Excel**, **CSV** או **PDF**. הדוח כולל שמות, ציונים, סטטוסי התקדמות ותאריכי סיום.</p>
-                </div>
-                <div class="card">
-                    <div class="card-icon"><i class='bx bx-edit-alt'></i></div>
-                    <h3>ניהול ידני</h3>
-                    <p>למנהלים יש הרשאה לערוך ידנית סטטוסי התקדמות או ציונים במקרים חריגים דרך כפתור העריכה בטבלת המעקב.</p>
-                </div>
+          </div>
+          <div class="card">
+            <h3>העלאת לומדה חדשה</h3>
+            <ol>
+              <li>עבור אל "ניהול לומדות".</li>
+              <li>מלא שם לומדה ותיאור קצר.</li>
+              <li>בחר קטגוריה קיימת.</li>
+              <li>בחר קובץ ZIP בלבד, רצוי לומדת SCORM 1.2 בפורמט HTML5.</li>
+              <li>לחץ "העלה ופרסם לומדה".</li>
+            </ol>
+          </div>
+          <div class="card">
+            <h3>בדיקת לומדה</h3>
+            <p class="muted">בטבלת הלומדות לחץ על כפתור הניגון. הלומדה תיפתח במסך תצוגה מקדימה. ודא שהיא נטענת, שאפשר לעבור בין המסכים, ושהמערכת שומרת התקדמות לאחר יציאה.</p>
+          </div>
+          <div class="card">
+            <h3>מחיקת לומדה</h3>
+            <p class="muted">לחץ על פח האשפה. המחיקה מוחקת את רשומת הלומדה ועלולה למחוק גם נתוני התקדמות קשורים, לכן יש להשתמש בה בזהירות.</p>
+          </div>
+          <div class="card">
+            <h3>קטגוריות</h3>
+            <p class="muted">קטגוריות מנוהלות במסך "הגדרות מערכת". לאחר יצירה הן מופיעות ברשימת בחירת הקטגוריה בעת העלאת לומדה חדשה.</p>
+          </div>
+          <div class="card full">
+            <div class="callout good">
+              המלצה תפעולית: לפני שמפרסמים לומדה ללקוח אמיתי, העלה אותה קודם כבדיקה, פתח תצוגה מקדימה, עבור כמה מסכים, צא, וודא שבדוח מופיעה התקדמות.
             </div>
-            <!-- Chapter 5: Branding -->
-            <h2><i class='bx bx-paint'></i> 5. מיתוג והגדרות ארגון</h2>
-            <p class="text-muted mb-4">התאמת המערכת למראה והרגשה של הארגון שלך.</p>
+          </div>
+        </div>
+      </section>
 
-            <div class="steps-container">
-                <div class="step-item">
-                    <div class="step-count">1</div>
-                    <div class="step-content">
-                        <h4>הגדרות עיצוב</h4>
-                        <p>מנהל הארגון יכול להעלות לוגו ארגוני שיופיע בסרגל הניווט ולבחור צבע מיתוג ראשי שישפיע על מראה הכפתורים והאלמנטים בממשק הלומד.</p>
-                    </div>
-                </div>
-                <div class="step-item">
-                    <div class="step-count">2</div>
-                    <div class="step-content">
-                        <h4>הודעת ברוכים הבאים</h4>
-                        <p>ניתן להזין הודעה אישית שתוצג לכל לומד בכניסתו למערכת. ההודעה מוגבלת ל-5 שורות ונועדה לספק הכוונה או ברכת שלום מהנהלת הארגון.</p>
-                    </div>
-                </div>
+      <section id="users" class="searchable">
+        <h2>ניהול משתמשים ועובדים</h2>
+        <div class="grid">
+          <div class="card full">
+            <h3>פעולות במסך ניהול עובדים</h3>
+            <table>
+              <thead><tr><th>פעולה</th><th>איך מבצעים</th><th>הערות</th></tr></thead>
+              <tbody>
+                <tr><td>יצירת משתמש יחיד</td><td>מלא שם, אימייל, טלפון, סיסמה ותפקיד. מנהל ראשי חייב לבחור ארגון.</td><td>מנהל ראשי יכול ליצור מנהלים ולומדים. מנהל שאינו מנהל ראשי יכול ליצור לומדים בלבד.</td></tr>
+                <tr><td>עריכת משתמש</td><td>לחץ על עיפרון בשורת המשתמש, שנה פרטים ולחץ "שמור שינויים".</td><td>סיסמה ריקה בעריכה משאירה את הסיסמה ללא שינוי.</td></tr>
+                <tr><td>מחיקת משתמש</td><td>לחץ על פח האשפה ואשר.</td><td>לא ניתן למחוק את המשתמש המחובר. מנהל שאינו מנהל ראשי אינו יכול למחוק משתמשי ניהול.</td></tr>
+                <tr><td>חיפוש וסינון</td><td>השתמש בשדה חיפוש, סינון תפקיד וסינון ארגון כאשר האפשרות זמינה לך.</td><td>החיפוש לפי שם, אימייל או טלפון.</td></tr>
+                <tr><td>שיוך לומדה ישיר</td><td>לחץ על אייקון ספר בשורת המשתמש, בחר לומדה ולחץ "שייך עכשיו".</td><td>הלומדה תופיע באזור האישי של הלומד.</td></tr>
+                <tr><td>הסרת שיוך לומדה</td><td>בחלון הלומדות המשויכות לחץ על פח ליד הלומדה.</td><td>ההסרה מוחקת גם את נתוני ההתקדמות של אותה לומדה.</td></tr>
+                <tr><td>איפוס התקדמות משתמש</td><td>לחץ על אייקון רענון בשורת המשתמש.</td><td>מוחק את כל נתוני הלמידה של אותו משתמש.</td></tr>
+                <tr><td>התחזות</td><td>לחץ על אייקון משקפיים ואשר.</td><td>פעולות למידה בזמן התחזות נשמרות בשם המשתמש המתחזה.</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="card">
+            <h3>יבוא משתמשים מ-Excel</h3>
+            <ol>
+              <li>לחץ "הורדת תבנית אקסל".</li>
+              <li>מלא עמודות: שם מלא, אימייל, טלפון, סיסמה, תפקיד, שיוך לקבוצה.</li>
+              <li>אם אתה מנהל ראשי אפשר לבחור תפקיד ניהולי או לומד; אחרת התבנית מיועדת ללומדים בלבד.</li>
+              <li>אם אתה מנהל ראשי, מלא גם את הארגון שאליו העובד שייך, לפי ההנחיות שקיבלת.</li>
+              <li>לחץ "העלאת קובץ ורישום".</li>
+            </ol>
+          </div>
+
+          <div class="card">
+            <h3>פעולות גורפות</h3>
+            <p class="muted">סמן משתמשים בטבלה. סרגל פעולות יופיע עם הוספה לקבוצה ומחיקה קבוצתית. למנהל ראשי יופיעו גם העברה לארגון אחר ושינוי תפקיד.</p>
+          </div>
+
+          <div class="card full">
+            <div class="callout warn">
+              שים לב: שינוי תפקיד גורף מיועד למנהל ראשי בלבד. אם שינוי תפקיד נכשל, ודא שהמשתמשים שנבחרו שייכים לארגון הנכון ופנה לתמיכה עם צילום מסך של ההודעה.
             </div>
-        </section>
+          </div>
+        </div>
+      </section>
 
-        </section>
+      <section id="groups" class="searchable">
+        <h2>קבוצות והקצאת לומדות</h2>
+        <p class="section-intro">קבוצות הן הדרך המרכזית להפוך לומדה לזמינה לקבוצה של עובדים ולייצר רשומות התקדמות מוכנות לדוחות.</p>
+        <div class="grid">
+          <div class="card">
+            <h3>יצירת קבוצה</h3>
+            <p class="muted">ב"ניהול קבוצות" מלא שם קבוצה ולחץ "צור קבוצה". הקבוצה נוצרת בתוך הארגון הנוכחי.</p>
+          </div>
+          <div class="card">
+            <h3>ניהול קבוצה</h3>
+            <p class="muted">לחץ על שם הקבוצה או כפתור גלגל השיניים. תיפתח תצוגת פירוט עם עובדים בקבוצה ולומדות מוקצות.</p>
+          </div>
+          <div class="card">
+            <h3>הוספת עובד לקבוצה</h3>
+            <p class="muted">בתצוגת הקבוצה לחץ "הוסף עובד", בחר עובד ולחץ "הוסף". אם לקבוצה כבר יש לומדות, המערכת מייצרת לעובד רשומות התקדמות עבורן.</p>
+          </div>
+          <div class="card">
+            <h3>הקצאת לומדה לקבוצה</h3>
+            <p class="muted">בתצוגת הקבוצה לחץ "הקצה לומדה", בחר לומדה ולחץ "הקצה עכשיו". לכל חברי הקבוצה תיווצר רשומת התקדמות במצב "טרם הותחל".</p>
+          </div>
+          <div class="card">
+            <h3>הסרה</h3>
+            <p class="muted">הסרת עובד מקבוצה או הסרת לומדה מקבוצה מנקה רשומות שלא התחילו ושזמן הלמידה שלהן נמוך מדקה. התקדמות אמיתית נשמרת בדרך כלל כדי לא למחוק עבודה שכבר בוצעה.</p>
+          </div>
+          <div class="card">
+            <h3>עריכת שם ומחיקה</h3>
+            <p class="muted">ניתן לערוך שם בשורת הטבלה או בכותרת פרטי הקבוצה. מחיקת קבוצה מנקה חברויות והקצאות של הקבוצה.</p>
+          </div>
+        </div>
+      </section>
 
-        <!-- Section: Learner -->
-        <section id="learner" class="section">
-            <h1>מדריך ללומד</h1>
-            <p class="subtitle">כך תפיקו את המקסימום מחוויית הלמידה הדיגיטלית שלכם.</p>
+      <section id="reports" class="searchable">
+        <h2>דוחות, מעקב וייצוא</h2>
+        <div class="grid">
+          <div class="card full">
+            <h3>מה מופיע בדוח</h3>
+            <table>
+              <thead><tr><th>שדה</th><th>מקור/משמעות</th></tr></thead>
+              <tbody>
+                <tr><td>שם הלומד</td><td>פרופיל המשתמש.</td></tr>
+                <tr><td>שם הלומדה</td><td>רשומת הקורס.</td></tr>
+                <tr><td>סטטוס</td><td>הסטטוס האחרון שנשמר עבור הלומדה: הושלם, בתהליך או לא התחיל.</td></tr>
+                <tr><td>התקדמות</td><td>אחוז ההתקדמות שהמערכת קיבלה מהלומדה. אם הלומדה לא דיווחה אחוז מדויק, לא יוצג אחוז או בר התקדמות.</td></tr>
+                <tr><td>ציון</td><td>ציון סופי אם הלומדה כוללת מבחן ומדווחת ציון למערכת.</td></tr>
+                <tr><td>זמן למידה</td><td>זמן מצטבר בדקות.</td></tr>
+                <tr><td>תאריך סיום</td><td>התאריך שבו הלומדה סומנה כהושלמה.</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="card">
+            <h3>עריכת רישום למידה</h3>
+            <p class="muted">בדוח לחץ על כפתור העריכה בשורה. ניתן לשנות סטטוס, אחוז התקדמות וציון. אם הסטטוס הושלם, המערכת מעדכנת תאריך סיום.</p>
+          </div>
+          <div class="card">
+            <h3>מחיקת רישום</h3>
+            <p class="muted">בתוך חלון העריכה ניתן למחוק רישום. פעולה זו מסירה את ההתקדמות של אותו משתמש באותה לומדה.</p>
+          </div>
+          <div class="card">
+            <h3>ייצוא</h3>
+            <p class="muted">כפתורי Excel ו-CSV מפיקים קובץ CSV עם BOM עברי. כפתור PDF משתמש בייצוא HTML ל-PDF עבור טבלת הדוח.</p>
+          </div>
+          <div class="card">
+            <h3>סינון למנהל ראשי</h3>
+            <p class="muted">מנהל ראשי יכול לבחור ארגון בדשבורד כדי לראות רק את נתוני הלמידה שלו, או להשאיר "כל הארגונים".</p>
+          </div>
+        </div>
+      </section>
 
-            <div class="steps-container">
-                <div class="step-item">
-                    <div class="step-count">1</div>
-                    <div class="step-content">
-                        <h4>כניסה למערכת</h4>
-                        <p>התחברו עם שם המשתמש והסיסמה שקיבלתם ממנהל ההדרכה. מומלץ לשנות את הסיסמה בכניסה הראשונה.</p>
-                    </div>
-                </div>
-                <div class="step-item">
-                    <div class="step-count">2</div>
-                    <div class="step-content">
-                        <h4>לוח הלומדות שלי</h4>
-                        <p>במסך הראשי תמצאו את כל ההדרכות שהוקצו לכם. תוכלו לראות את אחוז ההתקדמות בכל לומדה.</p>
-                    </div>
-                </div>
-                <div class="step-item">
-                    <div class="step-count">3</div>
-                    <div class="step-content">
-                        <h4>למידה רציפה (Bookmark)</h4>
-                        <p>המערכת שומרת אוטומטית היכן עצרתם. גם אם תסגרו את הדפדפן באמצע, תוכלו לחזור בדיוק לאותה נקודה.</p>
-                    </div>
-                </div>
+      <section id="operations" class="searchable">
+        <h2>תפעול ופתרון תקלות</h2>
+        <div class="grid">
+          <div class="card full">
+            <h3>פעולות רגישות</h3>
+            <table>
+              <thead><tr><th>פעולה</th><th>סיכון</th><th>מתי להשתמש</th></tr></thead>
+              <tbody>
+                <tr><td>מחיקת ארגון</td><td><span class="badge b-red">קריטי</span></td><td>רק בסיום התקשרות או סביבת בדיקה. מוחק מידע קשור ואינו הפיך.</td></tr>
+                <tr><td>איפוס ארגון</td><td><span class="badge b-red">קריטי</span></td><td>לפני השקה מחדש או מחיקת נתוני פיילוט.</td></tr>
+                <tr><td>מחיקת לומדה</td><td><span class="badge b-amber">גבוה</span></td><td>כאשר לומדה הועלתה בטעות או הוחלפה. בדוק השפעה על התקדמות קיימת.</td></tr>
+                <tr><td>התחזות</td><td><span class="badge b-amber">גבוה</span></td><td>לתמיכה ובדיקות. פעולות למידה נשמרות בשם המשתמש המתחזה.</td></tr>
+                <tr><td>מחיקת רישום למידה</td><td><span class="badge b-amber">גבוה</span></td><td>לתיקון שיוך שגוי או איפוס לומדה בודדת.</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="card">
+            <h3>משתמש לא מצליח להיכנס</h3>
+            <p class="muted">בדוק שהאימייל נכון, שהמשתמש קיים ברשימת העובדים, שיש לו תפקיד מתאים ושויך לארגון הנכון. אם הסיסמה שונתה ועדיין אין כניסה, פנה לתמיכה.</p>
+          </div>
+          <div class="card">
+            <h3>לומדה לא מופיעה ללומד</h3>
+            <p class="muted">בדוק שהלומדה פורסמה, שהעובד משויך לקבוצה עם הלומדה, שיש לו שיוך ישיר, או שהוא נוצר אחרי שהלומדה סומנה לשיוך אוטומטי.</p>
+          </div>
+          <div class="card">
+            <h3>אין נתונים בדוח</h3>
+            <p class="muted">ודא שהלומדה שויכה לעובדים, שהעובדים פתחו אותה לפחות פעם אחת, ושלא מופעל סינון ארגון או חיפוש שמסתיר את התוצאות.</p>
+          </div>
+          <div class="card">
+            <h3>קובץ לומדה לא נטען</h3>
+            <p class="muted">נסה לפתוח את הלומדה בתצוגה מקדימה. אם היא לא נטענת, ודא שקיבלת מספק התוכן קובץ ZIP מתאים למערכת למידה, ושהקובץ לא גדול או פגום. אם הבעיה נמשכת, פנה לתמיכה עם שם הלומדה והודעת השגיאה.</p>
+          </div>
+          <div class="card">
+            <h3>מנהל לא מצליח ליצור מנהל אחר</h3>
+            <p class="muted">זו התנהגות מכוונת: רק מנהל ראשי רשאי ליצור או למנות מנהלים. מנהלי ארגון יכולים ליצור ולנהל לומדים בארגון שלהם.</p>
+          </div>
+
+          <div class="card full">
+            <h3>סדר בדיקה לפני מסירה ללקוח</h3>
+            <div class="steps">
+              <div class="step"><div><h3>בדיקת הרשאות</h3><p>היכנס כמנהל ראשי, כמנהל מערכת, כמנהל הדרכה וכמשתמש לומד. ודא שכל אחד רואה רק את המסכים המתאימים ושמנהל שאינו מנהל ראשי אינו יכול למנות מנהלים.</p></div></div>
+              <div class="step"><div><h3>בדיקת תוכן</h3><p>העלה לומדת ניסיון, פתח תצוגה מקדימה, סיים אותה ובדוק שהדוח מתעד השלמה.</p></div></div>
+              <div class="step"><div><h3>בדיקת שיוכים</h3><p>צור קבוצה, הוסף עובד, הקצה לומדה, ודא שהלומדה מופיעה בלוח הלומד.</p></div></div>
+              <div class="step"><div><h3>בדיקת ייצוא</h3><p>ייצא CSV/PDF ובדוק שהעברית, השמות, הסטטוסים והציונים תקינים.</p></div></div>
             </div>
-        </section>
+          </div>
+        </div>
+      </section>
 
-        <!-- Section: FAQ/Tips -->
-        <section id="faq" class="section">
-            <h1>טיפים ותמיכה טכנית</h1>
-            <p class="subtitle">עצות למידה מוצלחת ופתרון בעיות נפוצות.</p>
-
-            <div class="tips-panel">
-                <i class='bx bx-bulb'></i>
-                <div>
-                    <h2>טיפים ללמידה אפקטיבית</h2>
-                    <ul class="tips-list" style="margin-top: 15px;">
-                        <li><strong>שימוש בדפדפן מעודכן:</strong> השתמשו ב-Chrome או Edge לחוויה מיטבית.</li>
-                        <li><strong>סביבת עבודה:</strong> בצעו את הלמידה במקום שקט עם חיבור אינטרנט יציב.</li>
-                        <li><strong>סיום הדרכה:</strong> הקפידו להגיע למסך הסגירה הסופי כדי לוודא שכל הנתונים נשלחו ל-InAlign.</li>
-                        <li><strong>תעודות:</strong> חלק מהלומדות מאפשרות הורדת תעודת סיום לאחר השלמת 100% מהתוכן.</li>
-                    </ul>
-                </div>
-            </div>
-
-            <div class="card mt-6" style="background: white;">
-                <h3>שאלות נפוצות (FAQ)</h3>
-                <div style="margin-top: 1.5rem;">
-                    <details style="margin-bottom: 1rem; border-bottom: 1px solid var(--border-color); padding-bottom: 0.5rem;">
-                        <summary style="font-weight: 700; cursor: pointer; color: var(--primary);">הלומדה לא נפתחת לי, מה עושים?</summary>
-                        <p style="padding: 10px 0; color: var(--text-muted);">וודאו שאין חוסם פופ-אפים (Pop-up Blocker) מופעל בדפדפן. הלומדות נפתחות בחלון חדש ומאובטח.</p>
-                    </details>
-                    <details style="margin-bottom: 1rem; border-bottom: 1px solid var(--border-color); padding-bottom: 0.5rem;">
-                        <summary style="font-weight: 700; cursor: pointer; color: var(--primary);">האם המערכת עובדת בטלפון הנייד?</summary>
-                        <p style="padding: 10px 0; color: var(--text-muted);">כן, המערכת רספונסיבית לחלוטין. עם זאת, איכות הלמידה תלויה גם באופן שבו הלומדה עצמה עוצבה ע"י התוכן.</p>
-                    </details>
-                    <details style="margin-bottom: 1rem; border-bottom: 1px solid var(--border-color); padding-bottom: 0.5rem;">
-                        <summary style="font-weight: 700; cursor: pointer; color: var(--primary);">סיימתי את הלומדה וזה עדיין מראה 90%, מדוע?</summary>
-                        <p style="padding: 10px 0; color: var(--text-muted);">סביר להניח שחלפתם על פני שקופית אחת או שלא עניתם על שאלת תרגול. חזרו ללומדה וודאו שעברתם על כל התכנים.</p>
-                    </details>
-                </div>
-            </div>
-        </section>
-
-        <footer style="margin-top: 5rem; padding: 2rem 0; border-top: 1px solid var(--border-color); color: var(--text-muted); text-align: center;">
-            &copy; 2026 שחר פתרונות דיגיטליים - מערכת InAlign.
-        </footer>
+      <footer>
+        מדריך שימוש לתפקידי ניהול בלבד: מנהל ראשי, מנהל מערכת ומנהל הדרכה.
+      </footer>
     </main>
+  </div>
 
-    <script>
-        function showSection(id) {
-            // Hide all sections
-            document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
-            // Show selected
-            document.getElementById(id).classList.add('active');
-            
-            // Update nav active class
-            document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
-            
-            // Find the link that has the onclick with this id
-            const targetLink = Array.from(document.querySelectorAll('.nav-link')).find(l => l.getAttribute('onclick').includes(id));
-            if(targetLink) targetLink.classList.add('active');
-            
-            // Scroll to top
-            window.scrollTo({ top: 0, behavior: 'smooth' });
+  <script>
+    const sectionButtons = document.querySelectorAll('.nav-btn');
+    const sections = document.querySelectorAll('main section');
+
+    function activateSection(id) {
+      sections.forEach(section => section.classList.toggle('active', section.id === id));
+      sectionButtons.forEach(btn => btn.classList.toggle('active', btn.dataset.section === id));
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      history.replaceState(null, '', '#' + id);
+    }
+
+    sectionButtons.forEach(btn => {
+      btn.addEventListener('click', () => activateSection(btn.dataset.section));
+    });
+
+    document.querySelectorAll('[data-jump]').forEach(btn => {
+      btn.addEventListener('click', () => activateSection(btn.dataset.jump));
+    });
+
+    const hash = decodeURIComponent(location.hash.replace('#', ''));
+    if (hash && document.getElementById(hash)) activateSection(hash);
+
+    document.querySelectorAll('.tab').forEach(tab => {
+      tab.addEventListener('click', () => {
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.role-panel').forEach(panel => panel.classList.remove('active'));
+        tab.classList.add('active');
+        document.getElementById('role-' + tab.dataset.role).classList.add('active');
+      });
+    });
+
+    const searchInput = document.getElementById('searchInput');
+    searchInput.addEventListener('input', () => {
+      const q = searchInput.value.trim().toLowerCase();
+      document.querySelectorAll('.searchable .card, .searchable details, .searchable .step, .searchable .callout').forEach(el => {
+        if (!q) {
+          el.classList.remove('hidden-by-search');
+          return;
         }
+        el.classList.toggle('hidden-by-search', !el.innerText.toLowerCase().includes(q));
+      });
+    });
 
-        function searchContent() {
-            let input = document.getElementById('searchInput').value.toLowerCase();
-            let cards = document.querySelectorAll('.card');
-            let steps = document.querySelectorAll('.step-item');
-            let headers = document.querySelectorAll('h2');
-
-            if (input === "") {
-                cards.forEach(c => c.style.display = 'block');
-                steps.forEach(s => s.style.display = 'flex');
-                headers.forEach(h => h.style.display = 'flex');
-                return;
-            }
-
-            cards.forEach(card => {
-                let text = card.innerText.toLowerCase();
-                card.style.display = text.includes(input) ? 'block' : 'none';
-            });
-
-            steps.forEach(step => {
-                let text = step.innerText.toLowerCase();
-                step.style.display = text.includes(input) ? 'flex' : 'none';
-            });
-
-            headers.forEach(h => {
-                let text = h.innerText.toLowerCase();
-                h.style.display = text.includes(input) ? 'flex' : 'none';
-            });
-        }
-    </script>
+    const checklist = document.getElementById('onboardingChecklist');
+    const resetChecklistBtn = document.getElementById('resetChecklistBtn');
+    const saved = JSON.parse(localStorage.getItem('inalignGuideChecklist') || '[]');
+    checklist.querySelectorAll('input[type="checkbox"]').forEach((box, index) => {
+      box.checked = !!saved[index];
+      box.closest('.check-row').classList.toggle('done', box.checked);
+      box.addEventListener('change', () => {
+        const state = Array.from(checklist.querySelectorAll('input[type="checkbox"]')).map(input => input.checked);
+        localStorage.setItem('inalignGuideChecklist', JSON.stringify(state));
+        box.closest('.check-row').classList.toggle('done', box.checked);
+      });
+    });
+    resetChecklistBtn.addEventListener('click', () => {
+      checklist.querySelectorAll('input[type="checkbox"]').forEach(input => {
+        input.checked = false;
+        input.closest('.check-row').classList.remove('done');
+      });
+      localStorage.removeItem('inalignGuideChecklist');
+    });
+  </script>
 </body>
 </html>

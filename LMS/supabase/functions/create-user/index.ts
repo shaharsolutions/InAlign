@@ -6,6 +6,10 @@ const corsHeaders = {
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 }
 
+const SUPER_ADMIN_ROLE = 'super_admin'
+const ADMIN_ROLES = ['admin', 'org_admin']
+const PRIMARY_SUPER_ADMIN_EMAIL = (Deno.env.get('SUPER_ADMIN_EMAIL') || 'shaharsolutions@gmail.com').toLowerCase()
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
@@ -28,7 +32,7 @@ Deno.serve(async (req) => {
         .eq('id', callerId)
         .single()
 
-      if (callerError || (callerData.role !== 'org_admin' && callerData.role !== 'super_admin')) {
+      if (callerError || (callerData.role !== SUPER_ADMIN_ROLE && !ADMIN_ROLES.includes(callerData.role))) {
         throw new Error('Unauthorized: Only admins can create users')
       }
     }
@@ -61,6 +65,27 @@ Deno.serve(async (req) => {
       try {
         if (!uEmail || !uFullName) {
           throw new Error('Missing email or full name');
+        }
+
+        if (uRole === SUPER_ADMIN_ROLE && uEmail !== PRIMARY_SUPER_ADMIN_EMAIL) {
+          throw new Error('Only the primary owner email can be assigned as Super Admin');
+        }
+
+        if (callerId) {
+          const { data: callerData } = await supabaseAdmin
+            .from('profiles')
+            .select('role, org_id')
+            .eq('id', callerId)
+            .single()
+
+          if (callerData?.role !== SUPER_ADMIN_ROLE) {
+            if (uRole === SUPER_ADMIN_ROLE || ADMIN_ROLES.includes(uRole)) {
+              throw new Error('Only Super Admin can create admins');
+            }
+            if (callerData?.org_id !== uOrgId) {
+              throw new Error('Unauthorized: Cannot create users in a different organization');
+            }
+          }
         }
 
         // 1. Create Auth User
@@ -153,5 +178,4 @@ Deno.serve(async (req) => {
     })
   }
 })
-
 

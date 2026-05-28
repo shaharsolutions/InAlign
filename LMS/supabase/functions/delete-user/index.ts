@@ -6,6 +6,9 @@ const corsHeaders = {
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 }
 
+const SUPER_ADMIN_ROLE = 'super_admin'
+const ADMIN_ROLES = ['admin', 'org_admin']
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
@@ -34,7 +37,7 @@ Deno.serve(async (req) => {
       throw new Error('Could not verify caller identity.')
     }
 
-    if (callerProfile.role !== 'super_admin' && callerProfile.role !== 'org_admin') {
+    if (callerProfile.role !== SUPER_ADMIN_ROLE && !ADMIN_ROLES.includes(callerProfile.role)) {
       throw new Error('Unauthorized: Only admins can delete users.')
     }
 
@@ -48,11 +51,11 @@ Deno.serve(async (req) => {
 
     for (const uid of usersToProcess) {
       try {
-        // Optional: If org_admin, verify user belongs to same org
-        if (callerProfile.role === 'org_admin') {
+        // Admins can delete only users from their own organization.
+        if (callerProfile.role !== SUPER_ADMIN_ROLE) {
           const { data: targetUser, error: targetError } = await supabaseClient
             .from('profiles')
-            .select('org_id')
+            .select('role, org_id')
             .eq('id', uid)
             .single()
           
@@ -62,6 +65,10 @@ Deno.serve(async (req) => {
 
           if (targetUser.org_id !== callerProfile.org_id) {
             throw new Error(`Unauthorized: Cannot delete user ${uid} from different organization.`)
+          }
+
+          if (targetUser.role === SUPER_ADMIN_ROLE || ADMIN_ROLES.includes(targetUser.role)) {
+            throw new Error(`Unauthorized: Only Super Admin can delete admin users.`)
           }
         }
 
@@ -85,5 +92,3 @@ Deno.serve(async (req) => {
     })
   }
 })
-
-

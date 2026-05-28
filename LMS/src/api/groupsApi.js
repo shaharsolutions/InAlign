@@ -1,5 +1,6 @@
 import { supabase } from '../lib/supabase.js'
 import { getCurrentUserSync } from './authApi.js'
+import { isManagementRole, isSuperAdminRole } from '../lib/roles.js'
 
 let MOCK_GROUPS = [
   { id: 'grp-1', name: 'מחלקת שיווק', org_id: 'org-2', user_count: 5, course_count: 2 },
@@ -24,7 +25,7 @@ export async function fetchGroups() {
     
     if (user.orgId) {
       query = query.eq('org_id', user.orgId);
-    } else if (user.role !== 'super_admin') {
+    } else if (!isSuperAdminRole(user.role)) {
       throw new Error("לא נמצא מזהה ארגון עבור המשתמש");
     }
 
@@ -44,7 +45,7 @@ export async function fetchGroups() {
 
 export async function createGroup(name) {
   const user = getCurrentUserSync();
-  if (!user || (user.role !== 'org_admin' && user.role !== 'super_admin')) throw new Error("אין הרשאה");
+  if (!user || !isManagementRole(user.role)) throw new Error("אין הרשאה");
 
   if (supabase) {
     const { data, error } = await supabase
@@ -149,7 +150,7 @@ export async function assignUsersToGroup(groupId, userIds) {
               course_id: asg.course_id,
               org_id: recordOrgId,
               status: 'not_started',
-              progress_percent: 0,
+              progress_percent: null,
               last_accessed: new Date().toISOString()
             });
           }
@@ -273,7 +274,7 @@ export async function assignCourseToGroup(groupId, courseId) {
                 course_id: courseId,
                 org_id: course.org_id,
                 status: 'not_started',
-                progress_percent: 0,
+                progress_percent: null,
                 last_accessed: new Date().toISOString()
             }));
 
@@ -287,4 +288,3 @@ export async function assignCourseToGroup(groupId, courseId) {
         console.log(`[MOCK] Assigned course ${courseId} to group ${groupId}`);
     }
 }
-
