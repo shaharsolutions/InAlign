@@ -143,7 +143,6 @@ export async function bulkCreateUsers(usersData) {
           ...u,
           phone: formatPhoneToE164(u.phone)
         })),
-        callerId: currentUser.id,
         orgId: currentUser.orgId // Default orgId for the batch
       }
     });
@@ -193,8 +192,7 @@ export async function createUser(userData) {
         fullName: userData.fullName,
         phone: formatPhoneToE164(userData.phone),
         role: userData.role || ROLE_LEARNER,
-        orgId: userData.orgId || currentUser.orgId,
-        callerId: currentUser.id
+        orgId: userData.orgId || currentUser.orgId
       }
     });
 
@@ -246,8 +244,7 @@ export async function updateUser(userId, userData) {
         email: userData.email,
         phone: formatPhoneToE164(userData.phone),
         role: userData.role || ROLE_LEARNER,
-        orgId: finalOrgId,
-        callerId: currentUser.id
+        orgId: finalOrgId
       }
     });
 
@@ -261,28 +258,6 @@ export async function updateUser(userId, userData) {
 
     if (data && data.error) {
       throw new Error(data.error);
-    }
-
-    // 2. Proactively update the profiles table to ensure RLS-correct data
-    // This handles the case where the Edge Function might fail to update denormalized org_id
-    const { error: profileError, count } = await supabase
-      .from('profiles')
-      .update({
-        full_name: userData.fullName,
-        phone: formatPhoneToE164(userData.phone),
-        role: userData.role,
-        org_id: finalOrgId
-      }, { count: 'exact' })
-      .eq('id', userId);
-
-    if (profileError) {
-      console.warn("[LMS] Direct profile update failed:", profileError.message);
-      // We don't throw here if the Edge Function supposedly succeeded, but we should log it
-    }
-
-    // 3. If org changed, sync related tables (like in bulk move)
-    if (count > 0 && finalOrgId) {
-        await supabase.from('learner_progress').update({ org_id: finalOrgId }).eq('user_id', userId);
     }
 
     return true;
@@ -305,8 +280,7 @@ export async function bulkDeleteUsers(userIds) {
   if (supabase) {
     const { data, error } = await supabase.functions.invoke('delete-user', {
       body: {
-        userIds: userIds,
-        callerId: currentUser.id
+        userIds: userIds
       }
     });
 
@@ -334,8 +308,7 @@ export async function deleteUser(userId) {
   if (supabase) {
     const { data, error } = await supabase.functions.invoke('delete-user', {
       body: {
-        userId: userId,
-        callerId: currentUser.id
+        userId: userId
       }
     });
 
@@ -405,35 +378,28 @@ export async function bulkUpdateUsersRole(userIds, newRole) {
 
     if (supabase) {
         console.log(`[LMS] Bulk updating ${userIds.length} users to role ${newRole}`);
-        
-        // 1. Update Profile (Primary Source)
-        const { error: pError } = await supabase
-            .from('profiles')
-            .update({ role: newRole })
-            .in('id', userIds);
-            
-        if (pError) throw new Error(pError.message);
 
-        // 2. Note: Updating roles in Auth usually happens via Edge Function 
-        // We'll call the Edge Function for each user in this simplified implementation.
-        // This ensures the Auth user_metadata is also updated.
         const promisesList = userIds.map(uid => 
             supabase.functions.invoke('update-user', {
                 body: {
                     userId: uid,
-                    role: newRole,
-                    callerId: currentUser.id,
-                    // Note: We need the user's orgId as it's required by the function's validator 
-                    // Let's modify the edge function to not require it OR fetch it here.
-                    // Actually, the edge function code I saw: (if (!userId || !orgId) throw...)
-                    // So we must provide something or update the edge function.
+                    role: newRole
                 }
             })
         );
         
-        // We'll handle errors gracefully
         const results = await Promise.allSettled(promisesList);
-        console.log(`[LMS] Bulk role update finished. Results:`, results);
+        const failed = results.filter(result => {
+            if (result.status === 'rejected') return true;
+            return result.value?.error || result.value?.data?.error;
+        });
+
+        if (failed.length > 0) {
+            console.warn(`[LMS] Bulk role update finished with ${failed.length} failures:`, failed);
+            throw new Error(`${failed.length} עדכוני תפקיד נכשלו`);
+        }
+
+        console.log(`[LMS] Bulk role update finished successfully.`);
     } else {
         userIds.forEach(id => {
             const user = MOCK_USERS.find(u => u.id === id);

@@ -10,6 +10,28 @@ const SUPER_ADMIN_ROLE = 'super_admin'
 const ADMIN_ROLES = ['admin', 'org_admin']
 const PRIMARY_SUPER_ADMIN_EMAIL = (Deno.env.get('SUPER_ADMIN_EMAIL') || 'shaharsolutions@gmail.com').toLowerCase()
 
+async function getCallerProfile(req: Request, supabaseAdmin: ReturnType<typeof createClient>) {
+  const authHeader = req.headers.get('Authorization') || ''
+  const token = authHeader.replace('Bearer ', '')
+  if (!token) throw new Error('Missing authorization token')
+
+  const { data: authData, error: authError } = await supabaseAdmin.auth.getUser(token)
+  if (authError || !authData.user) throw new Error('Invalid authorization token')
+
+  const { data: profile, error: profileError } = await supabaseAdmin
+    .from('profiles')
+    .select('id, role, org_id')
+    .eq('id', authData.user.id)
+    .single()
+
+  if (profileError || !profile) throw new Error('Could not verify caller profile')
+  if (profile.role !== SUPER_ADMIN_ROLE && !ADMIN_ROLES.includes(profile.role)) {
+    throw new Error('Unauthorized: Only admins can create users')
+  }
+
+  return profile
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
@@ -22,20 +44,8 @@ Deno.serve(async (req) => {
     )
 
     const body = await req.json();
-    const { email, password, fullName, phone, role, orgId, callerId, users } = body;
-
-    // Verify caller has permissions
-    if (callerId) {
-      const { data: callerData, error: callerError } = await supabaseAdmin
-        .from('profiles')
-        .select('role, org_id')
-        .eq('id', callerId)
-        .single()
-
-      if (callerError || (callerData.role !== SUPER_ADMIN_ROLE && !ADMIN_ROLES.includes(callerData.role))) {
-        throw new Error('Unauthorized: Only admins can create users')
-      }
-    }
+    const { email, password, fullName, phone, role, orgId, users } = body;
+    const callerData = await getCallerProfile(req, supabaseAdmin)
 
     // Determine if bulk or single
     const usersToProcess = users && Array.isArray(users) 
@@ -55,7 +65,7 @@ Deno.serve(async (req) => {
     for (const user of usersToProcess) {
       const uEmail = cleanEmail(user.email);
       const uFullName = user.fullName?.trim();
-      const uPassword = user.password || 'Lms123456';
+      const uPassword = user.password?.toString().trim() || '';
       const uRole = user.role || 'learner';
       const uOrgId = user.orgId || orgId;
       const uPhone = user.phone?.toString().trim() || null;
@@ -67,24 +77,20 @@ Deno.serve(async (req) => {
           throw new Error('Missing email or full name');
         }
 
+        if (uPassword.length < 8) {
+          throw new Error('Password must contain at least 8 characters');
+        }
+
         if (uRole === SUPER_ADMIN_ROLE && uEmail !== PRIMARY_SUPER_ADMIN_EMAIL) {
           throw new Error('Only the primary owner email can be assigned as Super Admin');
         }
 
-        if (callerId) {
-          const { data: callerData } = await supabaseAdmin
-            .from('profiles')
-            .select('role, org_id')
-            .eq('id', callerId)
-            .single()
-
-          if (callerData?.role !== SUPER_ADMIN_ROLE) {
-            if (uRole === SUPER_ADMIN_ROLE || ADMIN_ROLES.includes(uRole)) {
-              throw new Error('Only Super Admin can create admins');
-            }
-            if (callerData?.org_id !== uOrgId) {
-              throw new Error('Unauthorized: Cannot create users in a different organization');
-            }
+        if (callerData.role !== SUPER_ADMIN_ROLE) {
+          if (uRole === SUPER_ADMIN_ROLE || ADMIN_ROLES.includes(uRole)) {
+            throw new Error('Only Super Admin can create admins');
+          }
+          if (callerData.org_id !== uOrgId) {
+            throw new Error('Unauthorized: Cannot create users in a different organization');
           }
         }
 
@@ -178,4 +184,3 @@ Deno.serve(async (req) => {
     })
   }
 })
-

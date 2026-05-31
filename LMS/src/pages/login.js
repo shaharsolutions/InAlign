@@ -39,7 +39,7 @@ export default function renderLogin(container) {
             <div class="form-group" style="text-align: right;">
               <label class="form-label" for="password">סיסמה</label>
               <div class="password-input-wrapper">
-                <input class="form-control" type="password" id="password" required placeholder="123456" dir="ltr">
+                <input class="form-control" type="password" id="password" required placeholder="הקלד סיסמה" dir="ltr">
                 <button type="button" id="toggle-password" class="password-toggle-btn">
                   <i class='bx bx-show'></i>
                 </button>

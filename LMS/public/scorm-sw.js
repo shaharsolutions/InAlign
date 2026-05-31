@@ -1,6 +1,7 @@
-const SW_VERSION = 'scorm-proxy-v4';
+const SW_VERSION = 'scorm-proxy-v5';
 const CACHE_NAME = `inalign-scorm-assets-${SW_VERSION}`;
-const SUPABASE_URL = 'https://iduyexkzivtnvrdsbwig.supabase.co/storage/v1/object/public/scorm_packages/';
+const SCORM_ASSET_URL = 'https://iduyexkzivtnvrdsbwig.functions.supabase.co/scorm-asset';
+let authToken = null;
 
 self.addEventListener('install', event => {
     self.skipWaiting();
@@ -17,6 +18,28 @@ self.addEventListener('activate', event => {
     );
 });
 
+self.addEventListener('message', event => {
+    if (event.data && event.data.type === 'SET_AUTH_TOKEN') {
+        authToken = event.data.token || null;
+    }
+});
+
+function fetchScormAsset(proxyPath) {
+    if (!authToken) {
+        return Promise.resolve(new Response('Missing SCORM authorization token', { status: 401 }));
+    }
+
+    const targetUrl = `${SCORM_ASSET_URL}?path=${encodeURIComponent(proxyPath)}`;
+    return fetch(targetUrl, {
+        headers: {
+            'Authorization': `Bearer ${authToken}`,
+            'x-scorm-path': proxyPath
+        },
+        credentials: 'omit',
+        cache: 'no-store'
+    });
+}
+
 self.addEventListener('fetch', event => {
     const url = new URL(event.request.url);
 
@@ -26,14 +49,13 @@ self.addEventListener('fetch', event => {
     const proxyToken = 'scorm-proxy/';
     const tokenIndex = url.pathname.indexOf(proxyToken);
     const proxyPath = url.pathname.substring(tokenIndex + proxyToken.length);
-    const targetUrl = SUPABASE_URL + proxyPath + url.search;
     
     const isHtml = proxyPath.endsWith('.html') || proxyPath.endsWith('.htm');
 
     if (isHtml) {
-        // HTML files: Network-First to ensure we always have the latest bridge but fall back to cache
+        // HTML files: proxy through an authenticated Edge Function so private SCORM packages are not public.
         event.respondWith(
-            fetch(targetUrl).then(async response => {
+            fetchScormAsset(proxyPath).then(async response => {
                 if (!response.ok) return response;
                 
                 const text = await response.text();
@@ -63,35 +85,19 @@ self.addEventListener('fetch', event => {
                     statusText: response.statusText,
                     headers: {
                         'Content-Type': 'text/html; charset=utf-8',
-                        'Cache-Control': 'public, max-age=3600',
+                        'Cache-Control': 'private, max-age=300',
                     }
                 });
-                
-                // Cache the patched version
-                const cache = await caches.open(CACHE_NAME);
-                cache.put(event.request, newResponse.clone());
                 return newResponse;
             }).catch(async () => {
-                const cachedResponse = await caches.match(event.request);
-                return cachedResponse || new Response('Offline - Course asset missing', { status: 503 });
+                return new Response('Offline - Course asset missing', { status: 503 });
             })
         );
     } else {
-        // Static assets: Cache-First
+        // Static assets: always use the authenticated proxy; do not serve private assets from shared cache.
         event.respondWith(
-            caches.match(event.request).then(cachedResponse => {
-                if (cachedResponse) return cachedResponse;
-
-                return fetch(targetUrl).then(networkResponse => {
-                    if (!networkResponse.ok) return networkResponse;
-
-                    return caches.open(CACHE_NAME).then(cache => {
-                        cache.put(event.request, networkResponse.clone());
-                        return networkResponse;
-                    });
-                });
-            }).catch(error => {
-                console.error('[SW] SCORM proxy fetch failed:', targetUrl, error);
+            fetchScormAsset(proxyPath).catch(error => {
+                console.error('[SW] SCORM proxy fetch failed:', proxyPath, error);
                 return new Response('SCORM asset not found', { status: 502 });
             })
         );

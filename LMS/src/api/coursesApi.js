@@ -204,14 +204,12 @@ export async function fetchCourseById(id) {
     const data = results[0];
     if (!data) return null;
     
-    // Construct the direct URL to the index/story file
+    // Construct the authenticated proxy URL to the index/story file.
     if (data.course_files && data.course_files.length > 0) {
       const entryPath = `${data.course_files[0].file_path}/${data.entry_point || 'index.html'}`;
-      const { data: urlData } = supabase.storage
-        .from('scorm_packages')
-        .getPublicUrl(entryPath);
-      data.fileUrl = urlData.publicUrl;
-      console.log(`[LMS] Course file URL generated: ${data.fileUrl}`);
+      data.filePath = entryPath;
+      data.fileUrl = `scorm-proxy/${entryPath}`;
+      console.log(`[LMS] Course proxy URL generated: ${data.fileUrl}`);
     } else {
       console.warn(`[LMS] No course_files found for course ${id}. Relation data:`, data.course_files);
     }

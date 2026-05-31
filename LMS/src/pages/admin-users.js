@@ -108,7 +108,7 @@ export default async function renderAdminUsers(container) {
             </div>
             <div class="form-group mb-0 flex-1" style="text-align: right; min-width: 300px;">
                <label class="form-label" for="user-password" style="font-size: 0.85rem; margin-bottom: 0.2rem;">סיסמה לעובד <span style="color: hsl(var(--color-danger));">*</span></label>
-               <input class="form-control" type="text" id="user-password" required placeholder="לפחות 6 תווים" style="height: 44px; padding-top: 0; padding-bottom: 0;">
+               <input class="form-control" type="password" id="user-password" required placeholder="לפחות 8 תווים, אותיות וספרות" style="height: 44px; padding-top: 0; padding-bottom: 0;">
             </div>
             
             ${isSuperAdmin ? `
@@ -918,17 +918,17 @@ export default async function renderAdminUsers(container) {
           const fullName = (row['שם מלא'] || row['Full Name'])?.toString().trim();
           const email = (row['אימייל'] || row['Email'])?.toString().trim().toLowerCase();
           const phone = row['טלפון'] || row['Phone'];
-          const password = row['סיסמה'] || row['Password'] || 'Lms123456'; 
+          const password = (row['סיסמה'] || row['Password'])?.toString().trim(); 
           const role = row['תפקיד (learner/org_admin/admin)'] || row['תפקיד (learner/admin)'] || row['תפקיד (learner/org_admin)'] || row['Role'] || ROLE_LEARNER;
           const orgId = row['מזהה ארגון (Org ID)'] || row['Org ID'];
           const groupName = (row['שיוך לקבוצה'] || row['Group Name'])?.toString().trim();
 
-          if (fullName && email && emailRegex.test(email)) {
+          if (fullName && email && emailRegex.test(email) && password && password.length >= 8) {
             usersToBatch.push({
               fullName,
               email,
               phone: phone ? phone.toString() : '',
-              password: password.toString(),
+              password,
               role,
               orgId: isSuperAdmin ? orgId : currentUser.orgId,
               groupName
@@ -943,7 +943,7 @@ export default async function renderAdminUsers(container) {
         }
 
         if (usersToBatch.length === 0) {
-          throw new Error('לא נמצאו משתמשים תקינים (ודא שהאימייל תקין והשם מלא מלא)');
+          throw new Error('לא נמצאו משתמשים תקינים (ודא שהשם, האימייל והסיסמה תקינים; סיסמה חייבת לכלול לפחות 8 תווים)');
         }
 
         const batchResults = await bulkCreateUsers(usersToBatch);

@@ -1,6 +1,7 @@
 import { saveLearnerProgress, fetchCourseProgress } from '../api/progressApi.js'
 import { fetchCourseById } from '../api/coursesApi.js'
 import { getCurrentUserSync } from '../api/authApi.js'
+import { supabase } from '../lib/supabase.js'
 import { parseScormTime, formatScorm12Time } from '../lib/scormUtils.js'
 import { clampProgress } from '../lib/progressUtils.js'
 
@@ -322,24 +323,22 @@ export default async function renderPlayer(container) {
     if ('serviceWorker' in navigator) {
       try {
         // Register relative to current location to support subdirectory deployments
-        await navigator.serviceWorker.register('./scorm-sw.js');
+        const registration = await navigator.serviceWorker.register('./scorm-sw.js');
         await navigator.serviceWorker.ready;
+        if (supabase) {
+          const { data: { session } } = await supabase.auth.getSession();
+          const accessToken = session?.access_token;
+          const worker = registration.active || registration.waiting || registration.installing || navigator.serviceWorker.controller;
+          if (worker && accessToken) {
+            worker.postMessage({ type: 'SET_AUTH_TOKEN', token: accessToken });
+          }
+        }
       } catch (err) {
         console.error('[InAlign] SW registration failed:', err);
       }
     }
 
     let proxyUrl = course.fileUrl;
-    try {
-       const urlObj = new URL(course.fileUrl);
-       const pathPart = urlObj.pathname.split('scorm_packages/')[1];
-       if (pathPart) {
-           // Use relative path for proxy to ensure it hits the Service Worker scope
-           proxyUrl = 'scorm-proxy/' + pathPart + urlObj.search;
-       }
-    } catch(e) {
-       console.error('[InAlign] URL parse error', e);
-    }
     if (window.navigator.serviceWorker) {
         await window.navigator.serviceWorker.ready;
     }

@@ -10,6 +10,28 @@ const SUPER_ADMIN_ROLE = 'super_admin'
 const ADMIN_ROLES = ['admin', 'org_admin']
 const PRIMARY_SUPER_ADMIN_EMAIL = (Deno.env.get('SUPER_ADMIN_EMAIL') || 'shaharsolutions@gmail.com').toLowerCase()
 
+async function getCallerProfile(req: Request, supabaseAdmin: ReturnType<typeof createClient>) {
+  const authHeader = req.headers.get('Authorization') || ''
+  const token = authHeader.replace('Bearer ', '')
+  if (!token) throw new Error('Missing authorization token')
+
+  const { data: authData, error: authError } = await supabaseAdmin.auth.getUser(token)
+  if (authError || !authData.user) throw new Error('Invalid authorization token')
+
+  const { data: profile, error: profileError } = await supabaseAdmin
+    .from('profiles')
+    .select('id, role, org_id')
+    .eq('id', authData.user.id)
+    .single()
+
+  if (profileError || !profile) throw new Error('Could not verify caller profile')
+  if (profile.role !== SUPER_ADMIN_ROLE && !ADMIN_ROLES.includes(profile.role)) {
+    throw new Error('Unauthorized to perform this action')
+  }
+
+  return profile
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
@@ -22,7 +44,7 @@ Deno.serve(async (req) => {
     )
 
     const body = await req.json();
-    const { userId, password, fullName, phone, role, orgId, email, callerId } = body;
+    const { userId, password, fullName, phone, role, orgId, email } = body;
 
     if (!userId) {
       throw new Error('Missing required parameter: userId')
@@ -42,30 +64,19 @@ Deno.serve(async (req) => {
       throw new Error('User has no organization associated and none was provided')
     }
 
-    // Verify caller has permissions
-    if (callerId) {
-      const { data: callerData, error: callerError } = await supabaseAdmin
-        .from('profiles')
-        .select('role, org_id')
-        .eq('id', callerId)
-        .single()
+    const callerData = await getCallerProfile(req, supabaseAdmin)
 
-      if (callerError || (callerData.role !== SUPER_ADMIN_ROLE && !ADMIN_ROLES.includes(callerData.role))) {
-        throw new Error('Unauthorized to perform this action')
-      }
-      
-      // Admins can manage only users from their own organization and cannot appoint admins.
-      if (callerData.role !== SUPER_ADMIN_ROLE && callerData.org_id !== finalOrgId) {
-         throw new Error('Unauthorized to edit users from other organizations')
-      }
+    // Admins can manage only users from their own organization and cannot appoint admins.
+    if (callerData.role !== SUPER_ADMIN_ROLE && callerData.org_id !== finalOrgId) {
+       throw new Error('Unauthorized to edit users from other organizations')
+    }
 
-      if (callerData.role !== SUPER_ADMIN_ROLE && (existingProfile.role === SUPER_ADMIN_ROLE || ADMIN_ROLES.includes(existingProfile.role))) {
-        throw new Error('Only Super Admin can edit admins')
-      }
+    if (callerData.role !== SUPER_ADMIN_ROLE && (existingProfile.role === SUPER_ADMIN_ROLE || ADMIN_ROLES.includes(existingProfile.role))) {
+      throw new Error('Only Super Admin can edit admins')
+    }
 
-      if (callerData.role !== SUPER_ADMIN_ROLE && (role === SUPER_ADMIN_ROLE || ADMIN_ROLES.includes(role))) {
-        throw new Error('Only Super Admin can appoint admins')
-      }
+    if (callerData.role !== SUPER_ADMIN_ROLE && (role === SUPER_ADMIN_ROLE || ADMIN_ROLES.includes(role))) {
+      throw new Error('Only Super Admin can appoint admins')
     }
 
     const finalRole = role || existingProfile.role
@@ -73,6 +84,10 @@ Deno.serve(async (req) => {
 
     if (finalRole === SUPER_ADMIN_ROLE && finalEmail !== PRIMARY_SUPER_ADMIN_EMAIL) {
       throw new Error('Only the primary owner email can be assigned as Super Admin')
+    }
+
+    if (password && password.trim() !== '' && password.trim().length < 8) {
+      throw new Error('Password must contain at least 8 characters')
     }
 
     // 1. Update Auth payload
@@ -97,7 +112,7 @@ Deno.serve(async (req) => {
     }
 
     if (password && password.trim() !== '') {
-      authUpdatePayload.password = password
+      authUpdatePayload.password = password.trim()
     }
 
     const { data: authData, error: authError } = await supabaseAdmin.auth.admin.updateUserById(
@@ -120,6 +135,15 @@ Deno.serve(async (req) => {
       })
 
     if (profileError) throw profileError
+
+    if (finalOrgId !== existingProfile.org_id) {
+      const { error: progressError } = await supabaseAdmin
+        .from('learner_progress')
+        .update({ org_id: finalOrgId })
+        .eq('user_id', userId)
+
+      if (progressError) throw progressError
+    }
 
     return new Response(JSON.stringify({ message: 'User updated successfully' }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },

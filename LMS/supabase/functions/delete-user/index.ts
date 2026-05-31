@@ -9,6 +9,28 @@ const corsHeaders = {
 const SUPER_ADMIN_ROLE = 'super_admin'
 const ADMIN_ROLES = ['admin', 'org_admin']
 
+async function getCallerProfile(req: Request, supabaseClient: ReturnType<typeof createClient>) {
+  const authHeader = req.headers.get('Authorization') || ''
+  const token = authHeader.replace('Bearer ', '')
+  if (!token) throw new Error('Missing authorization token')
+
+  const { data: authData, error: authError } = await supabaseClient.auth.getUser(token)
+  if (authError || !authData.user) throw new Error('Invalid authorization token')
+
+  const { data: profile, error: profileError } = await supabaseClient
+    .from('profiles')
+    .select('id, role, org_id')
+    .eq('id', authData.user.id)
+    .single()
+
+  if (profileError || !profile) throw new Error('Could not verify caller identity.')
+  if (profile.role !== SUPER_ADMIN_ROLE && !ADMIN_ROLES.includes(profile.role)) {
+    throw new Error('Unauthorized: Only admins can delete users.')
+  }
+
+  return profile
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
@@ -21,25 +43,8 @@ Deno.serve(async (req) => {
     )
 
     const body = await req.json();
-    const { userId, userIds, callerId } = body;
-
-    if (!callerId) {
-      throw new Error('Caller ID is required for verification.')
-    }
-
-    const { data: callerProfile, error: callerError } = await supabaseClient
-      .from('profiles')
-      .select('role, org_id')
-      .eq('id', callerId)
-      .single()
-
-    if (callerError || !callerProfile) {
-      throw new Error('Could not verify caller identity.')
-    }
-
-    if (callerProfile.role !== SUPER_ADMIN_ROLE && !ADMIN_ROLES.includes(callerProfile.role)) {
-      throw new Error('Unauthorized: Only admins can delete users.')
-    }
+    const { userId, userIds } = body;
+    const callerProfile = await getCallerProfile(req, supabaseClient)
 
     const usersToProcess = userIds && Array.isArray(userIds) ? userIds : (userId ? [userId] : []);
     
