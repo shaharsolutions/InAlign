@@ -330,7 +330,7 @@ export default async function renderPlayer(container) {
           const accessToken = session?.access_token;
           const worker = registration.active || registration.waiting || registration.installing || navigator.serviceWorker.controller;
           if (worker && accessToken) {
-            worker.postMessage({ type: 'SET_AUTH_TOKEN', token: accessToken });
+            worker.postMessage({ type: 'SET_AUTH_TOKEN', token: accessToken, userId: user?.id });
           }
         }
       } catch (err) {

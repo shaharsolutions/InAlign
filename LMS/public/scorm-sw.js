@@ -1,4 +1,4 @@
-const SW_VERSION = 'scorm-proxy-v8';
+const SW_VERSION = 'scorm-proxy-v9';
 const CACHE_PREFIX = 'inalign-scorm-assets';
 let cacheName = `${CACHE_PREFIX}-session-${SW_VERSION}`;
 const SCORM_ASSET_URL = 'https://iduyexkzivtnvrdsbwig.functions.supabase.co/scorm-asset';
@@ -85,10 +85,12 @@ function setAuthToken(token, userId) {
     authToken = token || null;
     const cacheUserId = userId || decodeJwtSub(authToken || '') || 'session';
     cacheName = `${CACHE_PREFIX}-${sanitizeCachePart(cacheUserId)}-${SW_VERSION}`;
+    const operations = [];
     if (authToken) {
-        storeAuthToken(authToken, cacheUserId).catch(() => {});
+        operations.push(storeAuthToken(authToken, cacheUserId));
     }
-    cleanupCaches().catch(() => {});
+    operations.push(cleanupCaches());
+    return Promise.allSettled(operations);
 }
 
 self.addEventListener('activate', event => {
@@ -104,7 +106,7 @@ self.addEventListener('activate', event => {
 
 self.addEventListener('message', event => {
     if (event.data && event.data.type === 'SET_AUTH_TOKEN') {
-        setAuthToken(event.data.token, event.data.userId);
+        event.waitUntil(setAuthToken(event.data.token, event.data.userId));
     }
 });
 
@@ -147,14 +149,14 @@ self.addEventListener('fetch', event => {
     const tokenIndex = url.pathname.indexOf(proxyToken);
     const proxyPath = url.pathname.substring(tokenIndex + proxyToken.length);
     const requestToken = url.searchParams.get('lms_token');
-    if (requestToken) setAuthToken(requestToken);
+    const authReady = requestToken ? setAuthToken(requestToken) : Promise.resolve();
     
     const isHtml = proxyPath.endsWith('.html') || proxyPath.endsWith('.htm');
 
     if (isHtml) {
         // HTML files: proxy through an authenticated Edge Function so private SCORM packages are not public.
         event.respondWith(
-            fetchScormAsset(proxyPath).then(async response => {
+            authReady.then(() => fetchScormAsset(proxyPath)).then(async response => {
                 if (!response.ok) return response;
                 
                 const text = await response.text();
@@ -195,7 +197,7 @@ self.addEventListener('fetch', event => {
     } else {
         // Static assets: cache per authenticated user so repeat launches do not re-fetch every SCORM asset.
         event.respondWith(
-            loadStoredAuthToken().then(() => caches.open(cacheName)).then(cache => {
+            authReady.then(() => loadStoredAuthToken()).then(() => caches.open(cacheName)).then(cache => {
                 const key = cacheKeyFor(url);
                 return cache.match(key).then(cachedResponse => {
                     if (cachedResponse) return cachedResponse;
