@@ -5,6 +5,20 @@ import { supabase } from '../lib/supabase.js'
 import { parseScormTime, formatScorm12Time } from '../lib/scormUtils.js'
 import { clampProgress } from '../lib/progressUtils.js'
 
+function isScormDebugEnabled() {
+  try {
+    return typeof window !== 'undefined'
+      && (window.localStorage?.getItem('inalign:debug') === '1'
+        || window.localStorage?.getItem('inalign:scormDebug') === '1');
+  } catch (e) {
+    return false;
+  }
+}
+
+function scormDebug(...args) {
+  if (isScormDebugEnabled()) console.debug(...args);
+}
+
 // Aggressive global cleanup for intervals
 if (window._lmsHeartbeat) clearInterval(window._lmsHeartbeat);
 window._lmsActiveCourseId = null;
@@ -50,7 +64,7 @@ export default async function renderPlayer(container) {
       isExiting: false
     };
 
-    console.warn(`[InAlign] Initial State for ${courseId}: Status=${runtime.status}, Location="${runtime.location}", Progress=${runtime.progress}%`);
+    scormDebug(`[InAlign] Initial State for ${courseId}: Status=${runtime.status}, Location="${runtime.location}", Progress=${runtime.progress}%`);
 
     const syncProgressDebounced = (function() {
       let timeout = null;
@@ -89,7 +103,7 @@ export default async function renderPlayer(container) {
           const currentUpdates = { ...pendingUpdates };
           pendingUpdates = null;
           runtime.lastSync = Date.now();
-          console.log(`[InAlign] Syncing (${label}): Loc="${currentUpdates.lesson_location}", Progress=${currentUpdates.progress}%`);
+          scormDebug(`[InAlign] Syncing (${label}): Loc="${currentUpdates.lesson_location}", Progress=${currentUpdates.progress}%`);
           try {
             await saveLearnerProgress(runtime.courseId, currentUpdates);
           } catch (e) {
@@ -134,7 +148,7 @@ export default async function renderPlayer(container) {
     const API = {
       _initialized: false,
       Initialize: (n) => { 
-          console.warn("[InAlign] SCORM Initialize called");
+          scormDebug("[InAlign] SCORM Initialize called");
           API._initialized = true; 
           runtime.scormInitialized = true;
           window.dispatchEvent(new CustomEvent('lms:scorm-ready', { detail: { courseId: runtime.courseId } }));
@@ -157,7 +171,7 @@ export default async function renderPlayer(container) {
         else if (key.includes('entry')) val = (runtime.baseTimeSeconds > 5 || runtime.location) ? "resume" : "ab-initio";
         else if (key.includes('total_time')) val = formatScorm12Time(runtime.baseTimeSeconds);
         
-        console.log(`[InAlign] GetValue(${n}) -> "${val}"`);
+        scormDebug(`[InAlign] GetValue(${n}) -> "${val}"`);
         return val;
       },
       LMSGetValue: (n) => API.GetValue(n),
@@ -166,7 +180,7 @@ export default async function renderPlayer(container) {
         const key = n.toLowerCase();
         let changed = false;
 
-        console.log(`[InAlign] SetValue(${n}, "${v}")`);
+        scormDebug(`[InAlign] SetValue(${n}, "${v}")`);
 
         if (key.includes('lesson_status') || key.includes('completion_status')) {
             const status = (v === 'passed' || v === 'completed') ? 'completed' : 'in_progress';
@@ -203,14 +217,14 @@ export default async function renderPlayer(container) {
       LMSSetValue: (n, v) => API.SetValue(n, v),
       
       Commit: () => { 
-          console.log("[InAlign] SCORM Commit called");
+          scormDebug("[InAlign] SCORM Commit called");
           syncProgressDebounced("commit").catch(() => {}); 
           return "true"; 
       },
       LMSCommit: () => API.Commit(),
       
       Finish: () => { 
-          console.warn("[InAlign] SCORM Finish called - exiting");
+          scormDebug("[InAlign] SCORM Finish called - exiting");
           handleExit("scorm_finish");
           return "true"; 
       },

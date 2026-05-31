@@ -1,4 +1,4 @@
-const SW_VERSION = 'scorm-proxy-v10';
+const SW_VERSION = 'scorm-proxy-v11';
 const CACHE_PREFIX = 'inalign-scorm-assets';
 let cacheName = `${CACHE_PREFIX}-session-${SW_VERSION}`;
 const SCORM_ASSET_URL = 'https://iduyexkzivtnvrdsbwig.functions.supabase.co/scorm-asset';
@@ -6,6 +6,7 @@ const AUTH_DB_NAME = 'inalign-scorm-auth';
 const AUTH_STORE_NAME = 'session';
 let authToken = null;
 const clientCourseRoots = new Map();
+const inFlightRequests = new Map();
 const ABSOLUTE_SCORM_PREFIXES = ['html5/', 'story_content/'];
 
 self.addEventListener('install', event => {
@@ -129,8 +130,10 @@ async function fetchScormAsset(proxyPath) {
     });
 }
 
-function cacheKeyFor(url) {
-    const cacheUrl = new URL(url.href);
+function cacheKeyFor(url, proxyPath = '') {
+    const cacheUrl = proxyPath
+        ? new URL(`/scorm-proxy/${proxyPath}`, self.location.origin)
+        : new URL(url.href);
     cacheUrl.searchParams.delete('lms_token');
     return new Request(cacheUrl.toString(), { method: 'GET' });
 }
@@ -138,7 +141,7 @@ function cacheKeyFor(url) {
 function shouldCacheAsset(proxyPath, response) {
     if (!response || !response.ok) return false;
     const ext = proxyPath.split('?')[0].split('.').pop().toLowerCase();
-    return ['js', 'css', 'json', 'xml', 'png', 'jpg', 'jpeg', 'gif', 'svg', 'webp', 'woff', 'woff2', 'ttf', 'otf'].includes(ext);
+    return ['html', 'htm', 'js', 'css', 'json', 'xml', 'png', 'jpg', 'jpeg', 'gif', 'svg', 'webp', 'mp4', 'mp3', 'wav', 'woff', 'woff2', 'ttf', 'otf'].includes(ext);
 }
 
 function getCourseRoot(proxyPath) {
@@ -167,7 +170,56 @@ function rewriteScormCssUrls(text, courseRoot) {
         .replace(/@import\s+(["'])\/(html5|story_content)\//g, `@import $1${base}$2/`);
 }
 
+function getScormApiBridgeScript() {
+    return `<script>
+(function() {
+  function findAPI(win) {
+    try {
+      var attempts = 0;
+      while (win && !win.API && !win.API_1484_11 && attempts < 10) {
+        if (win.parent === win) break;
+        win = win.parent;
+        attempts++;
+      }
+      return (win && (win.API || win.API_1484_11)) ? win : null;
+    } catch(e) { return null; }
+  }
+  var apiWin = findAPI(window.parent);
+  if (apiWin) {
+    window.API = apiWin.API;
+    window.API_1484_11 = apiWin.API_1484_11 || apiWin.API;
+  }
+})();
+</script>`;
+}
+
+function rewriteScormHtml(text, courseRoot) {
+    const baseTag = courseRoot ? `<base href="/scorm-proxy/${courseRoot}">` : '';
+    const injection = `${baseTag}${getScormApiBridgeScript()}`;
+    return /<head>/i.test(text)
+        ? text.replace(/<head>/i, `<head>${injection}`)
+        : `${injection}${text}`;
+}
+
+async function normalizeHtmlResponse(response, proxyPath) {
+    if (!response.ok) return response;
+
+    const headers = new Headers(response.headers);
+    headers.set('Content-Type', 'text/html; charset=utf-8');
+    headers.set('Cache-Control', 'private, max-age=3600');
+
+    const courseRoot = getCourseRoot(proxyPath);
+    const text = await response.text();
+    return new Response(rewriteScormHtml(text, courseRoot), {
+        status: response.status,
+        statusText: response.statusText,
+        headers
+    });
+}
+
 async function normalizeAssetResponse(response, proxyPath) {
+    if (!response.ok) return response;
+
     const headers = new Headers(response.headers);
     headers.set('Cache-Control', 'private, max-age=3600');
 
@@ -189,21 +241,39 @@ async function normalizeAssetResponse(response, proxyPath) {
     });
 }
 
-function respondWithCachedAsset(url, proxyPath, authReady) {
-    return authReady.then(() => loadStoredAuthToken()).then(() => caches.open(cacheName)).then(cache => {
-        const key = cacheKeyFor(url);
-        return cache.match(key).then(cachedResponse => {
-            if (cachedResponse) return cachedResponse;
+async function respondWithCached(url, proxyPath, authReady, normalizeResponse) {
+    await authReady;
+    await loadStoredAuthToken();
 
-            return fetchScormAsset(proxyPath).then(async networkResponse => {
-                const assetResponse = await normalizeAssetResponse(networkResponse, proxyPath);
-                if (shouldCacheAsset(proxyPath, assetResponse)) {
-                    cache.put(key, assetResponse.clone());
+    const cache = await caches.open(cacheName);
+    const key = cacheKeyFor(url, proxyPath);
+    const cachedResponse = await cache.match(key);
+    if (cachedResponse) return cachedResponse;
+
+    const requestKey = key.url;
+    if (!inFlightRequests.has(requestKey)) {
+        const requestPromise = fetchScormAsset(proxyPath)
+            .then(response => normalizeResponse(response, proxyPath))
+            .then(async response => {
+                if (shouldCacheAsset(proxyPath, response)) {
+                    await cache.put(key, response.clone());
                 }
-                return assetResponse;
-            });
-        });
-    });
+                return response;
+            })
+            .finally(() => inFlightRequests.delete(requestKey));
+        inFlightRequests.set(requestKey, requestPromise);
+    }
+
+    const response = await inFlightRequests.get(requestKey);
+    return response.clone();
+}
+
+function respondWithCachedAsset(url, proxyPath, authReady) {
+    return respondWithCached(url, proxyPath, authReady, normalizeAssetResponse);
+}
+
+function respondWithCachedHtml(url, proxyPath, authReady) {
+    return respondWithCached(url, proxyPath, authReady, normalizeHtmlResponse);
 }
 
 self.addEventListener('fetch', event => {
@@ -225,7 +295,7 @@ self.addEventListener('fetch', event => {
     const proxyToken = 'scorm-proxy/';
     const tokenIndex = url.pathname.indexOf(proxyToken);
     const proxyPath = url.pathname.substring(tokenIndex + proxyToken.length);
-    const courseRoot = rememberCourseRoot(event.clientId, proxyPath);
+    rememberCourseRoot(event.clientId, proxyPath);
     const requestToken = url.searchParams.get('lms_token');
     const authReady = requestToken ? setAuthToken(requestToken) : Promise.resolve();
     
@@ -234,41 +304,9 @@ self.addEventListener('fetch', event => {
     if (isHtml) {
         // HTML files: proxy through an authenticated Edge Function so private SCORM packages are not public.
         event.respondWith(
-            authReady.then(() => fetchScormAsset(proxyPath)).then(async response => {
-                if (!response.ok) return response;
-                
-                const text = await response.text();
-                const bridge = `<script>
-(function() {
-  function findAPI(win) {
-    try {
-      var attempts = 0;
-      while (win && !win.API && !win.API_1484_11 && attempts < 10) {
-        if (win.parent === win) break;
-        win = win.parent;
-        attempts++;
-      }
-      return (win && (win.API || win.API_1484_11)) ? win : null;
-    } catch(e) { return null; }
-  }
-  var apiWin = findAPI(window.parent);
-  if (apiWin) {
-    window.API = apiWin.API;
-    window.API_1484_11 = apiWin.API_1484_11 || apiWin.API;
-  }
-})();
-</script>`;
-                const patched = text.replace(/<head>/i, '<head>' + bridge);
-                const baseTag = courseRoot ? `<base href="/scorm-proxy/${courseRoot}">` : '';
-                const patchedWithBase = patched.replace(/<head>/i, '<head>' + baseTag);
-                return new Response(patchedWithBase, {
-                    status: response.status,
-                    statusText: response.statusText,
-                    headers: {
-                        'Content-Type': 'text/html; charset=utf-8',
-                        'Cache-Control': 'private, max-age=300',
-                    }
-                });
+            respondWithCachedHtml(url, proxyPath, authReady).then(response => {
+                rememberCourseRoot(event.clientId, proxyPath);
+                return response;
             }).catch(async () => {
                 return new Response('Offline - Course asset missing', { status: 503 });
             })

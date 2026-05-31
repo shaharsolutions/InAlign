@@ -8,13 +8,26 @@ let MOCK_RECORDS = [
   { id: '2', user_id: 'usr-2', user_name: 'דוד המנהל',   course_id: 'c2', course_title: 'הכרה ושימוש ב-AI בעבודה', status: 'בתהליך', progress_percent: 45, score: null, time_spent_seconds: 720, time: '12 דקות', date: '05/03/2026', org_id: 'org-2' },
 ]
 
+function isDebugEnabled() {
+  try {
+    return typeof window !== 'undefined'
+      && window.localStorage?.getItem('inalign:debug') === '1';
+  } catch (e) {
+    return false;
+  }
+}
+
+function debugLog(...args) {
+  if (isDebugEnabled()) console.debug(...args);
+}
+
 export async function fetchOrgProgress(explicitOrgId = null) {
   const user = getCurrentUserSync();
   // Allow Admin OR Super Admin to fetch progress reports
   if (!user || !isManagementRole(user.role)) throw new Error("אין הרשאה");
 
   const orgToFetch = explicitOrgId || user.orgId;
-  console.log(`[InAlign] Fetching progress report. User: ${user.id}, Role: ${user.role}, Requested Org: ${orgToFetch}`);
+  debugLog(`[InAlign] Fetching progress report. User: ${user.id}, Role: ${user.role}, Requested Org: ${orgToFetch}`);
 
   if (supabase) {
     let query = supabase
@@ -33,7 +46,7 @@ export async function fetchOrgProgress(explicitOrgId = null) {
     const { data, error } = await query;
     if (error) throw new Error(error.message);
     
-    console.log(`[InAlign] Returned ${data.length} records. First record time: ${data[0]?.time_spent_seconds}`);
+    debugLog(`[InAlign] Returned ${data.length} records. First record time: ${data[0]?.time_spent_seconds}`);
 
     return data
       .filter(r => r.profiles?.role !== 'super_admin')
@@ -191,7 +204,7 @@ export async function fetchCourseProgress(courseId) {
   const user = getCurrentUserSync();
   if (!user) return null;
 
-  console.log(`[InAlign] Fetching existing progress for user ${user.id} and course ${courseId}`);
+  debugLog(`[InAlign] Fetching existing progress for user ${user.id} and course ${courseId}`);
 
   if (supabase) {
     const { data, error } = await supabase
@@ -205,7 +218,7 @@ export async function fetchCourseProgress(courseId) {
       console.error("[InAlign] Error fetching course progress:", error.message);
       return null;
     }
-    if (data) console.log(`[InAlign] Found existing progress: status=${data.status}, seconds=${data.time_spent_seconds}`);
+    if (data) debugLog(`[InAlign] Found existing progress: status=${data.status}, seconds=${data.time_spent_seconds}`);
     return data;
   }
   return null;
@@ -215,7 +228,7 @@ export async function saveLearnerProgress(courseId, updates) {
   const user = getCurrentUserSync();
   if (!user) return;
 
-  console.log(`[InAlign] Saving runtime updates for course ${courseId}:`, updates);
+  debugLog(`[InAlign] Saving runtime updates for course ${courseId}:`, updates);
 
   if (supabase) {
     try {
@@ -242,7 +255,7 @@ export async function saveLearnerProgress(courseId, updates) {
       
       if (updates.status === 'completed') progressObj.completed_at = new Date().toISOString();
       
-      console.log(`[InAlign] Final payload to Supabase:`, progressObj);
+      debugLog(`[InAlign] Final payload to Supabase:`, progressObj);
 
       const { error } = await supabase
         .from('learner_progress')
@@ -261,13 +274,13 @@ export async function saveLearnerProgress(courseId, updates) {
         console.error("[InAlign] Supabase Record Upsert Error:", error.message, error.code);
         throw error;
       }
-      console.log(`[InAlign] Progress successfully recorded for course ${courseId}. Location: ${progressObj.lesson_location}`);
+      debugLog(`[InAlign] Progress successfully recorded for course ${courseId}. Location: ${progressObj.lesson_location}`);
     } catch (err) {
       console.error("[InAlign] Progress sync operation failed:", err);
       throw err;
     }
   } else {
-    console.log("[InAlign] Mock progress saved (NO-OP):", user.id, courseId, updates);
+    debugLog("[InAlign] Mock progress saved (NO-OP):", user.id, courseId, updates);
   }
 }
 
