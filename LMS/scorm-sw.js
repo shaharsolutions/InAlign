@@ -1,10 +1,12 @@
-const SW_VERSION = 'scorm-proxy-v9';
+const SW_VERSION = 'scorm-proxy-v10';
 const CACHE_PREFIX = 'inalign-scorm-assets';
 let cacheName = `${CACHE_PREFIX}-session-${SW_VERSION}`;
 const SCORM_ASSET_URL = 'https://iduyexkzivtnvrdsbwig.functions.supabase.co/scorm-asset';
 const AUTH_DB_NAME = 'inalign-scorm-auth';
 const AUTH_STORE_NAME = 'session';
 let authToken = null;
+const clientCourseRoots = new Map();
+const ABSOLUTE_SCORM_PREFIXES = ['html5/', 'story_content/'];
 
 self.addEventListener('install', event => {
     self.skipWaiting();
@@ -139,15 +141,91 @@ function shouldCacheAsset(proxyPath, response) {
     return ['js', 'css', 'json', 'xml', 'png', 'jpg', 'jpeg', 'gif', 'svg', 'webp', 'woff', 'woff2', 'ttf', 'otf'].includes(ext);
 }
 
+function getCourseRoot(proxyPath) {
+    const match = proxyPath.match(/^(org_[^/]+\/courses\/[^/]+\/)/);
+    return match ? match[1] : '';
+}
+
+function rememberCourseRoot(clientId, proxyPath) {
+    const root = getCourseRoot(proxyPath);
+    if (clientId && root) clientCourseRoots.set(clientId, root);
+    return root;
+}
+
+function resolveAbsoluteScormPath(clientId, pathname) {
+    const cleanPath = pathname.replace(/^\/+/, '');
+    if (!ABSOLUTE_SCORM_PREFIXES.some(prefix => cleanPath.startsWith(prefix))) return '';
+    const root = clientCourseRoots.get(clientId);
+    return root ? `${root}${cleanPath}` : '';
+}
+
+function rewriteScormCssUrls(text, courseRoot) {
+    if (!courseRoot) return text;
+    const base = `/scorm-proxy/${courseRoot}`;
+    return text
+        .replace(/url\((['"]?)\/(html5|story_content)\//g, `url($1${base}$2/`)
+        .replace(/@import\s+(["'])\/(html5|story_content)\//g, `@import $1${base}$2/`);
+}
+
+async function normalizeAssetResponse(response, proxyPath) {
+    const headers = new Headers(response.headers);
+    headers.set('Cache-Control', 'private, max-age=3600');
+
+    if (proxyPath.toLowerCase().endsWith('.css')) {
+        const courseRoot = getCourseRoot(proxyPath);
+        const text = await response.text();
+        headers.set('Content-Type', 'text/css; charset=utf-8');
+        return new Response(rewriteScormCssUrls(text, courseRoot), {
+            status: response.status,
+            statusText: response.statusText,
+            headers
+        });
+    }
+
+    return new Response(response.body, {
+        status: response.status,
+        statusText: response.statusText,
+        headers
+    });
+}
+
+function respondWithCachedAsset(url, proxyPath, authReady) {
+    return authReady.then(() => loadStoredAuthToken()).then(() => caches.open(cacheName)).then(cache => {
+        const key = cacheKeyFor(url);
+        return cache.match(key).then(cachedResponse => {
+            if (cachedResponse) return cachedResponse;
+
+            return fetchScormAsset(proxyPath).then(async networkResponse => {
+                const assetResponse = await normalizeAssetResponse(networkResponse, proxyPath);
+                if (shouldCacheAsset(proxyPath, assetResponse)) {
+                    cache.put(key, assetResponse.clone());
+                }
+                return assetResponse;
+            });
+        });
+    });
+}
+
 self.addEventListener('fetch', event => {
     const url = new URL(event.request.url);
 
     // Only proxy requests matching /scorm-proxy/
-    if (!url.pathname.includes('scorm-proxy/')) return;
+    if (!url.pathname.includes('scorm-proxy/')) {
+        const absoluteScormPath = resolveAbsoluteScormPath(event.clientId, url.pathname);
+        if (!absoluteScormPath) return;
+        event.respondWith(
+            respondWithCachedAsset(url, absoluteScormPath, Promise.resolve()).catch(error => {
+                console.error('[SW] Absolute SCORM asset fetch failed:', absoluteScormPath, error);
+                return new Response('SCORM asset not found', { status: 502 });
+            })
+        );
+        return;
+    }
 
     const proxyToken = 'scorm-proxy/';
     const tokenIndex = url.pathname.indexOf(proxyToken);
     const proxyPath = url.pathname.substring(tokenIndex + proxyToken.length);
+    const courseRoot = rememberCourseRoot(event.clientId, proxyPath);
     const requestToken = url.searchParams.get('lms_token');
     const authReady = requestToken ? setAuthToken(requestToken) : Promise.resolve();
     
@@ -181,7 +259,9 @@ self.addEventListener('fetch', event => {
 })();
 </script>`;
                 const patched = text.replace(/<head>/i, '<head>' + bridge);
-                const newResponse = new Response(patched, {
+                const baseTag = courseRoot ? `<base href="/scorm-proxy/${courseRoot}">` : '';
+                const patchedWithBase = patched.replace(/<head>/i, '<head>' + baseTag);
+                return new Response(patchedWithBase, {
                     status: response.status,
                     statusText: response.statusText,
                     headers: {
@@ -189,7 +269,6 @@ self.addEventListener('fetch', event => {
                         'Cache-Control': 'private, max-age=300',
                     }
                 });
-                return newResponse;
             }).catch(async () => {
                 return new Response('Offline - Course asset missing', { status: 503 });
             })
@@ -197,19 +276,7 @@ self.addEventListener('fetch', event => {
     } else {
         // Static assets: cache per authenticated user so repeat launches do not re-fetch every SCORM asset.
         event.respondWith(
-            authReady.then(() => loadStoredAuthToken()).then(() => caches.open(cacheName)).then(cache => {
-                const key = cacheKeyFor(url);
-                return cache.match(key).then(cachedResponse => {
-                    if (cachedResponse) return cachedResponse;
-
-                    return fetchScormAsset(proxyPath).then(networkResponse => {
-                        if (shouldCacheAsset(proxyPath, networkResponse)) {
-                            cache.put(key, networkResponse.clone());
-                        }
-                        return networkResponse;
-                    });
-                });
-            }).catch(error => {
+            respondWithCachedAsset(url, proxyPath, authReady).catch(error => {
                 console.error('[SW] SCORM proxy fetch failed:', proxyPath, error);
                 return new Response('SCORM asset not found', { status: 502 });
             })
