@@ -339,6 +339,16 @@ export default async function renderPlayer(container) {
     }
 
     let proxyUrl = course.fileUrl;
+    if (supabase) {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session?.access_token) {
+          proxyUrl += `${proxyUrl.includes('?') ? '&' : '?'}lms_token=${encodeURIComponent(session.access_token)}`;
+        }
+      } catch (err) {
+        console.error('[InAlign] Failed to attach SCORM session token:', err);
+      }
+    }
     if (window.navigator.serviceWorker) {
         await window.navigator.serviceWorker.ready;
     }

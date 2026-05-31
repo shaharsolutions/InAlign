@@ -1,4 +1,4 @@
-const SW_VERSION = 'scorm-proxy-v5';
+const SW_VERSION = 'scorm-proxy-v6';
 const CACHE_NAME = `inalign-scorm-assets-${SW_VERSION}`;
 const SCORM_ASSET_URL = 'https://iduyexkzivtnvrdsbwig.functions.supabase.co/scorm-asset';
 let authToken = null;
@@ -49,6 +49,8 @@ self.addEventListener('fetch', event => {
     const proxyToken = 'scorm-proxy/';
     const tokenIndex = url.pathname.indexOf(proxyToken);
     const proxyPath = url.pathname.substring(tokenIndex + proxyToken.length);
+    const requestToken = url.searchParams.get('lms_token');
+    if (requestToken) authToken = requestToken;
     
     const isHtml = proxyPath.endsWith('.html') || proxyPath.endsWith('.htm');
 
