@@ -1,5 +1,6 @@
-const SW_VERSION = 'scorm-proxy-v6';
-const CACHE_NAME = `inalign-scorm-assets-${SW_VERSION}`;
+const SW_VERSION = 'scorm-proxy-v7';
+const CACHE_PREFIX = 'inalign-scorm-assets';
+let cacheName = `${CACHE_PREFIX}-session-${SW_VERSION}`;
 const SCORM_ASSET_URL = 'https://iduyexkzivtnvrdsbwig.functions.supabase.co/scorm-asset';
 let authToken = null;
 
@@ -7,11 +8,42 @@ self.addEventListener('install', event => {
     self.skipWaiting();
 });
 
+function sanitizeCachePart(value) {
+    return String(value || 'session').replace(/[^a-zA-Z0-9_-]/g, '_').slice(0, 80);
+}
+
+function decodeJwtSub(token) {
+    try {
+        const payload = token.split('.')[1];
+        if (!payload) return '';
+        const normalized = payload.replace(/-/g, '+').replace(/_/g, '/');
+        const json = atob(normalized.padEnd(Math.ceil(normalized.length / 4) * 4, '='));
+        return JSON.parse(json).sub || '';
+    } catch (e) {
+        return '';
+    }
+}
+
+function cleanupCaches() {
+    return caches.keys().then(keys => Promise.all(
+        keys
+            .filter(key => key.startsWith(CACHE_PREFIX) && key !== cacheName)
+            .map(key => caches.delete(key))
+    ));
+}
+
+function setAuthToken(token, userId) {
+    authToken = token || null;
+    const cacheUserId = userId || decodeJwtSub(authToken || '') || 'session';
+    cacheName = `${CACHE_PREFIX}-${sanitizeCachePart(cacheUserId)}-${SW_VERSION}`;
+    cleanupCaches().catch(() => {});
+}
+
 self.addEventListener('activate', event => {
     event.waitUntil(
         caches.keys().then(keys => {
             return Promise.all(
-                keys.filter(key => key.startsWith('inalign-scorm-assets-') && key !== CACHE_NAME)
+                keys.filter(key => key.startsWith(CACHE_PREFIX) && !key.endsWith(SW_VERSION))
                     .map(key => caches.delete(key))
             );
         }).then(() => clients.claim())
@@ -20,7 +52,7 @@ self.addEventListener('activate', event => {
 
 self.addEventListener('message', event => {
     if (event.data && event.data.type === 'SET_AUTH_TOKEN') {
-        authToken = event.data.token || null;
+        setAuthToken(event.data.token, event.data.userId);
     }
 });
 
@@ -40,6 +72,18 @@ function fetchScormAsset(proxyPath) {
     });
 }
 
+function cacheKeyFor(url) {
+    const cacheUrl = new URL(url.href);
+    cacheUrl.searchParams.delete('lms_token');
+    return new Request(cacheUrl.toString(), { method: 'GET' });
+}
+
+function shouldCacheAsset(proxyPath, response) {
+    if (!response || !response.ok) return false;
+    const ext = proxyPath.split('?')[0].split('.').pop().toLowerCase();
+    return ['js', 'css', 'json', 'xml', 'png', 'jpg', 'jpeg', 'gif', 'svg', 'webp', 'woff', 'woff2', 'ttf', 'otf'].includes(ext);
+}
+
 self.addEventListener('fetch', event => {
     const url = new URL(event.request.url);
 
@@ -50,7 +94,7 @@ self.addEventListener('fetch', event => {
     const tokenIndex = url.pathname.indexOf(proxyToken);
     const proxyPath = url.pathname.substring(tokenIndex + proxyToken.length);
     const requestToken = url.searchParams.get('lms_token');
-    if (requestToken) authToken = requestToken;
+    if (requestToken) setAuthToken(requestToken);
     
     const isHtml = proxyPath.endsWith('.html') || proxyPath.endsWith('.htm');
 
@@ -96,9 +140,21 @@ self.addEventListener('fetch', event => {
             })
         );
     } else {
-        // Static assets: always use the authenticated proxy; do not serve private assets from shared cache.
+        // Static assets: cache per authenticated user so repeat launches do not re-fetch every SCORM asset.
         event.respondWith(
-            fetchScormAsset(proxyPath).catch(error => {
+            caches.open(cacheName).then(cache => {
+                const key = cacheKeyFor(url);
+                return cache.match(key).then(cachedResponse => {
+                    if (cachedResponse) return cachedResponse;
+
+                    return fetchScormAsset(proxyPath).then(networkResponse => {
+                        if (shouldCacheAsset(proxyPath, networkResponse)) {
+                            cache.put(key, networkResponse.clone());
+                        }
+                        return networkResponse;
+                    });
+                });
+            }).catch(error => {
                 console.error('[SW] SCORM proxy fetch failed:', proxyPath, error);
                 return new Response('SCORM asset not found', { status: 502 });
             })

@@ -9,6 +9,13 @@ const corsHeaders = {
 const SUPER_ADMIN_ROLE = 'super_admin'
 const MANAGEMENT_ROLES = ['admin', 'org_admin', SUPER_ADMIN_ROLE]
 const BUCKET = 'scorm_packages'
+const PROFILE_CACHE_TTL_MS = 60_000
+const ACCESS_CACHE_TTL_MS = 300_000
+
+type CallerProfile = { id: string; role: string; org_id: string | null }
+
+const profileCache = new Map<string, { expires: number; profile: CallerProfile }>()
+const accessCache = new Map<string, number>()
 
 function safePath(rawPath: string | null) {
   const decoded = decodeURIComponent(rawPath || '').replace(/^\/+/, '')
@@ -45,10 +52,13 @@ function getContentType(path: string) {
   return map[ext || ''] || 'application/octet-stream'
 }
 
-async function getCallerProfile(req: Request, supabaseAdmin: ReturnType<typeof createClient>) {
+async function getCallerProfile(req: Request, supabaseAdmin: ReturnType<typeof createClient>): Promise<CallerProfile> {
   const authHeader = req.headers.get('Authorization') || ''
   const token = authHeader.replace('Bearer ', '')
   if (!token) throw new Error('Missing authorization token')
+
+  const cached = profileCache.get(token)
+  if (cached && cached.expires > Date.now()) return cached.profile
 
   const { data: authData, error: authError } = await supabaseAdmin.auth.getUser(token)
   if (authError || !authData.user) throw new Error('Invalid authorization token')
@@ -60,18 +70,33 @@ async function getCallerProfile(req: Request, supabaseAdmin: ReturnType<typeof c
     .single()
 
   if (profileError || !profile) throw new Error('Could not verify caller profile')
+  profileCache.set(token, {
+    expires: Date.now() + PROFILE_CACHE_TTL_MS,
+    profile,
+  })
   return profile
+}
+
+function cacheAccess(profile: CallerProfile, orgId: string, courseId: string) {
+  accessCache.set(`${profile.id}:${profile.role}:${profile.org_id || ''}:${orgId}:${courseId}`, Date.now() + ACCESS_CACHE_TTL_MS)
+}
+
+function hasCachedAccess(profile: CallerProfile, orgId: string, courseId: string) {
+  const expires = accessCache.get(`${profile.id}:${profile.role}:${profile.org_id || ''}:${orgId}:${courseId}`)
+  return !!expires && expires > Date.now()
 }
 
 async function assertCanAccessPath(
   path: string,
-  profile: { id: string; role: string; org_id: string | null },
+  profile: CallerProfile,
   supabaseAdmin: ReturnType<typeof createClient>,
 ) {
   const match = path.match(/^org_([^/]+)\/courses\/([^/]+)\//)
   if (!match) throw new Error('Invalid SCORM asset path')
 
   const [, orgId, courseId] = match
+
+  if (hasCachedAccess(profile, orgId, courseId)) return
 
   const { data: course, error: courseError } = await supabaseAdmin
     .from('courses')
@@ -82,13 +107,19 @@ async function assertCanAccessPath(
 
   if (courseError || !course) throw new Error('Course not found')
 
-  if (profile.role === SUPER_ADMIN_ROLE) return
+  if (profile.role === SUPER_ADMIN_ROLE) {
+    cacheAccess(profile, orgId, courseId)
+    return
+  }
 
   if (profile.org_id !== orgId) {
     throw new Error('Unauthorized organization access')
   }
 
-  if (MANAGEMENT_ROLES.includes(profile.role)) return
+  if (MANAGEMENT_ROLES.includes(profile.role)) {
+    cacheAccess(profile, orgId, courseId)
+    return
+  }
 
   if (!course.published) {
     throw new Error('Course is not published')
@@ -107,7 +138,10 @@ async function assertCanAccessPath(
       .eq('user_id', profile.id),
   ])
 
-  if (directProgress && directProgress.length > 0) return
+  if (directProgress && directProgress.length > 0) {
+    cacheAccess(profile, orgId, courseId)
+    return
+  }
 
   const groupIds = (groupMemberships || []).map((membership: { group_id: string }) => membership.group_id)
   if (groupIds.length === 0) throw new Error('Course is not assigned to learner')
@@ -122,6 +156,8 @@ async function assertCanAccessPath(
   if (!groupAssignments || groupAssignments.length === 0) {
     throw new Error('Course is not assigned to learner')
   }
+
+  cacheAccess(profile, orgId, courseId)
 }
 
 Deno.serve(async (req) => {
