@@ -1,7 +1,9 @@
-const SW_VERSION = 'scorm-proxy-v7';
+const SW_VERSION = 'scorm-proxy-v8';
 const CACHE_PREFIX = 'inalign-scorm-assets';
 let cacheName = `${CACHE_PREFIX}-session-${SW_VERSION}`;
 const SCORM_ASSET_URL = 'https://iduyexkzivtnvrdsbwig.functions.supabase.co/scorm-asset';
+const AUTH_DB_NAME = 'inalign-scorm-auth';
+const AUTH_STORE_NAME = 'session';
 let authToken = null;
 
 self.addEventListener('install', event => {
@@ -32,10 +34,60 @@ function cleanupCaches() {
     ));
 }
 
+function openAuthDb() {
+    return new Promise((resolve, reject) => {
+        const request = indexedDB.open(AUTH_DB_NAME, 1);
+        request.onupgradeneeded = () => {
+            request.result.createObjectStore(AUTH_STORE_NAME);
+        };
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => reject(request.error);
+    });
+}
+
+async function storeAuthToken(token, userId) {
+    const db = await openAuthDb();
+    await new Promise((resolve, reject) => {
+        const tx = db.transaction(AUTH_STORE_NAME, 'readwrite');
+        tx.objectStore(AUTH_STORE_NAME).put({
+            token,
+            userId,
+            savedAt: Date.now()
+        }, 'auth');
+        tx.oncomplete = resolve;
+        tx.onerror = () => reject(tx.error);
+    });
+    db.close();
+}
+
+async function loadStoredAuthToken() {
+    if (authToken) return authToken;
+
+    const db = await openAuthDb();
+    const record = await new Promise((resolve, reject) => {
+        const tx = db.transaction(AUTH_STORE_NAME, 'readonly');
+        const request = tx.objectStore(AUTH_STORE_NAME).get('auth');
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => reject(request.error);
+    });
+    db.close();
+
+    if (record && record.token) {
+        authToken = record.token;
+        const cacheUserId = record.userId || decodeJwtSub(authToken) || 'session';
+        cacheName = `${CACHE_PREFIX}-${sanitizeCachePart(cacheUserId)}-${SW_VERSION}`;
+    }
+
+    return authToken;
+}
+
 function setAuthToken(token, userId) {
     authToken = token || null;
     const cacheUserId = userId || decodeJwtSub(authToken || '') || 'session';
     cacheName = `${CACHE_PREFIX}-${sanitizeCachePart(cacheUserId)}-${SW_VERSION}`;
+    if (authToken) {
+        storeAuthToken(authToken, cacheUserId).catch(() => {});
+    }
     cleanupCaches().catch(() => {});
 }
 
@@ -56,15 +108,16 @@ self.addEventListener('message', event => {
     }
 });
 
-function fetchScormAsset(proxyPath) {
-    if (!authToken) {
+async function fetchScormAsset(proxyPath) {
+    const token = await loadStoredAuthToken();
+    if (!token) {
         return Promise.resolve(new Response('Missing SCORM authorization token', { status: 401 }));
     }
 
     const targetUrl = `${SCORM_ASSET_URL}?path=${encodeURIComponent(proxyPath)}`;
     return fetch(targetUrl, {
         headers: {
-            'Authorization': `Bearer ${authToken}`,
+            'Authorization': `Bearer ${token}`,
             'x-scorm-path': proxyPath
         },
         credentials: 'omit',
@@ -142,7 +195,7 @@ self.addEventListener('fetch', event => {
     } else {
         // Static assets: cache per authenticated user so repeat launches do not re-fetch every SCORM asset.
         event.respondWith(
-            caches.open(cacheName).then(cache => {
+            loadStoredAuthToken().then(() => caches.open(cacheName)).then(cache => {
                 const key = cacheKeyFor(url);
                 return cache.match(key).then(cachedResponse => {
                     if (cachedResponse) return cachedResponse;
