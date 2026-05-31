@@ -187,6 +187,24 @@
       border-color: var(--blue);
     }
 
+    .print-helper {
+      display: none;
+      align-items: center;
+      gap: 8px;
+      width: 100%;
+      color: var(--muted);
+      font-size: 0.95rem;
+    }
+
+    .print-helper.show {
+      display: flex;
+    }
+
+    .print-helper a {
+      color: var(--blue);
+      font-weight: 800;
+    }
+
     section {
       display: none;
       animation: show 0.22s ease-out;
@@ -479,8 +497,9 @@
         </div>
         <div class="quick-actions">
           <button class="action-btn primary" data-jump="onboarding"><i class='bx bx-rocket'></i> התחל הקמת לקוח חדש</button>
-          <button class="action-btn" onclick="window.print()"><i class='bx bx-printer'></i> הדפסה / PDF</button>
+          <button class="action-btn" id="printGuideBtn" type="button"><i class='bx bx-printer'></i> הדפסה / PDF</button>
           <span class="pill"><i class='bx bx-calendar'></i> עודכן: 27 במאי 2026</span>
+          <span class="print-helper" id="printHelper" aria-live="polite"></span>
         </div>
       </header>
 
@@ -954,6 +973,163 @@
         input.closest('.check-row').classList.remove('done');
       });
       localStorage.removeItem('inalignGuideChecklist');
+    });
+
+    const printGuideBtn = document.getElementById('printGuideBtn');
+    const printHelper = document.getElementById('printHelper');
+    let printViewUrl = '';
+
+    function showPrintHelper(message, linkUrl = '') {
+      if (!printHelper) return;
+      if (printViewUrl) URL.revokeObjectURL(printViewUrl);
+      printViewUrl = linkUrl;
+      const linkHtml = linkUrl
+        ? ` <a href="${linkUrl}" target="_blank" rel="noopener">פתח גרסת הדפסה</a>`
+        : '';
+      printHelper.innerHTML = `<i class='bx bx-info-circle'></i><span>${message}${linkHtml}</span>`;
+      printHelper.classList.add('show');
+    }
+
+    function createPrintableGuideUrl() {
+      const clonedDocument = document.documentElement.cloneNode(true);
+      clonedDocument.querySelectorAll('script').forEach(script => script.remove());
+      clonedDocument.querySelectorAll('aside, .quick-actions, .toolbar, .print-helper').forEach(el => el.remove());
+      clonedDocument.querySelectorAll('section').forEach(section => {
+        section.classList.add('active');
+        section.style.display = 'block';
+      });
+      clonedDocument.querySelectorAll('.role-panel').forEach(panel => {
+        panel.classList.add('active');
+        panel.style.display = 'block';
+      });
+      const main = clonedDocument.querySelector('main');
+      if (main) {
+        main.style.maxWidth = 'none';
+        main.style.padding = '0';
+      }
+      const printStyles = clonedDocument.ownerDocument.createElement('style');
+      printStyles.textContent = `
+        @page { size: A4; margin: 15mm; }
+        html, body {
+          background: #fff !important;
+          color: #172033 !important;
+        }
+        body {
+          margin: 0 !important;
+          font-size: 15px !important;
+          line-height: 1.58 !important;
+        }
+        .layout {
+          display: block !important;
+          min-height: 0 !important;
+        }
+        main {
+          width: min(100%, 920px) !important;
+          max-width: 920px !important;
+          margin: 0 auto !important;
+          padding: 28px 24px !important;
+        }
+        .hero {
+          display: block !important;
+          margin: 0 0 28px !important;
+          padding: 0 0 18px !important;
+          border-bottom: 2px solid #d9e1ee !important;
+        }
+        h1 {
+          font-size: 36px !important;
+          line-height: 1.12 !important;
+          margin: 0 0 12px !important;
+          max-width: 760px !important;
+        }
+        .lead,
+        .section-intro,
+        .muted {
+          color: #4e5f78 !important;
+        }
+        h2 {
+          font-size: 26px !important;
+          margin-top: 0 !important;
+        }
+        h3 {
+          font-size: 18px !important;
+        }
+        section {
+          display: block !important;
+          margin: 0 0 28px !important;
+          padding: 0 0 8px !important;
+          break-inside: auto !important;
+          animation: none !important;
+        }
+        section + section {
+          break-before: page !important;
+        }
+        .grid {
+          display: grid !important;
+          grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+          gap: 12px !important;
+        }
+        .card,
+        .card.third,
+        .card.full {
+          grid-column: auto !important;
+          padding: 14px !important;
+          box-shadow: none !important;
+          break-inside: avoid !important;
+          page-break-inside: avoid !important;
+        }
+        .card.full {
+          grid-column: 1 / -1 !important;
+        }
+        .step {
+          grid-template-columns: 44px 1fr !important;
+          break-inside: avoid !important;
+        }
+        .role-panel {
+          display: block !important;
+          margin-bottom: 14px !important;
+        }
+        details {
+          break-inside: avoid !important;
+        }
+        table {
+          display: table !important;
+          width: 100% !important;
+          overflow: visible !important;
+          border-collapse: collapse !important;
+          break-inside: avoid !important;
+        }
+        th,
+        td {
+          padding: 9px 10px !important;
+          vertical-align: top !important;
+        }
+        @media (max-width: 760px) {
+          main {
+            padding: 24px 18px !important;
+          }
+          h1 {
+            font-size: 32px !important;
+          }
+          .grid {
+            grid-template-columns: 1fr !important;
+          }
+          .step {
+            grid-template-columns: 1fr !important;
+          }
+        }
+      `;
+      clonedDocument.querySelector('head').appendChild(printStyles);
+      const html = '<!DOCTYPE html>\n' + clonedDocument.outerHTML;
+      return URL.createObjectURL(new Blob([html], { type: 'text/html;charset=utf-8' }));
+    }
+
+    printGuideBtn.addEventListener('click', () => {
+      const fallbackUrl = createPrintableGuideUrl();
+      showPrintHelper('אם חלון ההדפסה לא נפתח, אפשר להשתמש בקישור הגיבוי:', fallbackUrl);
+      requestAnimationFrame(() => {
+        window.focus();
+        window.print();
+      });
     });
   </script>
 </body>
