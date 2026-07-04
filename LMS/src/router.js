@@ -16,7 +16,8 @@ async function navigate(container) {
   const route = getRoute(hash)
 
   // 1. Guard: Authentication
-  if (!user && hash !== '#/login') {
+  const isPublicRoute = hash === '#/login' || hash.startsWith('#/guest')
+  if (!user && !isPublicRoute) {
     window.location.hash = '#/login'
     return
   }

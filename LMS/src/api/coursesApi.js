@@ -117,6 +117,7 @@ export async function uploadCourse(courseData, file) {
         title: courseData.title,
         category: courseData.category,
         published: true,
+        guest_access_enabled: courseData.guestAccessEnabled === true,
         entry_point: entryPoint
     };
 
@@ -189,6 +190,29 @@ export async function deleteCourse(id) {
   } else {
     MOCK_COURSES = MOCK_COURSES.filter(c => c.id !== id);
   }
+}
+
+export async function updateCourseGuestAccess(courseId, enabled) {
+  const user = getCurrentUserSync()
+  if (!user || !isManagementRole(user.role)) throw new Error("אין הרשאה")
+
+  if (supabase) {
+    const { data, error } = await supabase
+      .from('courses')
+      .update({ guest_access_enabled: enabled })
+      .eq('id', courseId)
+      .select('id, guest_access_enabled, guest_access_token')
+      .single()
+    if (error) throw new Error(error.message)
+    return data
+  }
+
+  const course = MOCK_COURSES.find(c => c.id === courseId)
+  if (course) {
+    course.guest_access_enabled = enabled
+    course.guest_access_token ||= crypto.randomUUID()
+  }
+  return course
 }
 
 export async function fetchCourseById(id) {

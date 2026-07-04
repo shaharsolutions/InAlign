@@ -39,14 +39,7 @@ export async function fetchUsers() {
       .from('profiles')
       .select(`
         id, full_name, role, email, phone, created_at, org_id,
-        organizations (name, auto_enroll_course_ids, primary_color, logo_url),
-        group_members (
-          groups (id, name, group_assignments (course_id))
-        ),
-        learner_progress (
-          course_id,
-          courses (title)
-        )
+        organizations (name, auto_enroll_course_ids, primary_color, logo_url)
       `);
       
     // Filter by org ONLY for non-super admins
@@ -74,20 +67,113 @@ export async function fetchUsers() {
     }
     
     console.log(`[LMS] fetchUsers - Fetched ${data?.length || 0} users`);
+    const userIds = (data || []).map(u => u.id).filter(Boolean);
+
+    let groupMembers = [];
+    let groups = [];
+    let groupAssignments = [];
+    let learnerProgress = [];
+    let courses = [];
+
+    if (userIds.length > 0) {
+        const [
+            groupMembersResult,
+            progressResult
+        ] = await Promise.all([
+            supabase
+                .from('group_members')
+                .select('user_id, group_id')
+                .in('user_id', userIds),
+            supabase
+                .from('learner_progress')
+                .select('user_id, course_id')
+                .in('user_id', userIds)
+        ]);
+
+        if (groupMembersResult.error) throw new Error(groupMembersResult.error.message);
+        if (progressResult.error) throw new Error(progressResult.error.message);
+
+        groupMembers = groupMembersResult.data || [];
+        learnerProgress = progressResult.data || [];
+    }
+
+    const groupIds = [...new Set(groupMembers.map(member => member.group_id).filter(Boolean))];
+    const progressCourseIds = learnerProgress.map(progress => progress.course_id).filter(Boolean);
+
+    if (groupIds.length > 0) {
+        const [
+            groupsResult,
+            groupAssignmentsResult
+        ] = await Promise.all([
+            supabase
+                .from('groups')
+                .select('id, name, org_id')
+                .in('id', groupIds),
+            supabase
+                .from('group_assignments')
+                .select('group_id, course_id')
+                .in('group_id', groupIds)
+        ]);
+
+        if (groupsResult.error) throw new Error(groupsResult.error.message);
+        if (groupAssignmentsResult.error) throw new Error(groupAssignmentsResult.error.message);
+
+        groups = groupsResult.data || [];
+        groupAssignments = groupAssignmentsResult.data || [];
+    }
+
+    const allCourseIds = [
+        ...new Set([
+            ...progressCourseIds,
+            ...groupAssignments.map(assignment => assignment.course_id).filter(Boolean)
+        ])
+    ];
+
+    if (allCourseIds.length > 0) {
+        const { data: coursesData, error: coursesError } = await supabase
+            .from('courses')
+            .select('id, title')
+            .in('id', allCourseIds);
+
+        if (coursesError) throw new Error(coursesError.message);
+        courses = coursesData || [];
+    }
+
+    const groupsById = new Map(groups.map(group => [group.id, group]));
+    const courseTitleById = new Map(courses.map(course => [course.id, course.title]));
+    const groupMembersByUserId = new Map();
+    const progressByUserId = new Map();
+    const assignmentsByGroupId = new Map();
+
+    for (const member of groupMembers) {
+        if (!groupMembersByUserId.has(member.user_id)) groupMembersByUserId.set(member.user_id, []);
+        groupMembersByUserId.get(member.user_id).push(member);
+    }
+
+    for (const progress of learnerProgress) {
+        if (!progressByUserId.has(progress.user_id)) progressByUserId.set(progress.user_id, []);
+        progressByUserId.get(progress.user_id).push(progress);
+    }
+
+    for (const assignment of groupAssignments) {
+        if (!assignmentsByGroupId.has(assignment.group_id)) assignmentsByGroupId.set(assignment.group_id, []);
+        assignmentsByGroupId.get(assignment.group_id).push(assignment);
+    }
+
     return data.map(u => {
         // Filter out any null groups or empty results from the join
-        const userGroups = (u.group_members || [])
-            .map(gm => gm.groups)
+        const userGroups = (groupMembersByUserId.get(u.id) || [])
+            .map(member => groupsById.get(member.group_id))
             .filter(g => g && g.id && g.name);
             
         const autoEnrollIds = u.organizations?.auto_enroll_course_ids || [];
-        const groupAssigns = (u.group_members || []).map(gm => ({
-            id: gm.groups?.id,
-            name: gm.groups?.name,
-            courseIds: (gm.groups?.group_assignments || []).map(ga => ga.course_id)
+        const groupAssigns = userGroups.map(group => ({
+            id: group.id,
+            name: group.name,
+            courseIds: (assignmentsByGroupId.get(group.id) || []).map(assignment => assignment.course_id)
         }));
 
-        const assignedCourses = (u.learner_progress || [])
+        const assignedCourses = (progressByUserId.get(u.id) || [])
             .map(lp => {
                 const cid = lp.course_id;
                 let source = 'שיוך ישיר'; // Default
@@ -102,7 +188,7 @@ export async function fetchUsers() {
 
                 return { 
                     id: cid, 
-                    title: lp.courses?.title,
+                    title: courseTitleById.get(cid),
                     source: source
                 };
             })

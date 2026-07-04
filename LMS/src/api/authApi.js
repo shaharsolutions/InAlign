@@ -1,4 +1,9 @@
-import { supabase } from '../lib/supabase.js'
+import {
+  isSupabaseNetworkError,
+  startSupabaseAutoRefresh,
+  stopSupabaseAutoRefresh,
+  supabase
+} from '../lib/supabase.js'
 import { ROLE_LEARNER, ROLE_ORG_ADMIN, ROLE_SUPER_ADMIN } from '../lib/roles.js'
 
 // Mock Data Fallback
@@ -11,10 +16,33 @@ const MOCK_PROFILES = {
 
 export async function checkAuth() {
   if (supabase) {
-    const { data: { session }, error } = await supabase.auth.getSession();
+    let session = null;
+    let error = null;
+
+    try {
+      const result = await supabase.auth.getSession();
+      session = result.data.session;
+      error = result.error;
+    } catch (err) {
+      error = err;
+    }
+
+    if (error) {
+      if (isSupabaseNetworkError(error)) {
+        console.warn('[InAlign] Supabase session refresh failed because the network is unavailable.', error);
+        await stopSupabaseAutoRefresh();
+        return null;
+      }
+
+      console.warn('[InAlign] Supabase session is invalid. Signing out.', error);
+      await supabase.auth.signOut();
+      return null;
+    }
+
     if (error || !session) return null;
     
     const realUser = await fetchUserProfile(session.user.id);
+    await startSupabaseAutoRefresh();
     
     // Check for impersonation
     const stored = localStorage.getItem('lms.impersonation');
@@ -60,9 +88,24 @@ export async function checkAuth() {
 
 export async function login(email, password) {
   if (supabase) {
-    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+    let data = null;
+    let error = null;
+
+    try {
+      const result = await supabase.auth.signInWithPassword({ email, password });
+      data = result.data;
+      error = result.error;
+    } catch (err) {
+      error = err;
+    }
+
+    if (isSupabaseNetworkError(error)) {
+      throw new Error('לא ניתן להתחבר לשירות כרגע. בדוק את החיבור לאינטרנט ונסה שוב.');
+    }
+
     if (error) throw new Error(error.message);
     const userProfile = await fetchUserProfile(data.user.id);
+    await startSupabaseAutoRefresh();
     
     // Clear any stale impersonation on fresh login
     localStorage.removeItem('lms.impersonation');
@@ -91,7 +134,9 @@ export async function login(email, password) {
 
 export async function logout() {
   localStorage.removeItem('lms.impersonation');
+  localStorage.removeItem('lms.guest.courseId');
   if (supabase) {
+    await stopSupabaseAutoRefresh();
     await supabase.auth.signOut();
   } else {
     mockCurrentUser = null;
@@ -131,7 +176,7 @@ async function fetchUserProfile(userId) {
   // 1. Fetch the basic profile
   const { data: profiles, error: profileError } = await supabase
     .from('profiles')
-    .select('id, full_name, role, org_id')
+    .select('id, full_name, role, org_id, phone, is_guest')
     .eq('id', userId);
 
   if (profileError) {
@@ -165,6 +210,8 @@ async function fetchUserProfile(userId) {
     fullName: profile.full_name,
     role: profile.role,
     orgId: profile.org_id,
+    phone: profile.phone || '',
+    isGuest: profile.is_guest === true,
     orgName: orgSettings?.name || null,
     orgColor: orgSettings?.primary_color || null,
     orgLogo: orgSettings?.logo_url || null
@@ -200,6 +247,9 @@ export function onAuthStatusChange(callback) {
       console.log(`[InAlign] Auth event: ${event}`);
       
       if (event === 'SIGNED_OUT') {
+        stopSupabaseAutoRefresh().catch((error) => {
+          console.warn('[InAlign] Failed to pause Supabase auto refresh.', error);
+        });
         localStorage.removeItem('lms.impersonation');
         if (window.__APP_STATE?.user && !session) {
           console.warn("[InAlign] Verified sign out, redirecting...");
@@ -208,6 +258,9 @@ export function onAuthStatusChange(callback) {
             window.location.hash = '#/login';
           }
         }
+      }
+      if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+        startSupabaseAutoRefresh();
       }
       if (callback) callback(event, session);
     });

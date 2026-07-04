@@ -34,7 +34,7 @@ export async function fetchOrgProgress(explicitOrgId = null) {
       .from('learner_progress')
       .select(`
         id, user_id, course_id, status, progress_percent, score, time_spent_seconds, completed_at,
-        profiles (full_name, role),
+        profiles (full_name, role, phone, is_guest),
         courses (title)
       `);
     
@@ -62,6 +62,8 @@ export async function fetchOrgProgress(explicitOrgId = null) {
           user_id: r.user_id,
           course_id: r.course_id,
           user_name: r.profiles?.full_name,
+          user_phone: r.profiles?.phone || '',
+          is_guest: r.profiles?.is_guest === true,
           course_title: r.courses?.title,
           status,
           progress: displayProgress,

@@ -1,4 +1,4 @@
-import { uploadCourse, deleteCourse, fetchCourses } from '../api/coursesApi.js'
+import { uploadCourse, deleteCourse, fetchCourses, updateCourseGuestAccess } from '../api/coursesApi.js'
 import { fetchCategories } from '../api/categoriesApi.js'
 import { showConfirmModal, showToast } from '../lib/ui.js'
 
@@ -18,6 +18,13 @@ export default async function renderAdminScorm(container) {
                <label class="form-label" for="course-title">שם הלומדה <span style="color: hsl(var(--color-danger));">*</span></label>
                <input class="form-control" type="text" id="course-title" required placeholder="לדוגמה: מניעת הטרדה מינית 2026">
             </div>
+            <label class="card flex items-center gap-3" style="padding:1rem;cursor:pointer;box-shadow:none;margin-top:1rem">
+              <input type="checkbox" id="course-guest-access" style="width:18px;height:18px">
+              <span>
+                <strong>אפשר כניסה ללא שם משתמש וסיסמה</strong>
+                <span class="text-sm text-muted" style="display:block">ייווצר קישור שבו הלומד מזין שם מלא ומספר טלפון.</span>
+              </span>
+            </label>
             <div class="form-group" style="text-align: right;">
                <label class="form-label" for="course-desc">תיאור קצר</label>
                <textarea class="form-control" id="course-desc" rows="3" placeholder="תקציר של תוכן ההדרכה..."></textarea>
@@ -52,12 +59,13 @@ export default async function renderAdminScorm(container) {
                   <th>שם הלומדה</th>
                   <th>קטגוריה</th>
                   <th>סטטוס</th>
+                  <th>גישת אורחים</th>
                   <th>תאריך יצירה</th>
                   <th>פעולות</th>
                </tr>
             </thead>
             <tbody>
-               <tr><td colspan="5" style="text-align: center;"><i class='bx bx-loader bx-spin'></i> טוען לומדות...</td></tr>
+               <tr><td colspan="6" style="text-align: center;"><i class='bx bx-loader bx-spin'></i> טוען לומדות...</td></tr>
             </tbody>
          </table>
        </div>
@@ -94,7 +102,7 @@ export default async function renderAdminScorm(container) {
     try {
       const courses = await fetchCourses()
       if (courses.length === 0) {
-        tableBody.innerHTML = `<tr><td colspan="5" style="text-align: center;" class="text-muted">אין לומדות במערכת</td></tr>`
+        tableBody.innerHTML = `<tr><td colspan="6" style="text-align: center;" class="text-muted">אין לומדות במערכת</td></tr>`
         return
       }
 
@@ -103,6 +111,19 @@ export default async function renderAdminScorm(container) {
            <td><div style="font-weight: 500;">${c.title}</div></td>
            <td><span class="badge badge-primary">${c.category || 'כללי'}</span></td>
            <td><span class="badge ${c.published ? 'badge-success' : 'badge-warning'}">${c.published ? 'מפורסם' : 'טיוטה'}</span></td>
+           <td>
+             <div class="flex items-center gap-2">
+               <button class="btn btn-outline text-sm guest-toggle-btn" data-id="${c.id}" data-enabled="${c.guest_access_enabled === true}">
+                 <i class='bx ${c.guest_access_enabled ? 'bx-user-check' : 'bx-user-x'}'></i>
+                 ${c.guest_access_enabled ? 'פעיל' : 'כבוי'}
+               </button>
+               ${c.guest_access_enabled && c.guest_access_token ? `
+                 <button class="btn btn-outline text-sm copy-guest-link-btn" data-token="${c.guest_access_token}" title="העתק קישור כניסה לאורחים">
+                   <i class='bx bx-copy'></i>
+                 </button>
+               ` : ''}
+             </div>
+           </td>
            <td>${new Date(c.created_at).toLocaleDateString('he-IL')}</td>
            <td>
              <div class="flex gap-2">
@@ -130,8 +151,33 @@ export default async function renderAdminScorm(container) {
           });
         })
       })
+
+      container.querySelectorAll('.guest-toggle-btn').forEach(btn => {
+        btn.addEventListener('click', async (event) => {
+          const button = event.currentTarget
+          const enabled = button.dataset.enabled === 'true'
+          button.disabled = true
+          try {
+            await updateCourseGuestAccess(button.dataset.id, !enabled)
+            showToast(!enabled ? 'גישת אורחים הופעלה' : 'גישת אורחים כובתה')
+            await renderTable()
+          } catch (error) {
+            showToast(error.message, 'error')
+            button.disabled = false
+          }
+        })
+      })
+
+      container.querySelectorAll('.copy-guest-link-btn').forEach(btn => {
+        btn.addEventListener('click', async (event) => {
+          const baseUrl = window.location.href.split('#')[0]
+          const link = `${baseUrl}#/guest?code=${event.currentTarget.dataset.token}`
+          await navigator.clipboard.writeText(link)
+          showToast('קישור הכניסה לאורחים הועתק')
+        })
+      })
     } catch (err) {
-      tableBody.innerHTML = `<tr><td colspan="5" style="color: hsl(var(--color-danger)); text-align: center;">שגיאה: ${err.message}</td></tr>`
+      tableBody.innerHTML = `<tr><td colspan="6" style="color: hsl(var(--color-danger)); text-align: center;">שגיאה: ${err.message}</td></tr>`
     }
   }
 
@@ -153,7 +199,8 @@ export default async function renderAdminScorm(container) {
     const courseData = {
       title: document.getElementById('course-title').value,
       description: document.getElementById('course-desc').value,
-      category: document.getElementById('course-category').value
+      category: document.getElementById('course-category').value,
+      guestAccessEnabled: document.getElementById('course-guest-access').checked
     }
 
     const submitBtn = form.querySelector('button[type="submit"]')

@@ -141,7 +141,19 @@ export default async function renderPlayer(container) {
       } catch (e) {
         console.error("[InAlign] Exit sync failed:", e);
       } finally {
-        window.history.back();
+        if (user?.isGuest) {
+          container.innerHTML = `
+            <div class="guest-completion-page">
+              <div class="login-card-modern fade-in" style="text-align:center">
+                <div style="font-size:4rem;color:hsl(var(--color-success));margin-bottom:1rem"><i class='bx bx-check-circle'></i></div>
+                <h2>ההתקדמות נשמרה</h2>
+                <p class="text-muted">תודה ${user.fullName || ''}. ניתן לסגור את החלון.</p>
+              </div>
+            </div>
+          `
+        } else {
+          window.history.back();
+        }
       }
     };
 

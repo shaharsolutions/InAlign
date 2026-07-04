@@ -600,6 +600,25 @@ h1, h2, h3, h4, h5, h6 {
   font-size: 0.875rem;
 }
 
+.guest-entry-page {
+  min-height: 100vh;
+  display: flex;
+  background: linear-gradient(135deg, hsl(var(--bg-body)) 0%, hsl(var(--border-color)) 100%);
+}
+
+.guest-entry-page .login-main {
+  min-height: 100vh;
+}
+
+.guest-completion-page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  background: linear-gradient(135deg, hsl(var(--bg-body)) 0%, hsl(var(--border-color)) 100%);
+}
+
 /* Player Styles */
 .player-container {
   display: flex;
