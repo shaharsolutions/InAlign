@@ -69,6 +69,7 @@ export default async function renderPlayer(container) {
     const syncProgressDebounced = (function() {
       let timeout = null;
       let pendingUpdates = null;
+      let inFlightSync = null;
       
       return async (label = "periodic", immediate = false) => {
         if (window._lmsActiveCourseId !== runtime.courseId) return;
@@ -99,21 +100,34 @@ export default async function renderPlayer(container) {
         };
 
         const performSync = async () => {
-          if (!pendingUpdates || window._lmsActiveCourseId !== runtime.courseId) return;
-          const currentUpdates = { ...pendingUpdates };
-          pendingUpdates = null;
-          runtime.lastSync = Date.now();
-          scormDebug(`[InAlign] Syncing (${label}): Loc="${currentUpdates.lesson_location}", Progress=${currentUpdates.progress}%`);
-          try {
-            await saveLearnerProgress(runtime.courseId, currentUpdates);
-          } catch (e) {
-            console.error(`[InAlign] Sync error:`, e.message);
+          if (inFlightSync) {
+            await inFlightSync;
+            if (!pendingUpdates) return;
+          }
+
+          while (pendingUpdates && window._lmsActiveCourseId === runtime.courseId) {
+            const currentUpdates = { ...pendingUpdates };
+            pendingUpdates = null;
+            runtime.lastSync = Date.now();
+            scormDebug(`[InAlign] Syncing (${label}): Loc="${currentUpdates.lesson_location}", Progress=${currentUpdates.progress}%`);
+
+            inFlightSync = saveLearnerProgress(runtime.courseId, currentUpdates)
+              .catch(e => {
+                console.error(`[InAlign] Sync error:`, e.message);
+              })
+              .finally(() => {
+                inFlightSync = null;
+              });
+            await inFlightSync;
           }
         };
 
         if (timeout) clearTimeout(timeout);
-        if (immediate || label === "commit" || label === "scorm_finish") {
+        if (immediate || label === "scorm_finish") {
           await performSync();
+        } else if (label === "commit") {
+          const syncDelay = now - runtime.lastSync < 8000 ? 1000 : 0;
+          timeout = setTimeout(performSync, syncDelay);
         } else {
           timeout = setTimeout(performSync, 5000); // 5s debounce for regular updates
         }

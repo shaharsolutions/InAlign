@@ -1,4 +1,4 @@
-const SW_VERSION = 'scorm-proxy-v11';
+const SW_VERSION = 'scorm-proxy-v12';
 const CACHE_PREFIX = 'inalign-scorm-assets';
 let cacheName = `${CACHE_PREFIX}-session-${SW_VERSION}`;
 const SCORM_ASSET_URL = 'https://kvlwkmappgpamigxoiwc.functions.supabase.co/scorm-asset';
@@ -113,18 +113,21 @@ self.addEventListener('message', event => {
     }
 });
 
-async function fetchScormAsset(proxyPath) {
+async function fetchScormAsset(proxyPath, rangeHeader = '') {
     const token = await loadStoredAuthToken();
     if (!token) {
         return Promise.resolve(new Response('Missing SCORM authorization token', { status: 401 }));
     }
 
+    const headers = {
+        'Authorization': `Bearer ${token}`,
+        'x-scorm-path': proxyPath
+    };
+    if (rangeHeader) headers.Range = rangeHeader;
+
     const targetUrl = `${SCORM_ASSET_URL}?path=${encodeURIComponent(proxyPath)}`;
     return fetch(targetUrl, {
-        headers: {
-            'Authorization': `Bearer ${token}`,
-            'x-scorm-path': proxyPath
-        },
+        headers,
         credentials: 'omit',
         cache: 'no-store'
     });
@@ -140,8 +143,45 @@ function cacheKeyFor(url, proxyPath = '') {
 
 function shouldCacheAsset(proxyPath, response) {
     if (!response || !response.ok) return false;
+    if (response.status === 206) return false;
     const ext = proxyPath.split('?')[0].split('.').pop().toLowerCase();
     return ['html', 'htm', 'js', 'css', 'json', 'xml', 'png', 'jpg', 'jpeg', 'gif', 'svg', 'webp', 'mp4', 'mp3', 'wav', 'woff', 'woff2', 'ttf', 'otf'].includes(ext);
+}
+
+function parseRangeHeader(rangeHeader, size) {
+    const match = /^bytes=(\d*)-(\d*)$/.exec(rangeHeader || '');
+    if (!match || !Number.isFinite(size) || size <= 0) return null;
+
+    let start = match[1] ? Number.parseInt(match[1], 10) : 0;
+    let end = match[2] ? Number.parseInt(match[2], 10) : size - 1;
+
+    if (!match[1] && match[2]) {
+        const suffixLength = Number.parseInt(match[2], 10);
+        start = Math.max(size - suffixLength, 0);
+        end = size - 1;
+    }
+
+    if (!Number.isFinite(start) || !Number.isFinite(end) || start > end || start >= size) return null;
+    return { start, end: Math.min(end, size - 1) };
+}
+
+async function partialResponseFromCache(cachedResponse, rangeHeader) {
+    if (!rangeHeader || !cachedResponse || !cachedResponse.ok || cachedResponse.status === 206) return null;
+
+    const buffer = await cachedResponse.clone().arrayBuffer();
+    const range = parseRangeHeader(rangeHeader, buffer.byteLength);
+    if (!range) return null;
+
+    const headers = new Headers(cachedResponse.headers);
+    headers.set('Accept-Ranges', 'bytes');
+    headers.set('Content-Length', String(range.end - range.start + 1));
+    headers.set('Content-Range', `bytes ${range.start}-${range.end}/${buffer.byteLength}`);
+
+    return new Response(buffer.slice(range.start, range.end + 1), {
+        status: 206,
+        statusText: 'Partial Content',
+        headers
+    });
 }
 
 function getCourseRoot(proxyPath) {
@@ -241,18 +281,22 @@ async function normalizeAssetResponse(response, proxyPath) {
     });
 }
 
-async function respondWithCached(url, proxyPath, authReady, normalizeResponse) {
+async function respondWithCached(request, url, proxyPath, authReady, normalizeResponse) {
     await authReady;
     await loadStoredAuthToken();
 
     const cache = await caches.open(cacheName);
     const key = cacheKeyFor(url, proxyPath);
     const cachedResponse = await cache.match(key);
-    if (cachedResponse) return cachedResponse;
+    const rangeHeader = request.headers.get('Range') || '';
+    if (cachedResponse) {
+        const partial = await partialResponseFromCache(cachedResponse, rangeHeader);
+        return partial || cachedResponse;
+    }
 
-    const requestKey = key.url;
+    const requestKey = rangeHeader ? `${key.url}::${rangeHeader}` : key.url;
     if (!inFlightRequests.has(requestKey)) {
-        const requestPromise = fetchScormAsset(proxyPath)
+        const requestPromise = fetchScormAsset(proxyPath, rangeHeader)
             .then(response => normalizeResponse(response, proxyPath))
             .then(async response => {
                 if (shouldCacheAsset(proxyPath, response)) {
@@ -268,12 +312,12 @@ async function respondWithCached(url, proxyPath, authReady, normalizeResponse) {
     return response.clone();
 }
 
-function respondWithCachedAsset(url, proxyPath, authReady) {
-    return respondWithCached(url, proxyPath, authReady, normalizeAssetResponse);
+function respondWithCachedAsset(request, url, proxyPath, authReady) {
+    return respondWithCached(request, url, proxyPath, authReady, normalizeAssetResponse);
 }
 
-function respondWithCachedHtml(url, proxyPath, authReady) {
-    return respondWithCached(url, proxyPath, authReady, normalizeHtmlResponse);
+function respondWithCachedHtml(request, url, proxyPath, authReady) {
+    return respondWithCached(request, url, proxyPath, authReady, normalizeHtmlResponse);
 }
 
 self.addEventListener('fetch', event => {
@@ -284,7 +328,7 @@ self.addEventListener('fetch', event => {
         const absoluteScormPath = resolveAbsoluteScormPath(event.clientId, url.pathname);
         if (!absoluteScormPath) return;
         event.respondWith(
-            respondWithCachedAsset(url, absoluteScormPath, Promise.resolve()).catch(error => {
+            respondWithCachedAsset(event.request, url, absoluteScormPath, Promise.resolve()).catch(error => {
                 console.error('[SW] Absolute SCORM asset fetch failed:', absoluteScormPath, error);
                 return new Response('SCORM asset not found', { status: 502 });
             })
@@ -304,7 +348,7 @@ self.addEventListener('fetch', event => {
     if (isHtml) {
         // HTML files: proxy through an authenticated Edge Function so private SCORM packages are not public.
         event.respondWith(
-            respondWithCachedHtml(url, proxyPath, authReady).then(response => {
+            respondWithCachedHtml(event.request, url, proxyPath, authReady).then(response => {
                 rememberCourseRoot(event.clientId, proxyPath);
                 return response;
             }).catch(async () => {
@@ -314,7 +358,7 @@ self.addEventListener('fetch', event => {
     } else {
         // Static assets: cache per authenticated user so repeat launches do not re-fetch every SCORM asset.
         event.respondWith(
-            respondWithCachedAsset(url, proxyPath, authReady).catch(error => {
+            respondWithCachedAsset(event.request, url, proxyPath, authReady).catch(error => {
                 console.error('[SW] SCORM proxy fetch failed:', proxyPath, error);
                 return new Response('SCORM asset not found', { status: 502 });
             })

@@ -1,7 +1,7 @@
 import { supabase } from '../lib/supabase.js'
 import { getCurrentUserSync } from './authApi.js'
 import { isAdminRole, isManagementRole, isSuperAdminRole } from '../lib/roles.js'
-import JSZip from 'https://esm.sh/jszip'
+import JSZip from 'jszip'
 
 let MOCK_COURSES = [
   { id: 'c1', title: 'הדרכת אבטחת מידע בארגון - Q1', desc: 'לומדת חובה לכלל עובדי החברה', category: 'אבטחת מידע', status: 'completed', score: 100, progress: 100, image: 'bx-shield-quarter', created_at: '01/01/2026', published: true, org_id: 'org-2' },

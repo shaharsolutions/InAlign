@@ -335,8 +335,8 @@ AS $$
   LIMIT 1;
 $$;
 
-CREATE OR REPLACE FUNCTION public.register_course_guest(
-  course_id uuid,
+CREATE OR REPLACE FUNCTION public.register_course_guest_impl(
+  p_course_id uuid,
   access_token uuid,
   guest_full_name text,
   guest_phone text
@@ -376,7 +376,7 @@ BEGIN
   SELECT *
   INTO target_course
   FROM public.courses
-  WHERE id = course_id
+  WHERE id = p_course_id
     AND guest_access_token = access_token
     AND guest_access_enabled = true
     AND published = true;
@@ -406,6 +406,20 @@ BEGIN
 
   RETURN target_course.id;
 END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.register_course_guest(
+  course_id uuid,
+  access_token uuid,
+  guest_full_name text,
+  guest_phone text
+)
+RETURNS uuid
+LANGUAGE sql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT public.register_course_guest_impl($1, $2, $3, $4);
 $$;
 
 ALTER TABLE public.organizations ENABLE ROW LEVEL SECURITY;
@@ -772,6 +786,7 @@ USING (
 );
 
 REVOKE ALL ON FUNCTION public.get_guest_course(uuid) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.register_course_guest_impl(uuid, uuid, text, text) FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.register_course_guest(uuid, uuid, text, text) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.get_guest_course(uuid) TO anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.register_course_guest(uuid, uuid, text, text) TO authenticated;

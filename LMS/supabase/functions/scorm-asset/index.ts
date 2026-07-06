@@ -2,8 +2,9 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2"
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-scorm-path',
-  'Access-Control-Allow-Methods': 'GET, OPTIONS',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-scorm-path, range',
+  'Access-Control-Allow-Methods': 'GET, HEAD, OPTIONS',
+  'Access-Control-Expose-Headers': 'Content-Length, Content-Range, Accept-Ranges, ETag',
 }
 
 const SUPER_ADMIN_ROLE = 'super_admin'
@@ -50,6 +51,27 @@ function getContentType(path: string) {
     otf: 'font/otf',
   }
   return map[ext || ''] || 'application/octet-stream'
+}
+
+function responseHeaders(path: string, sourceHeaders?: Headers) {
+  const headers = new Headers(corsHeaders)
+  headers.set('Content-Type', sourceHeaders?.get('Content-Type') || getContentType(path))
+  headers.set('Cache-Control', 'private, max-age=86400, stale-while-revalidate=604800')
+
+  const contentLength = sourceHeaders?.get('Content-Length')
+  const contentRange = sourceHeaders?.get('Content-Range')
+  const acceptRanges = sourceHeaders?.get('Accept-Ranges')
+  const etag = sourceHeaders?.get('ETag')
+  const lastModified = sourceHeaders?.get('Last-Modified')
+
+  if (contentLength) headers.set('Content-Length', contentLength)
+  if (contentRange) headers.set('Content-Range', contentRange)
+  if (acceptRanges) headers.set('Accept-Ranges', acceptRanges)
+  else headers.set('Accept-Ranges', 'bytes')
+  if (etag) headers.set('ETag', etag)
+  if (lastModified) headers.set('Last-Modified', lastModified)
+
+  return headers
 }
 
 async function getCallerProfile(req: Request, supabaseAdmin: ReturnType<typeof createClient>): Promise<CallerProfile> {
@@ -177,15 +199,25 @@ Deno.serve(async (req) => {
     const profile = await getCallerProfile(req, supabaseAdmin)
     await assertCanAccessPath(path, profile, supabaseAdmin)
 
-    const { data, error } = await supabaseAdmin.storage.from(BUCKET).download(path)
-    if (error || !data) throw new Error('SCORM asset not found')
+    const { data: signedData, error: signedError } = await supabaseAdmin.storage
+      .from(BUCKET)
+      .createSignedUrl(path, 60)
+    if (signedError || !signedData?.signedUrl) throw new Error('SCORM asset not found')
 
-    return new Response(data, {
-      headers: {
-        ...corsHeaders,
-        'Content-Type': getContentType(path),
-        'Cache-Control': 'private, max-age=300',
-      },
+    const upstreamHeaders = new Headers()
+    const range = req.headers.get('Range')
+    if (range) upstreamHeaders.set('Range', range)
+
+    const upstream = await fetch(signedData.signedUrl, {
+      method: req.method === 'HEAD' ? 'HEAD' : 'GET',
+      headers: upstreamHeaders,
+    })
+    if (!upstream.ok && upstream.status !== 206) throw new Error('SCORM asset not found')
+
+    return new Response(req.method === 'HEAD' ? null : upstream.body, {
+      status: upstream.status,
+      statusText: upstream.statusText,
+      headers: responseHeaders(path, upstream.headers),
     })
   } catch (error: any) {
     const status = /Unauthorized|not assigned|not published|authorization|Invalid/.test(error.message || '') ? 403 : 404
