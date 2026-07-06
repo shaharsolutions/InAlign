@@ -110,6 +110,70 @@ export default async function renderSuperAdminSettings(container) {
                </tbody>
             </table>
           </div>
+
+          <!-- Guides Section -->
+          <div class="card" style="grid-column: 1 / -1; margin-top: 1.5rem;">
+            <h3 class="mb-2"><i class='bx bx-book-bookmark'></i> מדריכי שימוש והדרכה</h3>
+            <p class="text-muted mb-4">גישה מהירה למדריכים הרשמיים של המערכת ללומדים ומנהלים.</p>
+            
+            <div class="grid grid-cols-3" style="gap: var(--gap-standard);">
+              <!-- Card 1: Interactive User Guide -->
+              <div style="background: hsl(var(--bg-surface-hover)/0.4); border: 1px solid hsl(var(--border-color)); border-radius: var(--radius-md); padding: 1.25rem; display: flex; flex-direction: column; justify-content: space-between; transition: all 0.2s ease;" class="hover-card">
+                <div>
+                  <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 0.75rem;">
+                    <div style="width: 40px; height: 40px; background: hsl(var(--color-primary)/0.1); color: hsl(var(--color-primary)); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.5rem;">
+                      <i class='bx bx-help-circle'></i>
+                    </div>
+                    <h4 style="margin: 0; font-size: 1.1rem;">מדריך שימוש אינטראקטיבי</h4>
+                  </div>
+                  <p class="text-xs text-muted" style="margin: 0; line-height: 1.4;">מדריך מעשי ומלא להפעלת מערכת ה-LMS, הקמת ארגונים וטעינת לומדות. מיועד למנהלים ראשיים ומנהלי מערכת.</p>
+                </div>
+                <a href="user_guide.html" target="_blank" class="btn btn-outline text-sm w-full justify-center mt-4">
+                  <i class='bx bx-link-external'></i> פתח מדריך
+                </a>
+              </div>
+
+              <!-- Card 2: Training Managers Guide -->
+              <div style="background: hsl(var(--bg-surface-hover)/0.4); border: 1px solid hsl(var(--border-color)); border-radius: var(--radius-md); padding: 1.25rem; display: flex; flex-direction: column; justify-content: space-between; transition: all 0.2s ease;" class="hover-card">
+                <div>
+                  <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 0.75rem;">
+                    <div style="width: 40px; height: 40px; background: hsl(var(--color-warning)/0.1); color: hsl(var(--color-warning)); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.5rem;">
+                      <i class='bx bx-user-voice'></i>
+                    </div>
+                    <h4 style="margin: 0; font-size: 1.1rem;">מדריך למנהלי הדרכה</h4>
+                  </div>
+                  <p class="text-xs text-muted" style="margin: 0; line-height: 1.4;">מדריך ממוקד לניהול סביבת ההדרכה הארגונית: יצירת משתמשים וקבוצות, שיוך לומדות והפקת דוחות למידה.</p>
+                </div>
+                <a href="user_guide_training_managers.html" target="_blank" class="btn btn-outline text-sm w-full justify-center mt-4">
+                  <i class='bx bx-link-external'></i> פתח מדריך
+                </a>
+              </div>
+
+              <!-- Card 3: Learners Guide -->
+              <div style="background: hsl(var(--bg-surface-hover)/0.4); border: 1px solid hsl(var(--border-color)); border-radius: var(--radius-md); padding: 1.25rem; display: flex; flex-direction: column; justify-content: space-between; transition: all 0.2s ease;" class="hover-card">
+                <div>
+                  <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 0.75rem;">
+                    <div style="width: 40px; height: 40px; background: hsl(var(--color-success)/0.1); color: hsl(var(--color-success)); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.5rem;">
+                      <i class='bx bx-book-reader'></i>
+                    </div>
+                    <h4 style="margin: 0; font-size: 1.1rem;">מדריך שימוש ללומדים</h4>
+                  </div>
+                  <p class="text-xs text-muted" style="margin: 0; line-height: 1.4;">מדריך מעשי ופשוט ללומדים במערכת: כניסה ראשונית, צפייה בלומדות שהוקצו, מעקב אחר התקדמות ופתרון תקלות.</p>
+                </div>
+                <a href="user_guide_learners.html" target="_blank" class="btn btn-outline text-sm w-full justify-center mt-4">
+                  <i class='bx bx-link-external'></i> פתח מדריך
+                </a>
+              </div>
+            </div>
+          </div>
+
+          <style>
+            .hover-card:hover {
+              transform: translateY(-4px);
+              box-shadow: var(--shadow-md);
+              border-color: hsl(var(--color-primary)/0.4) !important;
+            }
+          </style>
        </div>
     </div>
   `
