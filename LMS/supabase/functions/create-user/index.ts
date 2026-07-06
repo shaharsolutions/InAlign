@@ -20,7 +20,7 @@ async function getCallerProfile(req: Request, supabaseAdmin: ReturnType<typeof c
 
   const { data: profile, error: profileError } = await supabaseAdmin
     .from('profiles')
-    .select('id, role, org_id')
+    .select('id, full_name, role, org_id')
     .eq('id', authData.user.id)
     .single()
 
@@ -157,6 +157,23 @@ Deno.serve(async (req) => {
             }, { onConflict: 'group_id, user_id' });
           }
         }
+
+        await supabaseAdmin.from('activity_logs').insert({
+          actor_id: callerData.id,
+          actor_name: callerData.full_name,
+          actor_role: callerData.role,
+          org_id: uOrgId,
+          action: 'create',
+          entity_type: 'profiles',
+          entity_id: authData.user.id,
+          entity_label: uFullName,
+          details: {
+            source: 'edge_function:create-user',
+            email: uEmail,
+            role: uRole,
+            groupName: uGroupName || null
+          }
+        })
 
         results.push({ email: uEmail, status: 'success', userId: authData.user.id });
       } catch (err: any) {

@@ -19,7 +19,7 @@ async function getCallerProfile(req: Request, supabaseClient: ReturnType<typeof 
 
   const { data: profile, error: profileError } = await supabaseClient
     .from('profiles')
-    .select('id, role, org_id')
+    .select('id, full_name, role, org_id')
     .eq('id', authData.user.id)
     .single()
 
@@ -56,29 +56,44 @@ Deno.serve(async (req) => {
 
     for (const uid of usersToProcess) {
       try {
+        const { data: targetProfile } = await supabaseClient
+          .from('profiles')
+          .select('full_name, role, org_id')
+          .eq('id', uid)
+          .maybeSingle()
+
         // Admins can delete only users from their own organization.
         if (callerProfile.role !== SUPER_ADMIN_ROLE) {
-          const { data: targetUser, error: targetError } = await supabaseClient
-            .from('profiles')
-            .select('role, org_id')
-            .eq('id', uid)
-            .single()
-          
-          if (targetError || !targetUser) {
+          if (!targetProfile) {
             throw new Error(`Target user ${uid} not found.`)
           }
 
-          if (targetUser.org_id !== callerProfile.org_id) {
+          if (targetProfile.org_id !== callerProfile.org_id) {
             throw new Error(`Unauthorized: Cannot delete user ${uid} from different organization.`)
           }
 
-          if (targetUser.role === SUPER_ADMIN_ROLE || ADMIN_ROLES.includes(targetUser.role)) {
+          if (targetProfile.role === SUPER_ADMIN_ROLE || ADMIN_ROLES.includes(targetProfile.role)) {
             throw new Error(`Unauthorized: Only Super Admin can delete admin users.`)
           }
         }
 
         const { error: authError } = await supabaseClient.auth.admin.deleteUser(uid)
         if (authError) throw authError
+
+        await supabaseClient.from('activity_logs').insert({
+          actor_id: callerProfile.id,
+          actor_name: callerProfile.full_name,
+          actor_role: callerProfile.role,
+          org_id: targetProfile?.org_id || callerProfile.org_id,
+          action: 'delete',
+          entity_type: 'profiles',
+          entity_id: uid,
+          entity_label: targetProfile?.full_name || uid,
+          details: {
+            source: 'edge_function:delete-user',
+            targetRole: targetProfile?.role || null
+          }
+        })
         
         results.push({ userId: uid, status: 'success' });
       } catch (err: any) {

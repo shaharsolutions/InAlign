@@ -13,6 +13,7 @@ export function renderNavbar(user) {
     linksStr += `<a href="#/superadmin/orgs" class="nav-link"><i class='bx bx-building-house'></i> ניהול ארגונים</a>`
     linksStr += `<a href="#/admin/users" class="nav-link"><i class='bx bx-group'></i> ניהול עובדים</a>`
     linksStr += `<a href="#/superadmin/assignments" class="nav-link"><i class='bx bx-link'></i> הקצאת לומדות</a>`
+    linksStr += `<a href="#/superadmin/activity-log" class="nav-link"><i class='bx bx-history'></i> יומן פעולות</a>`
     linksStr += `<a href="#/admin/settings" class="nav-link"><i class='bx bx-cog'></i> הגדרות</a>`
   } else if (isAdminRole(user.role)) {
     linksStr += `<a href="#/admin" class="nav-link"><i class='bx bx-pie-chart-alt'></i> דשבורד מנהל</a>`

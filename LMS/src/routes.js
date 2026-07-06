@@ -9,6 +9,7 @@ import renderPlayer from './pages/player.js'
 import renderSuperAdminOrgs from './pages/superadmin-orgs.js'
 import renderSuperAdminSettings from './pages/superadmin-settings.js'
 import renderGuestEntry from './pages/guest-entry.js'
+import renderSuperAdminActivityLog from './pages/superadmin-activity-log.js'
 
 /**
  * Route Configuration
@@ -64,6 +65,12 @@ export const routes = [
   {
     path: '#/superadmin/assignments',
     component: renderAdminAssignments,
+    roles: ['super_admin'],
+    layout: 'default'
+  },
+  {
+    path: '#/superadmin/activity-log',
+    component: renderSuperAdminActivityLog,
     roles: ['super_admin'],
     layout: 'default'
   },

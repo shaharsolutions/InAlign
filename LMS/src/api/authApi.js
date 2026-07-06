@@ -112,6 +112,15 @@ export async function login(email, password) {
 
     if (!window.__APP_STATE) window.__APP_STATE = {};
     window.__APP_STATE.user = userProfile;
+    import('./activityLogApi.js')
+      .then(({ logActivity }) => logActivity('login', {
+        entityType: 'auth',
+        entityId: userProfile.id,
+        entityLabel: userProfile.fullName,
+        orgId: userProfile.orgId,
+        details: { email }
+      }))
+      .catch(() => {});
     
     return userProfile;
   } else {
@@ -133,6 +142,17 @@ export async function login(email, password) {
 }
 
 export async function logout() {
+  const activeUser = getCurrentUserSync();
+  if (activeUser && supabase) {
+    await import('./activityLogApi.js')
+      .then(({ logActivity }) => logActivity('logout', {
+        entityType: 'auth',
+        entityId: activeUser.id,
+        entityLabel: activeUser.fullName || activeUser.full_name,
+        orgId: activeUser.orgId || activeUser.org_id
+      }))
+      .catch(() => {});
+  }
   localStorage.removeItem('lms.impersonation');
   localStorage.removeItem('lms.guest.courseId');
   if (supabase) {
@@ -148,6 +168,15 @@ export async function logout() {
 
 export async function impersonateUser(targetUser) {
     console.log(`[InAlign] Starting impersonation of ${targetUser.full_name}`);
+    import('./activityLogApi.js')
+      .then(({ logActivity }) => logActivity('impersonate', {
+        entityType: 'profiles',
+        entityId: targetUser.id,
+        entityLabel: targetUser.full_name || targetUser.fullName,
+        orgId: targetUser.org_id || targetUser.orgId,
+        details: { targetRole: targetUser.role }
+      }))
+      .catch(() => {});
     
     // Store in localStorage for persistence
     localStorage.setItem('lms.impersonation', JSON.stringify(targetUser));
