@@ -94,7 +94,6 @@ export default async function renderSuperAdminOrgs(container) {
            </td>
            <td style="white-space: nowrap;">
               <div style="font-weight: 600; color: hsl(var(--text-main));">${o.name}</div>
-              <div class="text-xs text-muted font-mono" style="user-select: all; cursor: pointer; opacity: 0.7;" title="לחץ להעתקה" onclick="navigator.clipboard.writeText('${o.id}'); showToast('המזהה הועתק')">${o.id}</div>
            </td>
 
            <td>
