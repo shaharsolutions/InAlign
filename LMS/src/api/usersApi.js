@@ -1,6 +1,6 @@
 import { supabase } from '../lib/supabase.js'
 import { getCurrentUserSync } from './authApi.js'
-import { ROLE_LEARNER, ROLE_ORG_ADMIN, isAdminRole, isManagementRole, isSuperAdminRole } from '../lib/roles.js'
+import { ROLE_LEARNER, ROLE_ORG_ADMIN, isAdminRole, isManagementRole, isSuperAdminRole, isSystemAdminRole } from '../lib/roles.js'
 
 let MOCK_USERS = [
   { id: 'usr-2', full_name: 'דוד המנהל', role: ROLE_ORG_ADMIN, email: 'org@test.com', status: 'פעיל', org_id: 'org-2', created_at: '01/01/2026' },
@@ -29,6 +29,13 @@ function formatPhoneForDisplay(phone) {
   return phone;
 }
 
+function canCreateUserRole(currentRole, targetRole) {
+  const role = targetRole || ROLE_LEARNER;
+  if (isSuperAdminRole(currentRole)) return true;
+  if (isSystemAdminRole(currentRole)) return role === ROLE_LEARNER || role === ROLE_ORG_ADMIN;
+  return role === ROLE_LEARNER;
+}
+
 export async function fetchUsers() {
   const currentUser = getCurrentUserSync();
   console.log(`[LMS] fetchUsers - Current User:`, currentUser);
@@ -52,7 +59,10 @@ export async function fetchUsers() {
     }
     
     if (!isSuperAdminRole(currentUser.role)) {
-        query = query.not('role', 'in', '(super_admin,admin,org_admin)');
+        const hiddenRoles = isSystemAdminRole(currentUser.role)
+            ? '(super_admin,admin)'
+            : '(super_admin,admin,org_admin)';
+        query = query.not('role', 'in', hiddenRoles);
     } else {
         // Even for Super Admin, hide the main one
         query = query.neq('email', 'shaharsolutions@gmail.com');
@@ -221,6 +231,10 @@ export async function fetchUsers() {
 export async function bulkCreateUsers(usersData) {
   const currentUser = getCurrentUserSync();
   if (!currentUser || !isManagementRole(currentUser.role)) throw new Error("אין הרשאה");
+  const blockedUser = usersData.find(user => !canCreateUserRole(currentUser.role, user.role));
+  if (blockedUser) {
+    throw new Error("אין הרשאה ליצור משתמש בתפקיד שנבחר");
+  }
 
   if (supabase) {
     const { data, error } = await supabase.functions.invoke('create-user', {
@@ -266,8 +280,8 @@ export async function createUser(userData) {
 
   const currentUser = getCurrentUserSync();
   if (!currentUser || !isManagementRole(currentUser.role)) throw new Error("אין הרשאה");
-  if (!isSuperAdminRole(currentUser.role) && isAdminRole(userData.role)) {
-    throw new Error("רק Super Admin רשאי ליצור מנהלי מערכת");
+  if (!canCreateUserRole(currentUser.role, userData.role)) {
+    throw new Error("אין הרשאה ליצור משתמש בתפקיד שנבחר");
   }
 
   if (supabase) {

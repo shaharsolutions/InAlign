@@ -7,7 +7,7 @@ import { showConfirmModal, showToast, showBulkGroupModal, showBulkOrgModal, show
 import { fetchOrganizations } from '../api/orgApi.js'
 import { fetchCourses } from '../api/coursesApi.js'
 import { escapeAttr, escapeHtml } from '../lib/html.js'
-import { ROLE_ADMIN, ROLE_LEARNER, ROLE_ORG_ADMIN, isAdminRole, isSuperAdminRole, roleLabel } from '../lib/roles.js'
+import { ROLE_ADMIN, ROLE_LEARNER, ROLE_ORG_ADMIN, isAdminRole, isSuperAdminRole, isSystemAdminRole, roleLabel } from '../lib/roles.js'
 
 async function loadXlsx() {
   return await import('xlsx')
@@ -16,6 +16,7 @@ async function loadXlsx() {
 export default async function renderAdminUsers(container) {
   const currentUser = getCurrentUserSync();
   const isSuperAdmin = isSuperAdminRole(currentUser?.role);
+  const canCreateTrainingManagers = isSuperAdmin || isSystemAdminRole(currentUser?.role);
   let organizations = [];
   let allUsers = []; // Store all fetched users for filtering
 
@@ -129,8 +130,10 @@ export default async function renderAdminUsers(container) {
                <label class="form-label" for="user-role" style="font-size: 0.85rem; margin-bottom: 0.2rem;">תפקיד במערכת</label>
                <select class="form-control" id="user-role" style="height: 44px; padding-top: 0; padding-bottom: 0;">
                   <option value="${ROLE_LEARNER}">לומד</option>
-                  ${isSuperAdmin ? `
+                  ${canCreateTrainingManagers ? `
                     <option value="${ROLE_ORG_ADMIN}">מנהל הדרכה</option>
+                  ` : ''}
+                  ${isSuperAdmin ? `
                     <option value="${ROLE_ADMIN}">Admin</option>
                   ` : ''}
                </select>
@@ -871,7 +874,10 @@ export default async function renderAdminUsers(container) {
         templateDownloadUrl = null;
       }
 
-      const headers = [['שם מלא', 'אימייל', 'טלפון', 'סיסמה', isSuperAdmin ? 'תפקיד (learner/org_admin/admin)' : 'תפקיד (learner)', 'שיוך לקבוצה']];
+      const roleHeader = isSuperAdmin
+        ? 'תפקיד (learner/org_admin/admin)'
+        : (canCreateTrainingManagers ? 'תפקיד (learner/org_admin)' : 'תפקיד (learner)');
+      const headers = [['שם מלא', 'אימייל', 'טלפון', 'סיסמה', roleHeader, 'שיוך לקבוצה']];
       if (isSuperAdmin) {
         headers[0].push('מזהה ארגון (Org ID)');
       }

@@ -732,7 +732,10 @@ WITH CHECK (
   OR (
     public.current_profile_role() IN ('admin', 'org_admin')
     AND org_id = public.current_profile_org_id()
-    AND role = 'learner'
+    AND (
+      role = 'learner'
+      OR (public.current_profile_role() = 'admin' AND role = 'org_admin')
+    )
   )
 );
 

@@ -7,7 +7,10 @@ const corsHeaders = {
 }
 
 const SUPER_ADMIN_ROLE = 'super_admin'
-const ADMIN_ROLES = ['admin', 'org_admin']
+const SYSTEM_ADMIN_ROLE = 'admin'
+const ORG_ADMIN_ROLE = 'org_admin'
+const LEARNER_ROLE = 'learner'
+const ADMIN_ROLES = [SYSTEM_ADMIN_ROLE, ORG_ADMIN_ROLE]
 const PRIMARY_SUPER_ADMIN_EMAIL = (Deno.env.get('SUPER_ADMIN_EMAIL') || 'shaharsolutions@gmail.com').toLowerCase()
 
 async function getCallerProfile(req: Request, supabaseAdmin: ReturnType<typeof createClient>) {
@@ -30,6 +33,12 @@ async function getCallerProfile(req: Request, supabaseAdmin: ReturnType<typeof c
   }
 
   return profile
+}
+
+function canCreateRole(callerRole: string, targetRole: string) {
+  if (callerRole === SUPER_ADMIN_ROLE) return true
+  if (callerRole === SYSTEM_ADMIN_ROLE) return targetRole === LEARNER_ROLE || targetRole === ORG_ADMIN_ROLE
+  return targetRole === LEARNER_ROLE
 }
 
 Deno.serve(async (req) => {
@@ -66,7 +75,7 @@ Deno.serve(async (req) => {
       const uEmail = cleanEmail(user.email);
       const uFullName = user.fullName?.trim();
       const uPassword = user.password?.toString().trim() || '';
-      const uRole = user.role || 'learner';
+      const uRole = user.role || LEARNER_ROLE;
       const uOrgId = user.orgId || orgId;
       const uPhone = user.phone?.toString().trim() || null;
       const uGroupName = user.groupName?.trim();
@@ -85,10 +94,11 @@ Deno.serve(async (req) => {
           throw new Error('Only the primary owner email can be assigned as Super Admin');
         }
 
+        if (!canCreateRole(callerData.role, uRole)) {
+          throw new Error('Unauthorized: Cannot create users with the selected role');
+        }
+
         if (callerData.role !== SUPER_ADMIN_ROLE) {
-          if (uRole === SUPER_ADMIN_ROLE || ADMIN_ROLES.includes(uRole)) {
-            throw new Error('Only Super Admin can create admins');
-          }
           if (callerData.org_id !== uOrgId) {
             throw new Error('Unauthorized: Cannot create users in a different organization');
           }
