@@ -1,14 +1,6 @@
 import { fetchActivityLogs, getActionLabel } from '../api/activityLogApi.js'
+import { escapeHtml } from '../lib/html.js'
 import { roleLabel } from '../lib/roles.js'
-
-function escapeHtml(value) {
-  return String(value ?? '')
-    .replaceAll('&', '&amp;')
-    .replaceAll('<', '&lt;')
-    .replaceAll('>', '&gt;')
-    .replaceAll('"', '&quot;')
-    .replaceAll("'", '&#039;')
-}
 
 function formatDateTime(value) {
   if (!value) return '-'

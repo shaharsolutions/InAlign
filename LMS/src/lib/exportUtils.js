@@ -1,5 +1,3 @@
-// html2pdf is loaded globally via script tag in index.html to avoid ESM resolution errors
-
 export function exportToCSV(rows) {
   if (!rows || !rows.length) {
     return null;
@@ -43,11 +41,6 @@ export async function exportToPDF(elementId) {
     jsPDF:        { unit: 'mm', format: 'a4', orientation: 'landscape' }
   };
 
-  if (typeof window.html2pdf === 'function') {
-    // Return Blob directly to handle download manually
-    return await window.html2pdf().set(opt).from(clonedElement).output('blob');
-  } else {
-    throw new Error('ספריית יצירת ה-PDF לא נטענה מהשרת החיצוני (CDN).');
-  }
+  const { default: html2pdf } = await import('html2pdf.js');
+  return await html2pdf().set(opt).from(clonedElement).output('blob');
 }
-

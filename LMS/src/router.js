@@ -1,6 +1,7 @@
 import { getCurrentUserSync as getUser } from './auth.js'
 import { renderNavbar } from './components/navbar.js'
 import { getRoute } from './routes.js'
+import { escapeHtml } from './lib/html.js'
 import { isAdminRole, isSuperAdminRole } from './lib/roles.js'
 
 export function initRouter(container) {
@@ -67,6 +68,6 @@ async function navigate(container) {
     await route.component(pageContainer)
   } catch (err) {
     console.error(`Error rendering route ${hash}:`, err)
-    pageContainer.innerHTML = `<div class="p-8 text-center text-danger"><h3>שגיאה בטעינת העמוד</h3><p>${err.message}</p></div>`
+    pageContainer.innerHTML = `<div class="p-8 text-center text-danger"><h3>שגיאה בטעינת העמוד</h3><p>${escapeHtml(err.message)}</p></div>`
   }
 }

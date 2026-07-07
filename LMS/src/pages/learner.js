@@ -1,6 +1,7 @@
 import { getCurrentUserSync } from '../api/authApi.js'
 import { fetchLearnerAssignments } from '../api/progressApi.js'
 import { fetchOrganizationById } from '../api/orgApi.js'
+import { clampPercent, escapeAttr, escapeHtml } from '../lib/html.js'
 
 export default async function renderLearnerDashboard(container) {
   const user = getCurrentUserSync()
@@ -59,7 +60,7 @@ export default async function renderLearnerDashboard(container) {
            <div class="card mb-6 slide-up" style="background: linear-gradient(135deg, hsl(var(--color-primary)/0.08) 0%, transparent 100%); border-right: 5px solid hsl(var(--color-primary)); padding: 1.25rem 2rem;">
               <div class="flex gap-4 items-center">
                  <div style="font-size: 1.5rem; color: hsl(var(--color-primary)); flex-shrink: 0;"><i class='bx bxs-megaphone'></i></div>
-                 <p style="margin:0; font-weight: 500; font-size: 1.1rem; line-height: 1.4; white-space: pre-wrap; display: -webkit-box; -webkit-line-clamp: 5; -webkit-box-orient: vertical; overflow: hidden;">${org.welcome_message}</p>
+                 <p style="margin:0; font-weight: 500; font-size: 1.1rem; line-height: 1.4; white-space: pre-wrap; display: -webkit-box; -webkit-line-clamp: 5; -webkit-box-orient: vertical; overflow: hidden;">${escapeHtml(org.welcome_message)}</p>
               </div>
            </div>
         `;
@@ -81,14 +82,20 @@ export default async function renderLearnerDashboard(container) {
       if (course.status === 'completed') { hebrewStatus = 'הושלם'; done++; statusColorMsg = 'color: hsl(var(--color-success));' }
       else if (course.status === 'in_progress') { hebrewStatus = 'בתהליך'; inProg++; }
       else { pending++; }
+      const progress = clampPercent(course.progress);
+      const courseId = encodeURIComponent(course.id);
+      const safeTitle = escapeHtml(course.title);
+      const safeTitleAttr = escapeAttr(course.title);
+      const safeDescription = escapeHtml(course.desc || 'קורס העשרה לעובדים');
+      const safeImage = /^[a-z0-9-]+$/i.test(course.image || '') ? course.image : 'bx-book-open';
       const progressHtml = course.progressKnown ? `
           <div class="progress-section mb-3">
             <div class="flex justify-between text-sm mb-1">
               <span style="font-weight: 500; ${statusColorMsg}">${hebrewStatus}</span>
-              <span>${course.progress}%</span>
+              <span>${progress}%</span>
             </div>
             <div class="progress-bar-bg">
-              <div class="progress-bar-fill ${course.progress === 100 ? 'bg-success' : ''}" style="width: ${course.progress}%; ${course.progress === 100 ? 'background: hsl(var(--color-success));' : ''}"></div>
+              <div class="progress-bar-fill ${progress === 100 ? 'bg-success' : ''}" style="width: ${progress}%; ${progress === 100 ? 'background: hsl(var(--color-success));' : ''}"></div>
             </div>
           </div>
       ` : `
@@ -101,11 +108,11 @@ export default async function renderLearnerDashboard(container) {
         <div class="card course-card">
           <div class="flex items-center gap-3 mb-3">
             <div class="icon-box" style="font-size: 2.5rem; color: hsl(var(--color-primary)); background: hsl(var(--color-primary)/0.1); padding: 1rem; border-radius: 50%;">
-              <i class='bx ${course.image}'></i>
+              <i class='bx ${safeImage}'></i>
             </div>
             <div>
-              <h3 style="margin: 0; font-size: ${course.title.length > 20 ? '0.95rem' : '1.1rem'}; line-height: 1.2; font-weight: 700;" title="${course.title}">${course.title}</h3>
-              <p class="text-sm text-muted" style="max-height: 2.8em; overflow: hidden;">${course.desc || 'קורס העשרה לעובדים'}</p>
+              <h3 style="margin: 0; font-size: ${course.title.length > 20 ? '0.95rem' : '1.1rem'}; line-height: 1.2; font-weight: 700;" title="${safeTitleAttr}">${safeTitle}</h3>
+              <p class="text-sm text-muted" style="max-height: 2.8em; overflow: hidden;">${safeDescription}</p>
             </div>
           </div>
           
@@ -115,10 +122,10 @@ export default async function renderLearnerDashboard(container) {
             <span>ציון סופי: <strong style="color: ${course.score >= 80 ? 'hsl(var(--color-success))' : 'hsl(var(--color-danger))'};">${course.score || '-'}</strong></span>
           </div>
           
-          <button class="btn btn-primary w-full justify-center" onclick="window.location.hash = '#/player?id=${course.id}'">
+          <button class="btn btn-primary w-full justify-center" onclick="window.location.hash = '#/player?id=${courseId}'">
             ${course.status === 'completed' ? 'סקור מחדש' : course.status === 'in_progress' ? 'המשך למידה' : 'התחל עכשיו'}
           </button>
-          <div id="msg-${course.id}" class="text-sm mt-2 font-medium" style="color: hsl(var(--color-primary)); text-align: center; min-height: 1.5rem;"></div>
+          <div id="msg-${escapeAttr(course.id)}" class="text-sm mt-2 font-medium" style="color: hsl(var(--color-primary)); text-align: center; min-height: 1.5rem;"></div>
         </div>
       `;
     }).join('');
@@ -130,6 +137,6 @@ export default async function renderLearnerDashboard(container) {
     document.getElementById('stat-done').textContent = done;
     
   } catch (err) {
-    coursesContainer.innerHTML = `<div class="card" style="grid-column: 1 / -1; text-align: center; color: hsl(var(--color-danger));">שגיאה בטעינת הקורסים: ${err.message}</div>`;
+    coursesContainer.innerHTML = `<div class="card" style="grid-column: 1 / -1; text-align: center; color: hsl(var(--color-danger));">שגיאה בטעינת הקורסים: ${escapeHtml(err.message)}</div>`;
   }
 }

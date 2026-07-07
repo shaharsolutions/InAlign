@@ -6,8 +6,12 @@ import { getCurrentUserSync } from '../api/authApi.js'
 import { showConfirmModal, showToast, showBulkGroupModal, showBulkOrgModal, showBulkRoleModal, showCustomModal } from '../lib/ui.js'
 import { fetchOrganizations } from '../api/orgApi.js'
 import { fetchCourses } from '../api/coursesApi.js'
+import { escapeAttr, escapeHtml } from '../lib/html.js'
 import { ROLE_ADMIN, ROLE_LEARNER, ROLE_ORG_ADMIN, isAdminRole, isSuperAdminRole, roleLabel } from '../lib/roles.js'
-import * as XLSX from 'https://cdn.jsdelivr.net/npm/xlsx@0.18.5/+esm'
+
+async function loadXlsx() {
+  return await import('xlsx')
+}
 
 export default async function renderAdminUsers(container) {
   const currentUser = getCurrentUserSync();
@@ -116,7 +120,7 @@ export default async function renderAdminUsers(container) {
                <label class="form-label" for="user-org" style="font-size: 0.85rem; margin-bottom: 0.2rem;">שיוך לארגון</label>
                <select class="form-control" id="user-org" style="height: 44px; padding-top: 0; padding-bottom: 0;">
                   <option value="">-- בחר ארגון --</option>
-                  ${organizations.map(o => `<option value="${o.id}">${o.name}</option>`).join('')}
+                  ${organizations.map(o => `<option value="${escapeAttr(o.id)}">${escapeHtml(o.name)}</option>`).join('')}
                </select>
             </div>
             ` : ''}
@@ -184,7 +188,7 @@ export default async function renderAdminUsers(container) {
               <select id="filter-org" class="form-control" 
                 style="height: 46px !important; padding: 0 1rem !important; line-height: 46px !important; border: 1px solid hsl(var(--border-color)) !important; box-sizing: border-box !important; appearance: auto;">
                 <option value="">כל הארגונים</option>
-                ${organizations.map(o => `<option value="${o.id}">${o.name}</option>`).join('')}
+                ${organizations.map(o => `<option value="${escapeAttr(o.id)}">${escapeHtml(o.name)}</option>`).join('')}
               </select>
             </div>
             ` : ''}
@@ -288,42 +292,54 @@ export default async function renderAdminUsers(container) {
 
     const html = filteredUsers.map(u => {
       try {
+        const safeId = escapeAttr(u.id);
+        const safeName = escapeHtml(u.full_name);
+        const safeNameAttr = escapeAttr(u.full_name);
+        const safePhone = escapeHtml(u.phone || 'אין טלפון');
+        const safePhoneAttr = escapeAttr(u.phone || '');
+        const safeEmail = escapeHtml(u.email || '-');
+        const safeEmailAttr = escapeAttr(u.email || '');
+        const safeRole = escapeAttr(u.role);
+        const safeOrgId = escapeAttr(u.org_id || '');
+        const safeOrgName = escapeHtml(u.org_name || '-');
+        const safeStatus = escapeHtml(u.status || 'פעיל');
+        const safeCourses = escapeAttr(JSON.stringify(u.assigned_courses || []));
         return `
-          <tr data-user-id="${u.id}">
-             <td><input type="checkbox" class="user-checkbox" data-id="${u.id}" data-name="${u.full_name}" ${selectedUserIds.has(u.id) ? 'checked' : ''}></td>
+          <tr data-user-id="${safeId}">
+             <td><input type="checkbox" class="user-checkbox" data-id="${safeId}" data-name="${safeNameAttr}" ${selectedUserIds.has(u.id) ? 'checked' : ''}></td>
              <td class="nowrap">
-                <div style="font-weight: 500;">${u.full_name}</div>
+                <div style="font-weight: 500;">${safeName}</div>
                 <div class="user-groups-list flex gap-1 mt-1 flex-wrap">
                   ${u.groups?.length > 0 
-                    ? u.groups.map(g => `<span class="badge" style="font-size: 0.65rem; background: hsla(var(--color-primary), 0.1); color: hsl(var(--color-primary)); border: 1px solid hsla(var(--color-primary), 0.2);">${g.name}</span>`).join('') 
+                    ? u.groups.map(g => `<span class="badge" style="font-size: 0.65rem; background: hsla(var(--color-primary), 0.1); color: hsl(var(--color-primary)); border: 1px solid hsla(var(--color-primary), 0.2);">${escapeHtml(g.name)}</span>`).join('')
                     : '<span class="badge" style="font-size: 0.65rem; background: hsla(var(--color-warning), 0.1); color: hsl(var(--color-warning)); border: 1px solid hsla(var(--color-warning), 0.2);">לא משויך לקבוצה</span>'}
                 </div>
                 </div>
              </td>
              <td class="nowrap">
-                ${u.email || '-'} <br>
+                ${safeEmail} <br>
                 <span class="text-xs text-muted nowrap">
-                  ${u.phone || 'אין טלפון'} • 
+                  ${safePhone} •
                   ${roleLabel(u.role)}
                 </span>
              </td>
-             ${isSuperAdmin ? `<td class="nowrap"><span class="text-sm">${u.org_name || '-'}</span></td>` : ''}
-             <td><span class="badge ${u.status === 'פעיל' ? 'badge-success' : 'badge-warning'}">${u.status || 'פעיל'}</span></td>
+             ${isSuperAdmin ? `<td class="nowrap"><span class="text-sm">${safeOrgName}</span></td>` : ''}
+             <td><span class="badge ${u.status === 'פעיל' ? 'badge-success' : 'badge-warning'}">${safeStatus}</span></td>
              <td>${u.created_at ? new Date(u.created_at).toLocaleDateString('he-IL') : '-'}</td>
              <td>
                <div class="flex gap-2">
                  <button class="btn btn-outline text-sm edit-btn" 
-                   data-id="${u.id}" 
-                   data-name="${u.full_name}" 
-                   data-phone="${u.phone || ''}" 
-                   data-email="${u.email || ''}" 
-                   data-role="${u.role}" 
-                   data-org="${u.org_id || ''}"
+                   data-id="${safeId}"
+                   data-name="${safeNameAttr}"
+                   data-phone="${safePhoneAttr}"
+                   data-email="${safeEmailAttr}"
+                   data-role="${safeRole}"
+                   data-org="${safeOrgId}"
                    title="עריכת משתמש"><i class='bx bx-edit'></i></button>
-                 <button class="btn btn-outline text-sm view-courses-btn" data-id="${u.id}" data-name="${u.full_name}" data-courses='${JSON.stringify(u.assigned_courses || []).replace(/'/g, "&apos;")}' title="צפייה בלומדות משויכות"><i class='bx bx-book-open'></i></button>
-                 ${u.id !== currentUser.id ? `<button class="btn btn-outline text-sm impersonate-btn" data-id="${u.id}" data-name="${u.full_name}" title="התחזות למשתמש"><i class='bx bx-glasses' style="color: hsl(var(--color-primary)); font-weight: bold;"></i></button>` : ''}
-                 <button class="btn btn-outline text-sm reset-user-btn" data-id="${u.id}" data-name="${u.full_name}" title="איפוס נתוני למידה"><i class='bx bx-refresh' style="color: hsl(var(--color-warning));"></i></button>
-                 ${u.id !== currentUser.id ? `<button class="btn btn-outline text-sm delete-btn" data-id="${u.id}" data-name="${u.full_name}" title="מחיקת חשבון"><i class='bx bx-trash' style="color: hsl(var(--color-danger));"></i></button>` : ''}
+                 <button class="btn btn-outline text-sm view-courses-btn" data-id="${safeId}" data-name="${safeNameAttr}" data-courses="${safeCourses}" title="צפייה בלומדות משויכות"><i class='bx bx-book-open'></i></button>
+                 ${u.id !== currentUser.id ? `<button class="btn btn-outline text-sm impersonate-btn" data-id="${safeId}" data-name="${safeNameAttr}" title="התחזות למשתמש"><i class='bx bx-glasses' style="color: hsl(var(--color-primary)); font-weight: bold;"></i></button>` : ''}
+                 <button class="btn btn-outline text-sm reset-user-btn" data-id="${safeId}" data-name="${safeNameAttr}" title="איפוס נתוני למידה"><i class='bx bx-refresh' style="color: hsl(var(--color-warning));"></i></button>
+                 ${u.id !== currentUser.id ? `<button class="btn btn-outline text-sm delete-btn" data-id="${safeId}" data-name="${safeNameAttr}" title="מחיקת חשבון"><i class='bx bx-trash' style="color: hsl(var(--color-danger));"></i></button>` : ''}
                </div>
              </td>
           </tr>
@@ -380,7 +396,7 @@ export default async function renderAdminUsers(container) {
         
         await showConfirmModal({
           title: 'מחיקת משתמש',
-          message: `האם אתה בטוח שברצונך למחוק את <strong>${name}</strong>? פעולה זו תסיר את הגישה שלו לצמיתות.`,
+          message: `האם אתה בטוח שברצונך למחוק את <strong>${escapeHtml(name)}</strong>? פעולה זו תסיר את הגישה שלו לצמיתות.`,
           confirmText: 'מחק חשבון',
           onConfirm: async () => {
               await deleteUser(id);
@@ -399,7 +415,7 @@ export default async function renderAdminUsers(container) {
         
         await showConfirmModal({
           title: 'אישור איפוס נתונים',
-          message: `האם אתה בטוח שברצונך לאפס את כל נתוני הלמידה עבור <strong>${name}</strong>? פעולה זו תמחוק את כל ציוני הלומדות שלו לצמיתות.`,
+          message: `האם אתה בטוח שברצונך לאפס את כל נתוני הלמידה עבור <strong>${escapeHtml(name)}</strong>? פעולה זו תמחוק את כל ציוני הלומדות שלו לצמיתות.`,
           confirmText: 'אפס נתונים',
           onConfirm: async () => {
               await resetUserProgress(id);
@@ -428,7 +444,7 @@ export default async function renderAdminUsers(container) {
         }
 
         showCustomModal({
-            title: `לומדות משויכות - ${name}`,
+            title: `לומדות משויכות - ${escapeHtml(name)}`,
             content: `
                 <div class="mb-4">
                     <p class="text-xs text-muted mb-4 font-medium">רשימת כל הלומדות המשויכות לעובד זה (באמצעות שיוך לקבוצה, שיוך ארגוני או שיוך ישיר):</p>
@@ -441,15 +457,15 @@ export default async function renderAdminUsers(container) {
                                           <i class='bx bx-book' style="font-size: 1.25rem;"></i>
                                       </div>
                                       <div style="display: flex; flex-direction: column;">
-                                        <span style="font-weight: 600;">${c.title}</span>
-                                        <span class="text-xs text-muted" style="margin-top: 2px;">מקור: ${c.source || 'שיוך ישיר'}</span>
+                                        <span style="font-weight: 600;">${escapeHtml(c.title)}</span>
+                                        <span class="text-xs text-muted" style="margin-top: 2px;">מקור: ${escapeHtml(c.source || 'שיוך ישיר')}</span>
                                       </div>
                                     </div>
                                     ${canManage ? `
                                         <button class="btn btn-outline p-1 remove-course-btn" 
                                           style="border: none; color: hsl(var(--color-danger));" 
-                                          data-course-id="${c.id}" 
-                                          data-course-title="${c.title}" 
+                                          data-course-id="${escapeAttr(c.id)}"
+                                          data-course-title="${escapeAttr(c.title)}"
                                           title="הסר שיוך לומדה">
                                           <i class='bx bx-trash' style="font-size: 1.15rem;"></i>
                                         </button>
@@ -472,8 +488,8 @@ export default async function renderAdminUsers(container) {
                       <select class="form-control" id="modal-direct-assign-select" style="height: 48px; flex: 1;">
                         <option value="">-- בחר לומדה לשיוך --</option>
                         ${availableCourses.map(c => `
-                          <option value="${c.id}" ${courses.some(ac => ac.id === c.id) ? 'disabled' : ''}>
-                            ${c.title} ${courses.some(ac => ac.id === c.id) ? '(כבר משויך)' : ''}
+                          <option value="${escapeAttr(c.id)}" ${courses.some(ac => ac.id === c.id) ? 'disabled' : ''}>
+                            ${escapeHtml(c.title)} ${courses.some(ac => ac.id === c.id) ? '(כבר משויך)' : ''}
                           </option>
                         `).join('')}
                       </select>
@@ -523,7 +539,7 @@ export default async function renderAdminUsers(container) {
 
               await showConfirmModal({
                 title: 'הסרת שיוך לומדה',
-                message: `האם אתה בטוח שברצונך להסיר את השיוך של הלומדה <strong>${courseTitle}</strong> מהעובד <strong>${name}</strong>? פעולה זו תמחק גם את נתוני ההתקדמות שלו בלומדה זו לצמיתות.`,
+                message: `האם אתה בטוח שברצונך להסיר את השיוך של הלומדה <strong>${escapeHtml(courseTitle)}</strong> מהעובד <strong>${escapeHtml(name)}</strong>? פעולה זו תמחק גם את נתוני ההתקדמות שלו בלומדה זו לצמיתות.`,
                 confirmText: 'הסר שיוך',
                 onConfirm: async () => {
                   try {
@@ -558,7 +574,7 @@ export default async function renderAdminUsers(container) {
         
         await showConfirmModal({
             title: 'אישור התחזות המערכת',
-            message: `האם אתה בטוח שברצונך להתחזות למשתמש <strong>${name}</strong>? תוכל לראות את המערכת בדיוק כפי שהמשתמש רואה אותה.<br><br><strong>שימו לב:</strong> נתוני הלמידה וההתקדמות שתבצעו כעת יישמרו בשם המשתמש המתחזה.`,
+            message: `האם אתה בטוח שברצונך להתחזות למשתמש <strong>${escapeHtml(name)}</strong>? תוכל לראות את המערכת בדיוק כפי שהמשתמש רואה אותה.<br><br><strong>שימו לב:</strong> נתוני הלמידה וההתקדמות שתבצעו כעת יישמרו בשם המשתמש המתחזה.`,
             confirmText: 'התחל התחזות',
             type: 'info',
             onConfirm: async () => {
@@ -847,39 +863,45 @@ export default async function renderAdminUsers(container) {
   const bulkMsg = container.querySelector('#bulk-msg');
   let templateDownloadUrl = null;
 
-  container.querySelector('#download-template-btn').addEventListener('click', () => {
-    if (templateDownloadUrl) {
-      URL.revokeObjectURL(templateDownloadUrl);
-      templateDownloadUrl = null;
-    }
+  container.querySelector('#download-template-btn').addEventListener('click', async () => {
+    try {
+      const XLSX = await loadXlsx();
+      if (templateDownloadUrl) {
+        URL.revokeObjectURL(templateDownloadUrl);
+        templateDownloadUrl = null;
+      }
 
-    const headers = [['שם מלא', 'אימייל', 'טלפון', 'סיסמה', isSuperAdmin ? 'תפקיד (learner/org_admin/admin)' : 'תפקיד (learner)', 'שיוך לקבוצה']];
-    if (isSuperAdmin) {
-      headers[0].push('מזהה ארגון (Org ID)');
-    }
-    
-    const worksheet = XLSX.utils.aoa_to_sheet(headers);
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, 'תבנית עובדים');
-    const workbookBytes = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
-    const blob = new Blob([workbookBytes], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-    templateDownloadUrl = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = templateDownloadUrl;
-    link.download = 'lms_users_template.xlsx';
-    link.style.display = 'none';
-    document.body.appendChild(link);
-    link.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, view: window }));
-    setTimeout(() => link.remove(), 0);
+      const headers = [['שם מלא', 'אימייל', 'טלפון', 'סיסמה', isSuperAdmin ? 'תפקיד (learner/org_admin/admin)' : 'תפקיד (learner)', 'שיוך לקבוצה']];
+      if (isSuperAdmin) {
+        headers[0].push('מזהה ארגון (Org ID)');
+      }
 
-    bulkMsg.style.color = 'hsl(var(--color-success))';
-    bulkMsg.innerHTML = `
-      התבנית מוכנה.
-      <a href="${templateDownloadUrl}" download="lms_users_template.xlsx" style="color: hsl(var(--color-primary)); font-weight: 800; text-decoration: underline;">
-        לחץ כאן אם ההורדה לא התחילה
-      </a>
-    `;
-    showToast('התבנית מוכנה להורדה');
+      const worksheet = XLSX.utils.aoa_to_sheet(headers);
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, 'תבנית עובדים');
+      const workbookBytes = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
+      const blob = new Blob([workbookBytes], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+      templateDownloadUrl = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = templateDownloadUrl;
+      link.download = 'lms_users_template.xlsx';
+      link.style.display = 'none';
+      document.body.appendChild(link);
+      link.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, view: window }));
+      setTimeout(() => link.remove(), 0);
+
+      bulkMsg.style.color = 'hsl(var(--color-success))';
+      bulkMsg.innerHTML = `
+        התבנית מוכנה.
+        <a href="${templateDownloadUrl}" download="lms_users_template.xlsx" style="color: hsl(var(--color-primary)); font-weight: 800; text-decoration: underline;">
+          לחץ כאן אם ההורדה לא התחילה
+        </a>
+      `;
+      showToast('התבנית מוכנה להורדה');
+    } catch {
+      bulkMsg.style.color = 'hsl(var(--color-danger))';
+      bulkMsg.textContent = 'שגיאה בטעינת רכיב Excel';
+    }
   });
 
   container.querySelector('#upload-bulk-btn').addEventListener('click', () => {
@@ -896,6 +918,7 @@ export default async function renderAdminUsers(container) {
     const reader = new FileReader();
     reader.onload = async (evt) => {
       try {
+        const XLSX = await loadXlsx();
         const bstr = evt.target.result;
         const wb = XLSX.read(bstr, { type: 'binary' });
         const wsname = wb.SheetNames[0];

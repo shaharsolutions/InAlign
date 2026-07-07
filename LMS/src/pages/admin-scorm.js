@@ -1,5 +1,6 @@
 import { uploadCourse, deleteCourse, fetchCourses, updateCourseGuestAccess } from '../api/coursesApi.js'
 import { fetchCategories } from '../api/categoriesApi.js'
+import { escapeAttr, escapeHtml } from '../lib/html.js'
 import { showConfirmModal, showToast } from '../lib/ui.js'
 
 export default async function renderAdminScorm(container) {
@@ -88,7 +89,7 @@ export default async function renderAdminScorm(container) {
       });
 
       if (uniqueCategories.length > 0) {
-        categorySelect.innerHTML = uniqueCategories.map(c => `<option value="${c.name}">${c.name}</option>`).join('')
+        categorySelect.innerHTML = uniqueCategories.map(c => `<option value="${escapeAttr(c.name)}">${escapeHtml(c.name)}</option>`).join('')
       } else {
         categorySelect.innerHTML = `<option value="כללי">כללי</option>`
       }
@@ -108,17 +109,17 @@ export default async function renderAdminScorm(container) {
 
       tableBody.innerHTML = courses.map(c => `
         <tr>
-           <td><div style="font-weight: 500;">${c.title}</div></td>
-           <td><span class="badge badge-primary">${c.category || 'כללי'}</span></td>
+           <td><div style="font-weight: 500;">${escapeHtml(c.title)}</div></td>
+           <td><span class="badge badge-primary">${escapeHtml(c.category || 'כללי')}</span></td>
            <td><span class="badge ${c.published ? 'badge-success' : 'badge-warning'}">${c.published ? 'מפורסם' : 'טיוטה'}</span></td>
            <td>
              <div class="flex items-center gap-2">
-               <button class="btn btn-outline text-sm guest-toggle-btn" data-id="${c.id}" data-enabled="${c.guest_access_enabled === true}">
+               <button class="btn btn-outline text-sm guest-toggle-btn" data-id="${escapeAttr(c.id)}" data-enabled="${c.guest_access_enabled === true}">
                  <i class='bx ${c.guest_access_enabled ? 'bx-user-check' : 'bx-user-x'}'></i>
                  ${c.guest_access_enabled ? 'פעיל' : 'כבוי'}
                </button>
                ${c.guest_access_enabled && c.guest_access_token ? `
-                 <button class="btn btn-outline text-sm copy-guest-link-btn" data-token="${c.guest_access_token}" title="העתק קישור כניסה לאורחים">
+                 <button class="btn btn-outline text-sm copy-guest-link-btn" data-token="${escapeAttr(c.guest_access_token)}" title="העתק קישור כניסה לאורחים">
                    <i class='bx bx-copy'></i>
                  </button>
                ` : ''}
@@ -127,12 +128,18 @@ export default async function renderAdminScorm(container) {
            <td>${new Date(c.created_at).toLocaleDateString('he-IL')}</td>
            <td>
              <div class="flex gap-2">
-               <button class="btn btn-outline text-sm" onclick="window.location.hash = '#/player?id=${c.id}'" title="תצוגה מקדימה"><i class='bx bx-play'></i></button>
-               <button class="btn btn-outline text-sm delete-btn" data-id="${c.id}" data-title="${c.title}" title="מחק"><i class='bx bx-trash' style="color: hsl(var(--color-danger));"></i></button>
+               <button class="btn btn-outline text-sm preview-btn" data-id="${escapeAttr(c.id)}" title="תצוגה מקדימה"><i class='bx bx-play'></i></button>
+               <button class="btn btn-outline text-sm delete-btn" data-id="${escapeAttr(c.id)}" data-title="${escapeAttr(c.title)}" title="מחק"><i class='bx bx-trash' style="color: hsl(var(--color-danger));"></i></button>
              </div>
            </td>
         </tr>
       `).join('')
+
+      container.querySelectorAll('.preview-btn').forEach(btn => {
+        btn.addEventListener('click', (event) => {
+          window.location.hash = `#/player?id=${encodeURIComponent(event.currentTarget.dataset.id)}`
+        })
+      })
 
       container.querySelectorAll('.delete-btn').forEach(btn => {
         btn.addEventListener('click', async (e) => {
@@ -141,7 +148,7 @@ export default async function renderAdminScorm(container) {
           
           await showConfirmModal({
             title: 'מחיקת לומדה',
-            message: `האם אתה בטוח שברצונך למחוק את הלומדה <strong>${title}</strong>? כל נתוני ההתקדמות של המשתמשים יימחקו לצמיתות.`,
+            message: `האם אתה בטוח שברצונך למחוק את הלומדה <strong>${escapeHtml(title)}</strong>? כל נתוני ההתקדמות של המשתמשים יימחקו לצמיתות.`,
             confirmText: 'מחק לצמיתות',
             onConfirm: async () => {
                 await deleteCourse(id);

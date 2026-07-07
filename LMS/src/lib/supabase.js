@@ -1,4 +1,4 @@
-import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm'
+import { createClient } from '@supabase/supabase-js'
 
 // Safety check for environments without Vite (like VS Code Live Server / GitHub Pages)
 const env = import.meta.env || {}

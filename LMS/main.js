@@ -1,5 +1,6 @@
 import { initRouter } from './src/router.js'
 import { checkAuth, onAuthStatusChange } from './src/auth.js'
+import { escapeHtml } from './src/lib/html.js'
 import { applyOrganizationStyles, showAlert, showConfirmModal, showPrompt } from './src/lib/ui.js'
 import { roleLabel } from './src/lib/roles.js'
 
@@ -30,7 +31,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         `;
         banner.innerHTML = `
             <i class='bx bxs-user-voice' style="font-size: 1.25rem;"></i>
-            <span>מצב התחזות: הנך צופה במערכת כ-<strong>${user.fullName || user.full_name}</strong> (${roleLabel(user.role)})</span>
+            <span>מצב התחזות: הנך צופה במערכת כ-<strong>${escapeHtml(user.fullName || user.full_name)}</strong> (${roleLabel(user.role)})</span>
             <button class="btn btn-primary btn-sm" id="stop-impersonation-btn" style="padding: 4px 12px; font-size: 0.85rem; height: auto;">הפסק התחזות וחזור לחשבון שלי</button>
         `;
         document.body.prepend(banner);
@@ -52,7 +53,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     
   } catch (err) {
     console.error("Initialization Failed", err)
-    appContainer.innerHTML = `<div class="container mt-4 text-center"><h2>שגיאה בטעינת המערכת</h2><p>${err.message}</p></div>`
+    appContainer.innerHTML = `<div class="container mt-4 text-center"><h2>שגיאה בטעינת המערכת</h2><p>${escapeHtml(err.message)}</p></div>`
   }
 })
 

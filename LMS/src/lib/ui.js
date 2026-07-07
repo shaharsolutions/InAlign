@@ -1,4 +1,5 @@
 import { ROLE_ADMIN, ROLE_LEARNER, ROLE_ORG_ADMIN } from './roles.js'
+import { escapeHtml } from './html.js'
 
 /**
  * Shared UI Components and Helpers
@@ -222,7 +223,7 @@ export function showToast(message, type = 'success') {
     `;
     
     const icon = type === 'success' ? 'bx-check-circle' : type === 'warning' ? 'bx-error' : 'bx-x-circle';
-    toast.innerHTML = `<i class='bx ${icon}' style='font-size: 1.25rem'></i> <span>${message}</span>`;
+    toast.innerHTML = `<i class='bx ${icon}' style='font-size: 1.25rem'></i> <span>${escapeHtml(message)}</span>`;
     
     document.body.appendChild(toast);
     setTimeout(() => {

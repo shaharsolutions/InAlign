@@ -2,6 +2,7 @@ import { fetchOrgProgress, adminUpdateLearnerProgress, resetUserProgress } from 
 import { exportToCSV, exportToPDF } from '../lib/exportUtils.js'
 import { fetchOrganizations, fetchOrganizationById } from '../api/orgApi.js'
 import { getCurrentUserSync } from '../api/authApi.js'
+import { clampPercent, escapeAttr, escapeHtml } from '../lib/html.js'
 import { showToast, showEditProgressModal } from '../lib/ui.js'
 
 export default async function renderAdminDashboard(container) {
@@ -42,7 +43,7 @@ export default async function renderAdminDashboard(container) {
             <div style="font-weight: 600;">סינון לפי ארגון:</div>
             <select id="org-filter" class="form-control" style="max-width: 300px; margin: 0;">
                 <option value="">-- כל הארגונים --</option>
-                ${organizations.map(o => `<option value="${o.id}">${o.name}</option>`).join('')}
+                ${organizations.map(o => `<option value="${escapeAttr(o.id)}">${escapeHtml(o.name)}</option>`).join('')}
             </select>
             <div class="text-sm text-muted">כמנהל על, באפשרותך לצפות בנתוני הלמידה מכלל הסביבות במערכת.</div>
         </div>
@@ -113,35 +114,37 @@ export default async function renderAdminDashboard(container) {
         return;
       }
       
-      tbody.innerHTML = currentRecords.map((r, idx) => `
+      tbody.innerHTML = currentRecords.map((r, idx) => {
+        const progress = clampPercent(r.progress);
+        return `
         <tr>
           <td>
-            ${r.user_name || 'משתמש לא ידוע'}
+            ${escapeHtml(r.user_name || 'משתמש לא ידוע')}
             ${r.is_guest ? `<span class="badge badge-primary" style="margin-right:.4rem">אורח</span>` : ''}
           </td>
-          <td dir="ltr">${r.user_phone || '-'}</td>
-          <td style="font-weight: 500;">${r.course_title || 'קורס שנמחק'}</td>
+          <td dir="ltr">${escapeHtml(r.user_phone || '-')}</td>
+          <td style="font-weight: 500;">${escapeHtml(r.course_title || 'קורס שנמחק')}</td>
           <td>
             <span class="badge ${r.status === 'הושלם' ? 'badge-success' : r.status === 'בתהליך' ? 'badge-primary' : 'badge-warning'}">
-              ${r.status}
+              ${escapeHtml(r.status)}
             </span>
           </td>
           <td>
             ${r.progressKnown ? `<div class="flex items-center gap-2">
               <div class="progress-bar-bg" style="width: 60px; margin: 0; height: 8px;">
-                <div class="progress-bar-fill" style="width: ${r.progress}%; ${r.status === 'הושלם' ? 'background: hsl(var(--color-success));' : ''}"></div>
+                <div class="progress-bar-fill" style="width: ${progress}%; ${r.status === 'הושלם' ? 'background: hsl(var(--color-success));' : ''}"></div>
               </div>
-              <span class="text-sm text-muted">${r.progress}%</span>
+              <span class="text-sm text-muted">${progress}%</span>
             </div>` : `<span class="text-sm text-muted">לא דווח</span>`}
           </td>
-          <td>${r.score}</td>
-          <td>${r.time}</td>
-          <td>${r.date}</td>
+          <td>${escapeHtml(r.score)}</td>
+          <td>${escapeHtml(r.time)}</td>
+          <td>${escapeHtml(r.date)}</td>
           <td>
             <button class="btn btn-outline text-sm edit-reg-btn" data-index="${idx}" title="עריכת רישום"><i class='bx bx-edit-alt'></i></button>
           </td>
         </tr>
-      `).join('');
+      `}).join('');
 
       // Calculate simple stats
       const total = currentRecords.length;
@@ -172,7 +175,7 @@ export default async function renderAdminDashboard(container) {
       });
 
     } catch (err) {
-      tbody.innerHTML = `<tr><td colspan="9" style="text-align: center; color: hsl(var(--color-danger));">שגיאה: ${err.message}</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="9" style="text-align: center; color: hsl(var(--color-danger));">שגיאה: ${escapeHtml(err.message)}</td></tr>`;
     }
   }
 
@@ -197,7 +200,7 @@ export default async function renderAdminDashboard(container) {
             <div class="card mb-6 slide-up" style="background: linear-gradient(135deg, hsl(var(--color-primary)/0.08) 0%, transparent 100%); border-right: 5px solid hsl(var(--color-primary)); padding: 1.25rem 2rem;">
                <div class="flex gap-4 items-center">
                   <div style="font-size: 1.5rem; color: hsl(var(--color-primary)); flex-shrink: 0;"><i class='bx bxs-megaphone'></i></div>
-                  <p style="margin:0; font-weight: 500; font-size: 1.1rem; line-height: 1.4; white-space: pre-wrap; display: -webkit-box; -webkit-line-clamp: 5; -webkit-box-orient: vertical; overflow: hidden;">${org.welcome_message}</p>
+                  <p style="margin:0; font-weight: 500; font-size: 1.1rem; line-height: 1.4; white-space: pre-wrap; display: -webkit-box; -webkit-line-clamp: 5; -webkit-box-orient: vertical; overflow: hidden;">${escapeHtml(org.welcome_message)}</p>
                </div>
             </div>
           `;
