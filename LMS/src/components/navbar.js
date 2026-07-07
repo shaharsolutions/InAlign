@@ -45,9 +45,9 @@ export function renderNavbar(user) {
       <div class="navbar-nav" id="navbar-nav">
         ${linksStr}
         <div class="user-menu flex items-center gap-2">
-          ${user.originalRole === 'super_admin' ? `<button id="exit-impersonation-btn" class="btn btn-warning text-sm" style="background: hsl(var(--color-warning)); color: black;" title="חזור לניהול הראשי"><i class='bx bx-exit'></i> חזור לניהול הראשי</button>` : ''}
-          <div class="text-sm text-muted" style="line-height: 1.2;">
-            שלום, ${user.fullName || user.full_name}<br>
+          ${user.originalRole === 'super_admin' ? `<button id="exit-impersonation-btn" class="btn btn-warning text-sm navbar-exit-btn" style="background: hsl(var(--color-warning)); color: black;" title="חזור לניהול הראשי"><i class='bx bx-exit'></i> חזור לניהול הראשי</button>` : ''}
+          <div class="text-sm text-muted navbar-user-label">
+            שלום, ${user.fullName || user.full_name}
             <strong style="color: hsl(var(--color-primary))">(${user.orgName || 'מנהל ראשי'})</strong>
           </div>
           <button id="logout-btn" class="btn btn-outline text-sm" title="התנתק"><i class='bx bx-log-out'></i></button>

@@ -293,6 +293,21 @@ h1, h2, h3, h4, h5, h6 {
   min-width: 0;
 }
 
+.navbar-user-label {
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.navbar-exit-btn {
+  min-height: 2.25rem;
+  padding: 0.45rem 0.8rem;
+  white-space: nowrap;
+}
+
+.navbar-exit-btn i {
+  font-size: 1.15rem;
+}
+
 .nav-link {
   display: flex;
   align-items: center;
