@@ -97,9 +97,9 @@ export async function logActivity(action, metadata = {}) {
 
   try {
     const { error } = await supabase.rpc('log_activity', payload)
-    if (error) console.warn('[InAlign] Failed to write activity log:', error.message)
+    if (error) console.warn('[Align] Failed to write activity log:', error.message)
   } catch (error) {
-    console.warn('[InAlign] Failed to write activity log:', error)
+    console.warn('[Align] Failed to write activity log:', error)
   }
 
   return null

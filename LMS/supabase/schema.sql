@@ -1,4 +1,4 @@
--- InAlign LMS Supabase schema
+-- Align LMS Supabase schema
 -- Run in Supabase SQL Editor for a fresh project.
 --
 -- This creates the database objects used by the current app:
@@ -1049,7 +1049,7 @@ COMMIT;
 -- 2. Replace the placeholders below and run:
 --
 -- INSERT INTO public.organizations (id, name)
--- VALUES ('00000000-0000-0000-0000-000000000001', 'InAlign')
+-- VALUES ('00000000-0000-0000-0000-000000000001', 'Align')
 -- ON CONFLICT (id) DO NOTHING;
 --
 -- INSERT INTO public.profiles (id, org_id, email, full_name, role)

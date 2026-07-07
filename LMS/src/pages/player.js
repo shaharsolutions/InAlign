@@ -64,7 +64,7 @@ export default async function renderPlayer(container) {
       isExiting: false
     };
 
-    scormDebug(`[InAlign] Initial State for ${courseId}: Status=${runtime.status}, Location="${runtime.location}", Progress=${runtime.progress}%`);
+    scormDebug(`[Align] Initial State for ${courseId}: Status=${runtime.status}, Location="${runtime.location}", Progress=${runtime.progress}%`);
 
     const syncProgressDebounced = (function() {
       let timeout = null;
@@ -109,11 +109,11 @@ export default async function renderPlayer(container) {
             const currentUpdates = { ...pendingUpdates };
             pendingUpdates = null;
             runtime.lastSync = Date.now();
-            scormDebug(`[InAlign] Syncing (${label}): Loc="${currentUpdates.lesson_location}", Progress=${currentUpdates.progress}%`);
+            scormDebug(`[Align] Syncing (${label}): Loc="${currentUpdates.lesson_location}", Progress=${currentUpdates.progress}%`);
 
             inFlightSync = saveLearnerProgress(runtime.courseId, currentUpdates)
               .catch(e => {
-                console.error(`[InAlign] Sync error:`, e.message);
+                console.error(`[Align] Sync error:`, e.message);
               })
               .finally(() => {
                 inFlightSync = null;
@@ -153,7 +153,7 @@ export default async function renderPlayer(container) {
       try {
         await syncProgressDebounced(label, true);
       } catch (e) {
-        console.error("[InAlign] Exit sync failed:", e);
+        console.error("[Align] Exit sync failed:", e);
       } finally {
         if (user?.isGuest) {
           container.innerHTML = `
@@ -174,7 +174,7 @@ export default async function renderPlayer(container) {
     const API = {
       _initialized: false,
       Initialize: (n) => { 
-          scormDebug("[InAlign] SCORM Initialize called");
+          scormDebug("[Align] SCORM Initialize called");
           API._initialized = true; 
           runtime.scormInitialized = true;
           window.dispatchEvent(new CustomEvent('lms:scorm-ready', { detail: { courseId: runtime.courseId } }));
@@ -197,7 +197,7 @@ export default async function renderPlayer(container) {
         else if (key.includes('entry')) val = (runtime.baseTimeSeconds > 5 || runtime.location) ? "resume" : "ab-initio";
         else if (key.includes('total_time')) val = formatScorm12Time(runtime.baseTimeSeconds);
         
-        scormDebug(`[InAlign] GetValue(${n}) -> "${val}"`);
+        scormDebug(`[Align] GetValue(${n}) -> "${val}"`);
         return val;
       },
       LMSGetValue: (n) => API.GetValue(n),
@@ -206,7 +206,7 @@ export default async function renderPlayer(container) {
         const key = n.toLowerCase();
         let changed = false;
 
-        scormDebug(`[InAlign] SetValue(${n}, "${v}")`);
+        scormDebug(`[Align] SetValue(${n}, "${v}")`);
 
         if (key.includes('lesson_status') || key.includes('completion_status')) {
             const status = (v === 'passed' || v === 'completed') ? 'completed' : 'in_progress';
@@ -243,14 +243,14 @@ export default async function renderPlayer(container) {
       LMSSetValue: (n, v) => API.SetValue(n, v),
       
       Commit: () => { 
-          scormDebug("[InAlign] SCORM Commit called");
+          scormDebug("[Align] SCORM Commit called");
           syncProgressDebounced("commit").catch(() => {}); 
           return "true"; 
       },
       LMSCommit: () => API.Commit(),
       
       Finish: () => { 
-          scormDebug("[InAlign] SCORM Finish called - exiting");
+          scormDebug("[Align] SCORM Finish called - exiting");
           handleExit("scorm_finish");
           return "true"; 
       },
@@ -374,7 +374,7 @@ export default async function renderPlayer(container) {
           }
         }
       } catch (err) {
-        console.error('[InAlign] SW registration failed:', err);
+        console.error('[Align] SW registration failed:', err);
       }
     }
 
@@ -386,7 +386,7 @@ export default async function renderPlayer(container) {
           proxyUrl += `${proxyUrl.includes('?') ? '&' : '?'}lms_token=${encodeURIComponent(session.access_token)}`;
         }
       } catch (err) {
-        console.error('[InAlign] Failed to attach SCORM session token:', err);
+        console.error('[Align] Failed to attach SCORM session token:', err);
       }
     }
     if (window.navigator.serviceWorker) {

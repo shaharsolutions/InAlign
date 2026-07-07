@@ -290,11 +290,11 @@ export default async function renderSuperAdminSettings(container) {
       const loader = container.querySelector('#branding-loader');
       const form = container.querySelector('#branding-form');
       if (!loader || !form) {
-        console.warn("[InAlign] Branding loader or form elements not found in DOM.");
+        console.warn("[Align] Branding loader or form elements not found in DOM.");
         return;
       }
 
-      console.log(`[InAlign] loadBranding() starting for orgId: ${orgId}`);
+      console.log(`[Align] loadBranding() starting for orgId: ${orgId}`);
       try {
         const [org, courses] = await Promise.all([
           fetchOrganizationById(orgId).catch(err => {
@@ -307,7 +307,7 @@ export default async function renderSuperAdminSettings(container) {
           })
         ]);
 
-        console.log("[InAlign] loadBranding data fetched successfully", { org: !!org, coursesCount: courses?.length });
+        console.log("[Align] loadBranding data fetched successfully", { org: !!org, coursesCount: courses?.length });
 
         if (org) {
           nameInput.value = org.name || '';
@@ -336,11 +336,11 @@ export default async function renderSuperAdminSettings(container) {
 
           form.classList.remove('hidden');
         } else {
-          console.warn("[InAlign] Organization data not found for ID:", orgId);
+          console.warn("[Align] Organization data not found for ID:", orgId);
           showToast('נתוני הארגון לא נמצאו', 'warning');
         }
       } catch (err) {
-        console.error("[InAlign] loadBranding encountered an error:", err);
+        console.error("[Align] loadBranding encountered an error:", err);
         showToast('טעינת הגדרות מיתוג נכשלה: ' + err.message, 'error');
       } finally {
         if (loader) loader.classList.add('hidden');

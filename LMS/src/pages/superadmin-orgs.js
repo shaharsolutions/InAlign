@@ -54,7 +54,7 @@ export default async function renderSuperAdminOrgs(container) {
 
        <!-- Orgs Table Section -->
        <div class="card table-wrapper" style="grid-column: 1 / -1;">
-         <h3 class="mb-3">רשימת הארגונים ב-InAlign</h3>
+         <h3 class="mb-3">רשימת הארגונים ב-Align</h3>
          <table class="table" id="orgs-table">
             <thead>
                <tr>

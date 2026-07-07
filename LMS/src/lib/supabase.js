@@ -48,7 +48,7 @@ export async function startSupabaseAutoRefresh() {
     return true
   } catch (error) {
     lastAutoRefreshFailureAt = Date.now()
-    console.warn('[InAlign] Supabase auto refresh is paused until connectivity returns.', error)
+    console.warn('[Align] Supabase auto refresh is paused until connectivity returns.', error)
     return false
   }
 }
@@ -62,7 +62,7 @@ export async function stopSupabaseAutoRefresh() {
 if (typeof window !== 'undefined') {
   window.addEventListener('offline', () => {
     stopSupabaseAutoRefresh().catch((error) => {
-      console.warn('[InAlign] Failed to pause Supabase auto refresh.', error)
+      console.warn('[Align] Failed to pause Supabase auto refresh.', error)
     })
   })
 

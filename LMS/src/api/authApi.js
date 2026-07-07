@@ -29,12 +29,12 @@ export async function checkAuth() {
 
     if (error) {
       if (isSupabaseNetworkError(error)) {
-        console.warn('[InAlign] Supabase session refresh failed because the network is unavailable.', error);
+        console.warn('[Align] Supabase session refresh failed because the network is unavailable.', error);
         await stopSupabaseAutoRefresh();
         return null;
       }
 
-      console.warn('[InAlign] Supabase session is invalid. Signing out.', error);
+      console.warn('[Align] Supabase session is invalid. Signing out.', error);
       await supabase.auth.signOut();
       return null;
     }
@@ -167,7 +167,7 @@ export async function logout() {
 }
 
 export async function impersonateUser(targetUser) {
-    console.log(`[InAlign] Starting impersonation of ${targetUser.full_name}`);
+    console.log(`[Align] Starting impersonation of ${targetUser.full_name}`);
     import('./activityLogApi.js')
       .then(({ logActivity }) => logActivity('impersonate', {
         entityType: 'profiles',
@@ -196,7 +196,7 @@ export async function impersonateUser(targetUser) {
 }
 
 export async function stopImpersonating() {
-    console.log(`[InAlign] Stopping impersonation`);
+    console.log(`[Align] Stopping impersonation`);
     localStorage.removeItem('lms.impersonation');
     window.location.reload();
 }
@@ -217,7 +217,7 @@ async function fetchUserProfile(userId) {
   let profile = profiles && profiles.length > 0 ? profiles[0] : null;
   
   if (!profile) {
-    console.error(`[InAlign] No profile found for user ${userId}. Deleting session...`);
+    console.error(`[Align] No profile found for user ${userId}. Deleting session...`);
     // Optionally log out if no profile exists to keep things clean
     await supabase.auth.signOut();
     throw new Error('לא נמצא פרופיל משתמש במערכת. פנה למנהל המערכת.');
@@ -273,15 +273,15 @@ export function getCurrentUserSync() {
 export function onAuthStatusChange(callback) {
   if (supabase) {
     return supabase.auth.onAuthStateChange((event, session) => {
-      console.log(`[InAlign] Auth event: ${event}`);
+      console.log(`[Align] Auth event: ${event}`);
       
       if (event === 'SIGNED_OUT') {
         stopSupabaseAutoRefresh().catch((error) => {
-          console.warn('[InAlign] Failed to pause Supabase auto refresh.', error);
+          console.warn('[Align] Failed to pause Supabase auto refresh.', error);
         });
         localStorage.removeItem('lms.impersonation');
         if (window.__APP_STATE?.user && !session) {
-          console.warn("[InAlign] Verified sign out, redirecting...");
+          console.warn("[Align] Verified sign out, redirecting...");
           window.__APP_STATE.user = null;
           if (window.location.hash !== '#/login') {
             window.location.hash = '#/login';

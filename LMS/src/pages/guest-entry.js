@@ -25,7 +25,7 @@ export default async function renderGuestEntry(container) {
             <p class="text-muted">בודק את קישור הגישה...</p>
           </div>
         </div>
-        <div class="login-footer-modern">&copy; ${new Date().getFullYear()} InAlign</div>
+        <div class="login-footer-modern">&copy; ${new Date().getFullYear()} Align</div>
       </main>
     </div>
   `

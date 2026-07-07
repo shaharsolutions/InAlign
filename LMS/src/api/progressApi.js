@@ -27,7 +27,7 @@ export async function fetchOrgProgress(explicitOrgId = null) {
   if (!user || !isManagementRole(user.role)) throw new Error("אין הרשאה");
 
   const orgToFetch = explicitOrgId || user.orgId;
-  debugLog(`[InAlign] Fetching progress report. User: ${user.id}, Role: ${user.role}, Requested Org: ${orgToFetch}`);
+  debugLog(`[Align] Fetching progress report. User: ${user.id}, Role: ${user.role}, Requested Org: ${orgToFetch}`);
 
   if (supabase) {
     let query = supabase
@@ -46,7 +46,7 @@ export async function fetchOrgProgress(explicitOrgId = null) {
     const { data, error } = await query;
     if (error) throw new Error(error.message);
     
-    debugLog(`[InAlign] Returned ${data.length} records. First record time: ${data[0]?.time_spent_seconds}`);
+    debugLog(`[Align] Returned ${data.length} records. First record time: ${data[0]?.time_spent_seconds}`);
 
     return data
       .filter(r => r.profiles?.role !== 'super_admin')
@@ -206,7 +206,7 @@ export async function fetchCourseProgress(courseId) {
   const user = getCurrentUserSync();
   if (!user) return null;
 
-  debugLog(`[InAlign] Fetching existing progress for user ${user.id} and course ${courseId}`);
+  debugLog(`[Align] Fetching existing progress for user ${user.id} and course ${courseId}`);
 
   if (supabase) {
     const { data, error } = await supabase
@@ -217,10 +217,10 @@ export async function fetchCourseProgress(courseId) {
       .maybeSingle();
     
     if (error) {
-      console.error("[InAlign] Error fetching course progress:", error.message);
+      console.error("[Align] Error fetching course progress:", error.message);
       return null;
     }
-    if (data) debugLog(`[InAlign] Found existing progress: status=${data.status}, seconds=${data.time_spent_seconds}`);
+    if (data) debugLog(`[Align] Found existing progress: status=${data.status}, seconds=${data.time_spent_seconds}`);
     return data;
   }
   return null;
@@ -230,7 +230,7 @@ export async function saveLearnerProgress(courseId, updates) {
   const user = getCurrentUserSync();
   if (!user) return;
 
-  debugLog(`[InAlign] Saving runtime updates for course ${courseId}:`, updates);
+  debugLog(`[Align] Saving runtime updates for course ${courseId}:`, updates);
 
   if (supabase) {
     try {
@@ -257,7 +257,7 @@ export async function saveLearnerProgress(courseId, updates) {
       
       if (updates.status === 'completed') progressObj.completed_at = new Date().toISOString();
       
-      debugLog(`[InAlign] Final payload to Supabase:`, progressObj);
+      debugLog(`[Align] Final payload to Supabase:`, progressObj);
 
       const { error } = await supabase
         .from('learner_progress')
@@ -271,18 +271,18 @@ export async function saveLearnerProgress(courseId, updates) {
       if (error) {
         // If column is missing, we need to alert the developer/admin
         if (error.code === '42703' || error.message?.includes('lesson_location')) {
-            console.error("[InAlign] CRITICAL: 'lesson_location' column is missing in your 'learner_progress' table. SCORM resume will NOT work until this is fixed in Supabase.");
+            console.error("[Align] CRITICAL: 'lesson_location' column is missing in your 'learner_progress' table. SCORM resume will NOT work until this is fixed in Supabase.");
         }
-        console.error("[InAlign] Supabase Record Upsert Error:", error.message, error.code);
+        console.error("[Align] Supabase Record Upsert Error:", error.message, error.code);
         throw error;
       }
-      debugLog(`[InAlign] Progress successfully recorded for course ${courseId}. Location: ${progressObj.lesson_location}`);
+      debugLog(`[Align] Progress successfully recorded for course ${courseId}. Location: ${progressObj.lesson_location}`);
     } catch (err) {
-      console.error("[InAlign] Progress sync operation failed:", err);
+      console.error("[Align] Progress sync operation failed:", err);
       throw err;
     }
   } else {
-    debugLog("[InAlign] Mock progress saved (NO-OP):", user.id, courseId, updates);
+    debugLog("[Align] Mock progress saved (NO-OP):", user.id, courseId, updates);
   }
 }
 
@@ -353,7 +353,7 @@ export async function bulkAssignCourses(userIds, courseId) {
         if (error) throw error;
     } else {
         // Mock (simplified)
-        console.log(`[InAlign] Bulk assigning ${courseId} to ${userIds.length} users`);
+        console.log(`[Align] Bulk assigning ${courseId} to ${userIds.length} users`);
     }
 }
 
