@@ -125,7 +125,7 @@ export default async function renderAdminUsers(container) {
             </div>
             ` : ''}
 
-            <div class="form-group mb-0 flex-1" style="text-align: right; min-width: 150px; margin-bottom: 0;">
+            <div class="form-group mb-0 flex-1" style="text-align: right; min-width: 150px;">
                <label class="form-label" for="user-role" style="font-size: 0.85rem; margin-bottom: 0.2rem;">תפקיד במערכת</label>
                <select class="form-control" id="user-role" style="height: 44px; padding-top: 0; padding-bottom: 0;">
                   <option value="${ROLE_LEARNER}">לומד</option>
