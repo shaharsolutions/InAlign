@@ -57,8 +57,54 @@ const FIELD_LABELS = {
   welcome_message: 'הודעת פתיחה'
 }
 
+const ENTITY_TYPE_LABELS = {
+  activity_logs: 'יומן פעולות',
+  course_assignments: 'שיוכי לומדות לארגון',
+  course_categories: 'קטגוריות לומדות',
+  course_files: 'קבצי לומדה',
+  courses: 'לומדות',
+  group_assignments: 'שיוכי לומדות לקבוצה',
+  group_members: 'חברי קבוצה',
+  groups: 'קבוצות',
+  learner_progress: 'התקדמות לומד',
+  organizations: 'ארגונים',
+  profiles: 'משתמשים',
+  scorm_packages: 'חבילות SCORM'
+}
+
+const ENTITY_FALLBACK_LABELS = {
+  activity_logs: 'רשומה ביומן פעולות',
+  course_assignments: 'שיוך לומדה לארגון',
+  course_categories: 'קטגוריית לומדות',
+  course_files: 'קובץ לומדה',
+  courses: 'לומדה',
+  group_assignments: 'שיוך לומדה לקבוצה',
+  group_members: 'חבר קבוצה',
+  groups: 'קבוצה',
+  learner_progress: 'רשומת התקדמות בלומדה',
+  organizations: 'ארגון',
+  profiles: 'משתמש',
+  scorm_packages: 'חבילת SCORM'
+}
+
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+
 function fieldLabel(field) {
   return FIELD_LABELS[field] || field
+}
+
+function entityTypeLabel(entityType) {
+  return ENTITY_TYPE_LABELS[entityType] || entityType || ''
+}
+
+function entityFallbackLabel(entityType) {
+  return ENTITY_FALLBACK_LABELS[entityType] || entityTypeLabel(entityType) || 'יעד פעולה'
+}
+
+function formatTargetLabel(log) {
+  if (log.entity_label) return log.entity_label
+  if (log.entity_id && !UUID_PATTERN.test(log.entity_id)) return log.entity_id
+  return entityFallbackLabel(log.entity_type)
 }
 
 function formatChangedFields(fields) {
@@ -70,7 +116,7 @@ function detailsSummary(details) {
   const table = details.table || details.entity || ''
   const fields = Array.isArray(details.changed_fields) ? details.changed_fields : []
   if (fields.length > 0) return `שדות שהשתנו: ${formatChangedFields(fields)}`
-  if (table) return `טבלה: ${table}`
+  if (table) return `אזור במערכת: ${entityTypeLabel(table)}`
   return ''
 }
 
@@ -191,7 +237,8 @@ export default async function renderSuperAdminActivityLog(container) {
     }
 
     tbody.innerHTML = filtered.map(log => {
-      const target = log.entity_label || log.entity_id || log.entity_type || '-'
+      const target = formatTargetLabel(log)
+      const targetType = entityTypeLabel(log.entity_type)
       const detailText = detailsSummary(log.details)
 
       return `
@@ -202,10 +249,10 @@ export default async function renderSuperAdminActivityLog(container) {
             <div style="font-weight: 600;">${escapeHtml(log.actor_name)}</div>
             <div class="text-xs text-muted">${escapeHtml(roleLabel(log.actor_role))}</div>
           </td>
-          <td>${escapeHtml(log.org_name || 'ניהול ראשי')}</td>
+          <td class="nowrap" style="min-width: 120px;">${escapeHtml(log.org_name || 'ניהול ראשי')}</td>
           <td>
             <div style="font-weight: 500;">${escapeHtml(target)}</div>
-            <div class="text-xs text-muted">${escapeHtml(log.entity_type || '')}</div>
+            <div class="text-xs text-muted">${escapeHtml(targetType)}</div>
           </td>
           <td class="text-sm">${escapeHtml(detailText || '-')}</td>
         </tr>
