@@ -77,7 +77,7 @@ export const routes = [
   {
     path: '#/admin/settings',
     component: renderSuperAdminSettings,
-    roles: ['admin', 'org_admin', 'super_admin'],
+    roles: ['admin', 'org_admin', 'super_admin', 'learner'],
     layout: 'default'
   },
   {

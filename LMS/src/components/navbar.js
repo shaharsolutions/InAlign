@@ -1,7 +1,7 @@
 import { logout } from '../auth.js'
 import { applyOrganizationStyles } from '../lib/ui.js'
 
-import { isAdminRole, isSuperAdminRole } from '../lib/roles.js'
+import { getGuideDocumentsForRole, isAdminRole, isSuperAdminRole } from '../lib/roles.js'
 
 export function renderNavbar(user) {
   const nav = document.createElement('nav')
@@ -23,6 +23,12 @@ export function renderNavbar(user) {
     linksStr += `<a href="#/learner" class="nav-link"><i class='bx bx-book-open'></i> תצוגת לומד</a>`
   } else {
     linksStr += `<a href="#/learner" class="nav-link"><i class='bx bx-home'></i> האזור האישי שלי</a>`
+    linksStr += `<a href="#/admin/settings" class="nav-link"><i class='bx bx-cog'></i> הגדרות</a>`
+  }
+
+  const guide = getGuideDocumentsForRole(user.role)[0]
+  if (guide) {
+    linksStr += `<a href="${guide.href}" target="_blank" rel="noopener" class="nav-link"><i class='bx bx-book-bookmark'></i> מדריך שימוש</a>`
   }
   
   nav.innerHTML = `

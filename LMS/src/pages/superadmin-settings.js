@@ -2,21 +2,24 @@ import { fetchCategories, addCategory, updateCategory, deleteCategory } from '..
 import { fetchCourses } from '../api/coursesApi.js'
 import { fetchOrganizationById, updateOrganization, fetchOrganizations } from '../api/orgApi.js'
 import { getCurrentUserSync } from '../api/authApi.js'
+import { getGuideDocumentsForRole, isManagementRole } from '../lib/roles.js'
 import { showConfirmModal, showToast, showPrompt, applyOrganizationStyles } from '../lib/ui.js'
 
 export default async function renderSuperAdminSettings(container) {
   const user = getCurrentUserSync();
   const orgId = user?.orgId;
+  const guideCards = renderGuideCards(user?.role);
+  const canManageSettings = isManagementRole(user?.role);
   
   container.innerHTML = `
     <div class="mb-4 fade-in">
       <h1 class="mb-1">הגדרות מערכת</h1>
-      <p class="text-muted">ניהול פרמטרים גלובליים, מיתוג וקטגוריות של לומדות.</p>
+      <p class="text-muted">${canManageSettings ? 'ניהול פרמטרים גלובליים, מיתוג וקטגוריות של לומדות.' : 'מדריכי שימוש והגדרות הזמינים לתפקיד שלך.'}</p>
     </div>
 
     <div class="grid grid-cols-1 gap-6 fade-in">
        <!-- Branding Section (Conditional) -->
-       ${orgId ? `
+       ${canManageSettings && orgId ? `
        <div class="card" id="branding-section">
           <h3 class="mb-4"><i class='bx bx-palette'></i> מיתוג ועיצוב הארגון</h3>
           <div id="branding-loader" class="text-center p-4"><i class='bx bx-loader bx-spin'></i> טוען הגדרות...</div>
@@ -67,6 +70,7 @@ export default async function renderSuperAdminSettings(container) {
        ` : ''}
 
         <div class="grid grid-cols-12 gap-6">
+          ${canManageSettings ? `
            <!-- Categories Management Section -->
            <div class="card" style="grid-column: 1 / -1;">
             <h3 class="mb-3">ניהול קטגוריות לומדות</h3>
@@ -111,59 +115,15 @@ export default async function renderSuperAdminSettings(container) {
             </table>
           </div>
 
+          ` : ''}
+
           <!-- Guides Section -->
           <div class="card" style="grid-column: 1 / -1; margin-top: 1.5rem;">
             <h3 class="mb-2"><i class='bx bx-book-bookmark'></i> מדריכי שימוש והדרכה</h3>
-            <p class="text-muted mb-4">גישה מהירה למדריכים הרשמיים של המערכת ללומדים ומנהלים.</p>
+            <p class="text-muted mb-4">גישה מהירה למדריכים הרשמיים הזמינים לתפקיד שלך.</p>
             
             <div class="grid grid-cols-3" style="gap: var(--gap-standard);">
-              <!-- Card 1: Interactive User Guide -->
-              <div style="background: hsl(var(--bg-surface-hover)/0.4); border: 1px solid hsl(var(--border-color)); border-radius: var(--radius-md); padding: 1.25rem; display: flex; flex-direction: column; justify-content: space-between; transition: all 0.2s ease;" class="hover-card">
-                <div>
-                  <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 0.75rem;">
-                    <div style="width: 40px; height: 40px; background: hsl(var(--color-primary)/0.1); color: hsl(var(--color-primary)); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.5rem;">
-                      <i class='bx bx-help-circle'></i>
-                    </div>
-                    <h4 style="margin: 0; font-size: 1.1rem;">מדריך שימוש אינטראקטיבי</h4>
-                  </div>
-                  <p class="text-xs text-muted" style="margin: 0; line-height: 1.4;">מדריך מעשי ומלא להפעלת מערכת ה-LMS, הקמת ארגונים וטעינת לומדות. מיועד למנהלים ראשיים ומנהלי מערכת.</p>
-                </div>
-                <a href="user_guide.html" target="_blank" class="btn btn-outline text-sm w-full justify-center mt-4">
-                  <i class='bx bx-link-external'></i> פתח מדריך
-                </a>
-              </div>
-
-              <!-- Card 2: Training Managers Guide -->
-              <div style="background: hsl(var(--bg-surface-hover)/0.4); border: 1px solid hsl(var(--border-color)); border-radius: var(--radius-md); padding: 1.25rem; display: flex; flex-direction: column; justify-content: space-between; transition: all 0.2s ease;" class="hover-card">
-                <div>
-                  <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 0.75rem;">
-                    <div style="width: 40px; height: 40px; background: hsl(var(--color-warning)/0.1); color: hsl(var(--color-warning)); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.5rem;">
-                      <i class='bx bx-user-voice'></i>
-                    </div>
-                    <h4 style="margin: 0; font-size: 1.1rem;">מדריך למנהלי הדרכה</h4>
-                  </div>
-                  <p class="text-xs text-muted" style="margin: 0; line-height: 1.4;">מדריך ממוקד לניהול סביבת ההדרכה הארגונית: יצירת משתמשים וקבוצות, שיוך לומדות והפקת דוחות למידה.</p>
-                </div>
-                <a href="user_guide_training_managers.html" target="_blank" class="btn btn-outline text-sm w-full justify-center mt-4">
-                  <i class='bx bx-link-external'></i> פתח מדריך
-                </a>
-              </div>
-
-              <!-- Card 3: Learners Guide -->
-              <div style="background: hsl(var(--bg-surface-hover)/0.4); border: 1px solid hsl(var(--border-color)); border-radius: var(--radius-md); padding: 1.25rem; display: flex; flex-direction: column; justify-content: space-between; transition: all 0.2s ease;" class="hover-card">
-                <div>
-                  <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 0.75rem;">
-                    <div style="width: 40px; height: 40px; background: hsl(var(--color-success)/0.1); color: hsl(var(--color-success)); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.5rem;">
-                      <i class='bx bx-book-reader'></i>
-                    </div>
-                    <h4 style="margin: 0; font-size: 1.1rem;">מדריך שימוש ללומדים</h4>
-                  </div>
-                  <p class="text-xs text-muted" style="margin: 0; line-height: 1.4;">מדריך מעשי ופשוט ללומדים במערכת: כניסה ראשונית, צפייה בלומדות שהוקצו, מעקב אחר התקדמות ופתרון תקלות.</p>
-                </div>
-                <a href="user_guide_learners.html" target="_blank" class="btn btn-outline text-sm w-full justify-center mt-4">
-                  <i class='bx bx-link-external'></i> פתח מדריך
-                </a>
-              </div>
+              ${guideCards}
             </div>
           </div>
 
@@ -177,6 +137,8 @@ export default async function renderSuperAdminSettings(container) {
        </div>
     </div>
   `
+
+  if (!canManageSettings) return;
 
   const tableBody = container.querySelector('#categories-table tbody')
   const orgFilter = container.querySelector('#settings-org-filter');
@@ -458,4 +420,33 @@ export default async function renderSuperAdminSettings(container) {
   }
 
   await renderCategoriesTable();
+}
+
+function renderGuideCards(role) {
+  const guides = getGuideDocumentsForRole(role);
+
+  if (guides.length === 0) {
+    return `
+      <div class="text-muted" style="grid-column: 1 / -1; padding: 1rem;">
+        אין מדריכי שימוש זמינים לתפקיד הנוכחי.
+      </div>
+    `;
+  }
+
+  return guides.map(guide => `
+    <div style="background: hsl(var(--bg-surface-hover)/0.4); border: 1px solid hsl(var(--border-color)); border-radius: var(--radius-md); padding: 1.25rem; display: flex; flex-direction: column; justify-content: space-between; transition: all 0.2s ease;" class="hover-card">
+      <div>
+        <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 0.75rem;">
+          <div style="width: 40px; height: 40px; background: hsl(var(--color-${guide.tone})/0.1); color: hsl(var(--color-${guide.tone})); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.5rem;">
+            <i class='bx ${guide.icon}'></i>
+          </div>
+          <h4 style="margin: 0; font-size: 1.1rem;">${guide.title}</h4>
+        </div>
+        <p class="text-xs text-muted" style="margin: 0; line-height: 1.4;">${guide.description}</p>
+      </div>
+      <a href="${guide.href}" target="_blank" rel="noopener" class="btn btn-outline text-sm w-full justify-center mt-4">
+        <i class='bx bx-link-external'></i> פתח מדריך
+      </a>
+    </div>
+  `).join('');
 }
