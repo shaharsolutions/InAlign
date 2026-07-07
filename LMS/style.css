@@ -273,6 +273,7 @@ h1, h2, h3, h4, h5, h6 {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 2.5rem;
   height: var(--navbar-height);
 }
 .navbar-brand {
@@ -282,12 +283,14 @@ h1, h2, h3, h4, h5, h6 {
   display: flex;
   align-items: center;
   gap: 0.5rem;
+  flex: 0 0 auto;
   z-index: 1001;
 }
 .navbar-nav {
   display: flex;
   align-items: center;
   gap: 1.5rem;
+  min-width: 0;
 }
 
 .nav-link {
