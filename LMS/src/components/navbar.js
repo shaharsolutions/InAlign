@@ -23,7 +23,6 @@ export function renderNavbar(user) {
     linksStr += `<a href="#/learner" class="nav-link"><i class='bx bx-book-open'></i> תצוגת לומד</a>`
   } else {
     linksStr += `<a href="#/learner" class="nav-link"><i class='bx bx-home'></i> האזור האישי שלי</a>`
-    linksStr += `<a href="#/admin/settings" class="nav-link"><i class='bx bx-cog'></i> הגדרות</a>`
   }
 
   const guide = getGuideDocumentsForRole(user.role)[0]
