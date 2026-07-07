@@ -10,11 +10,66 @@ function formatDateTime(value) {
   })
 }
 
+const FIELD_LABELS = {
+  action: 'פעולה',
+  actor_id: 'משתמש מבצע',
+  actor_name: 'שם המשתמש המבצע',
+  actor_role: 'תפקיד המשתמש המבצע',
+  assigned_at: 'מועד שיוך',
+  auto_enroll_course_ids: 'קורסים לשיוך אוטומטי',
+  category: 'קטגוריה',
+  completed_at: 'מועד השלמה',
+  course_id: 'קורס',
+  created_at: 'מועד יצירה',
+  description: 'תיאור',
+  email: 'אימייל',
+  entity_id: 'מזהה יעד הפעולה',
+  entity_label: 'שם יעד הפעולה',
+  entity_type: 'סוג יעד הפעולה',
+  entry_point: 'קובץ פתיחה',
+  file_path: 'נתיב קובץ',
+  full_name: 'שם מלא',
+  group_id: 'קבוצה',
+  guest_access_enabled: 'גישה לאורחים',
+  guest_access_token: 'קישור גישה לאורחים',
+  id: 'מזהה',
+  is_guest: 'משתמש אורח',
+  joined_at: 'מועד הצטרפות',
+  last_accessed: 'כניסה אחרונה',
+  lesson_location: 'מיקום בשיעור',
+  logo_url: 'לוגו',
+  name: 'שם',
+  org_id: 'ארגון',
+  phone: 'טלפון',
+  primary_color: 'צבע ראשי',
+  progress_percent: 'אחוז התקדמות',
+  published: 'פורסם',
+  role: 'תפקיד',
+  score: 'ציון',
+  started_at: 'מועד התחלה',
+  status: 'סטטוס',
+  suspend_data: 'נתוני המשך',
+  time_spent_seconds: 'זמן למידה',
+  title: 'כותרת',
+  updated_at: 'מועד עדכון',
+  user_id: 'משתמש',
+  version: 'גרסה',
+  welcome_message: 'הודעת פתיחה'
+}
+
+function fieldLabel(field) {
+  return FIELD_LABELS[field] || field
+}
+
+function formatChangedFields(fields) {
+  return fields.map(fieldLabel).join(', ')
+}
+
 function detailsSummary(details) {
   if (!details || typeof details !== 'object') return ''
   const table = details.table || details.entity || ''
   const fields = Array.isArray(details.changed_fields) ? details.changed_fields : []
-  if (fields.length > 0) return `שדות שהשתנו: ${fields.join(', ')}`
+  if (fields.length > 0) return `שדות שהשתנו: ${formatChangedFields(fields)}`
   if (table) return `טבלה: ${table}`
   return ''
 }
