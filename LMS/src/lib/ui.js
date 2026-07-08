@@ -361,14 +361,14 @@ export async function showBulkAssignModal({ users, courses, onAssign }) {
     
     modal.innerHTML = `
       <div class="card slide-up" style="max-width: 500px; width: 95%; padding: 2rem; border-top: 5px solid hsl(var(--color-primary)); text-align: right;">
-        <h2 class="mb-2">הקצאת לומדה לקבוצת עובדים</h2>
-        <p class="text-muted mb-4">בחר לומדה להקצאה עבור <strong>${users.length}</strong> המשתמשים שנבחרו.</p>
+        <h2 class="mb-2">הקצאת תוכן למידה לקבוצת עובדים</h2>
+        <p class="text-muted mb-4">בחר תוכן למידה להקצאה עבור <strong>${users.length}</strong> המשתמשים שנבחרו.</p>
         
         <form id="bulk-assign-form" style="text-align: right;">
             <div class="form-group">
-                <label class="form-label">בחר לומדה מהקטלוג</label>
+                <label class="form-label">בחר תוכן מהקטלוג</label>
                 <select class="form-control" id="bulk-course-select" required>
-                    <option value="">-- בחר לומדה --</option>
+                    <option value="">-- בחר תוכן למידה --</option>
                     ${courses.map(c => `<option value="${c.id}">${c.title}</option>`).join('')}
                 </select>
             </div>

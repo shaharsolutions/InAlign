@@ -1,9 +1,10 @@
 import { saveLearnerProgress, fetchCourseProgress } from '../api/progressApi.js'
-import { fetchCourseById } from '../api/coursesApi.js'
+import { fetchCourseById, getCourseContentLabel, getCourseContentType } from '../api/coursesApi.js'
 import { getCurrentUserSync } from '../api/authApi.js'
 import { supabase } from '../lib/supabase.js'
 import { parseScormTime, formatScorm12Time } from '../lib/scormUtils.js'
 import { clampProgress } from '../lib/progressUtils.js'
+import { escapeAttr, escapeHtml } from '../lib/html.js'
 
 function isScormDebugEnabled() {
   try {
@@ -17,6 +18,193 @@ function isScormDebugEnabled() {
 
 function scormDebug(...args) {
   if (isScormDebugEnabled()) console.debug(...args);
+}
+
+async function getAuthenticatedProxyUrl(fileUrl, user) {
+  let proxyUrl = fileUrl;
+
+  if ('serviceWorker' in navigator) {
+    try {
+      const registration = await navigator.serviceWorker.register('./scorm-sw.js');
+      await navigator.serviceWorker.ready;
+      if (supabase) {
+        const { data: { session } } = await supabase.auth.getSession();
+        const accessToken = session?.access_token;
+        const worker = registration.active || registration.waiting || registration.installing || navigator.serviceWorker.controller;
+        if (worker && accessToken) {
+          worker.postMessage({ type: 'SET_AUTH_TOKEN', token: accessToken, userId: user?.id });
+        }
+      }
+    } catch (err) {
+      console.error('[Align] SW registration failed:', err);
+    }
+  }
+
+  if (supabase) {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.access_token) {
+        proxyUrl += `${proxyUrl.includes('?') ? '&' : '?'}lms_token=${encodeURIComponent(session.access_token)}`;
+      }
+    } catch (err) {
+      console.error('[Align] Failed to attach content session token:', err);
+    }
+  }
+
+  if (window.navigator.serviceWorker) {
+    await window.navigator.serviceWorker.ready;
+  }
+
+  return proxyUrl;
+}
+
+async function renderTrackedContentPlayer(container, { course, existingProgress, user }) {
+  const courseId = course.id;
+  const contentType = getCourseContentType(course);
+  const contentLabel = getCourseContentLabel(course);
+  const safeTitle = escapeHtml(course.title || 'תוכן למידה');
+  const safeTitleAttr = escapeAttr(course.title || 'תוכן למידה');
+  const baseProgress = existingProgress?.status === 'completed'
+    ? 100
+    : (existingProgress?.progress_percent === null || existingProgress?.progress_percent === undefined ? null : clampProgress(existingProgress.progress_percent));
+  const runtime = {
+    courseId,
+    status: existingProgress?.status || 'not_started',
+    progress: baseProgress,
+    baseTimeSeconds: parseInt(existingProgress?.time_spent_seconds || 0),
+    startTime: Date.now(),
+    lastSync: 0,
+    isExiting: false
+  };
+
+  const syncProgress = async ({ status = runtime.status, progress = runtime.progress, immediate = false } = {}) => {
+    if (window._lmsActiveCourseId !== runtime.courseId) return;
+    const now = Date.now();
+    if (!immediate && now - runtime.lastSync < 12000) return;
+
+    const elapsed = Math.floor((now - runtime.startTime) / 1000);
+    const totalTime = runtime.baseTimeSeconds + elapsed;
+    if (status === 'not_started' && totalTime > 5) status = 'in_progress';
+    if (status === 'completed') progress = 100;
+
+    runtime.status = status;
+    runtime.progress = (progress === null || progress === undefined) ? null : clampProgress(progress);
+    runtime.lastSync = now;
+
+    await saveLearnerProgress(runtime.courseId, {
+      status: runtime.status,
+      progress: runtime.progress,
+      score: null,
+      time: totalTime,
+      suspend_data: existingProgress?.suspend_data || '',
+      lesson_location: contentType,
+      org_id: course.org_id
+    });
+  };
+
+  const exitPlayer = async ({ complete = false } = {}) => {
+    if (runtime.isExiting) return;
+    runtime.isExiting = true;
+    if (window._lmsHeartbeat) clearInterval(window._lmsHeartbeat);
+    await syncProgress({
+      status: complete ? 'completed' : runtime.status,
+      progress: complete ? 100 : runtime.progress,
+      immediate: true
+    });
+
+    if (user?.isGuest) {
+      container.innerHTML = `
+        <div class="guest-completion-page">
+          <div class="login-card-modern fade-in" style="text-align:center">
+            <div style="font-size:4rem;color:hsl(var(--color-success));margin-bottom:1rem"><i class='bx bx-check-circle'></i></div>
+            <h2>ההתקדמות נשמרה</h2>
+            <p class="text-muted">תודה ${escapeHtml(user.fullName || '')}. ניתן לסגור את החלון.</p>
+          </div>
+        </div>
+      `;
+    } else {
+      window.history.back();
+    }
+  };
+
+  if (!course.fileUrl) {
+    throw new Error("לא נמצאו קבצי תוכן עבור פריט זה. ייתכן שההעלאה נכשלה או שהקבצים נמחקו.");
+  }
+
+  const proxyUrl = await getAuthenticatedProxyUrl(course.fileUrl, user);
+  const viewerHtml = contentType === 'video'
+    ? `<video id="tracked-video" class="content-media-player" controls playsinline preload="metadata" src="${escapeAttr(proxyUrl)}"></video>`
+    : `
+      <iframe id="tracked-document" class="content-document-frame" title="${safeTitleAttr}" src="${escapeAttr(proxyUrl)}"></iframe>
+      ${contentType === 'presentation' ? `
+        <div class="content-viewer-fallback">
+          <span class="text-sm text-muted">אם המצגת אינה מוצגת בדפדפן, ניתן לפתוח או להוריד אותה.</span>
+          <a class="btn btn-outline text-sm" href="${escapeAttr(proxyUrl)}" target="_blank" rel="noopener">
+            <i class='bx bx-link-external'></i> פתח מצגת
+          </a>
+        </div>
+      ` : ''}
+    `;
+
+  container.innerHTML = `
+    <div class="player-container">
+      <div class="player-header">
+        <div style="min-width:0">
+          <div class="text-sm text-muted" style="margin-bottom:.2rem">${escapeHtml(contentLabel)}</div>
+          <h2 style="margin: 0; font-size: 1.25rem; font-weight: 700; color: #1e293b; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${safeTitleAttr}">
+            ${safeTitle}
+          </h2>
+        </div>
+        <div class="flex gap-2">
+          <button class="btn btn-outline" id="content-complete-exit" style="display: flex; align-items: center; gap: 8px; padding: 0.5rem 1rem;">
+            <i class='bx bx-check-circle'></i>
+            <span>סמן כהושלם</span>
+          </button>
+          <button class="btn btn-primary" id="content-save-exit" style="display: flex; align-items: center; gap: 8px; padding: 0.5rem 1rem;">
+            <i class='bx bx-log-out-circle'></i>
+            <span>שמור וצא</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="player-content content-player-surface">
+        ${viewerHtml}
+      </div>
+    </div>
+  `;
+
+  window._lmsHeartbeat = setInterval(() => {
+    syncProgress().catch(error => console.error('[Align] Content progress heartbeat failed:', error));
+  }, 30000);
+
+  const video = document.getElementById('tracked-video');
+  if (video) {
+    video.addEventListener('play', () => {
+      syncProgress({ status: 'in_progress' }).catch(() => {});
+    });
+    video.addEventListener('timeupdate', () => {
+      if (Number.isFinite(video.duration) && video.duration > 0) {
+        const progress = Math.min(99, Math.round((video.currentTime / video.duration) * 100));
+        syncProgress({ status: 'in_progress', progress }).catch(() => {});
+      }
+    });
+    video.addEventListener('ended', () => {
+      syncProgress({ status: 'completed', progress: 100, immediate: true }).catch(() => {});
+    });
+  } else {
+    syncProgress({ status: 'in_progress' }).catch(() => {});
+  }
+
+  document.getElementById('content-save-exit').addEventListener('click', () => {
+    exitPlayer().catch(error => console.error('[Align] Content exit failed:', error));
+  });
+  document.getElementById('content-complete-exit').addEventListener('click', () => {
+    exitPlayer({ complete: true }).catch(error => console.error('[Align] Content completion failed:', error));
+  });
+
+  window.addEventListener('beforeunload', () => {
+    syncProgress({ immediate: true }).catch(() => {});
+  }, { once: true });
 }
 
 // Aggressive global cleanup for intervals
@@ -48,6 +236,12 @@ export default async function renderPlayer(container) {
     ]);
 
     if (!course) throw new Error("הקורס לא נמצא");
+    course.content_type = getCourseContentType(course);
+
+    if (course.content_type !== 'scorm') {
+      await renderTrackedContentPlayer(container, { course, existingProgress, user });
+      return;
+    }
 
     const runtime = {
       courseId: courseId,
@@ -268,7 +462,7 @@ export default async function renderPlayer(container) {
       <div class="player-container">
         <div class="player-header">
           <h2 style="margin: 0; font-size: 1.25rem; font-weight: 700; color: #1e293b; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
-            ${course.title}
+            ${escapeHtml(course.title)}
           </h2>
           <button class="btn btn-primary" id="scorm-save-exit" style="display: flex; align-items: center; gap: 8px; padding: 0.5rem 1rem;">
             <i class='bx bx-log-out-circle'></i>
@@ -290,7 +484,7 @@ export default async function renderPlayer(container) {
                 </div>
               </div>
             </div>
-            <iframe id="scorm-iframe" title="${course.title}" style="width: 100%; height: 100%; border:0; opacity:0; transition: opacity 0.5s ease;"></iframe>
+            <iframe id="scorm-iframe" title="${escapeAttr(course.title)}" style="width: 100%; height: 100%; border:0; opacity:0; transition: opacity 0.5s ease;"></iframe>
           </div>
         </div>
       </div>
@@ -360,38 +554,7 @@ export default async function renderPlayer(container) {
         throw new Error("לא נמצאו קבצי לומדה עבור קורס זה. ייתכן שההעלאה נכשלה או שהקבצים נמחקו.");
     }
 
-    if ('serviceWorker' in navigator) {
-      try {
-        // Register relative to current location to support subdirectory deployments
-        const registration = await navigator.serviceWorker.register('./scorm-sw.js');
-        await navigator.serviceWorker.ready;
-        if (supabase) {
-          const { data: { session } } = await supabase.auth.getSession();
-          const accessToken = session?.access_token;
-          const worker = registration.active || registration.waiting || registration.installing || navigator.serviceWorker.controller;
-          if (worker && accessToken) {
-            worker.postMessage({ type: 'SET_AUTH_TOKEN', token: accessToken, userId: user?.id });
-          }
-        }
-      } catch (err) {
-        console.error('[Align] SW registration failed:', err);
-      }
-    }
-
-    let proxyUrl = course.fileUrl;
-    if (supabase) {
-      try {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (session?.access_token) {
-          proxyUrl += `${proxyUrl.includes('?') ? '&' : '?'}lms_token=${encodeURIComponent(session.access_token)}`;
-        }
-      } catch (err) {
-        console.error('[Align] Failed to attach SCORM session token:', err);
-      }
-    }
-    if (window.navigator.serviceWorker) {
-        await window.navigator.serviceWorker.ready;
-    }
+    const proxyUrl = await getAuthenticatedProxyUrl(course.fileUrl, user);
 
     iframe.onload = async () => {
         setLoaderStatus('מסיים טעינה...');

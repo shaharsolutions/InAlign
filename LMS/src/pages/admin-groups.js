@@ -11,7 +11,7 @@ export default async function renderAdminGroups(container) {
   container.innerHTML = `
     <div class="mb-4 fade-in">
       <h1 class="mb-1">ניהול קבוצות למידה</h1>
-      <p class="text-muted">יצירת קבוצות, שיוך עובדים והקצאת לומדות לפי מחלקות או תפקידים.</p>
+      <p class="text-muted">יצירת קבוצות, שיוך עובדים והקצאת תוכן למידה לפי מחלקות או תפקידים.</p>
     </div>
 
     <div class="grid grid-cols-3 slide-up" style="gap: var(--gap-standard); align-items: start;">
@@ -38,7 +38,7 @@ export default async function renderAdminGroups(container) {
                <tr>
                   <th>שם הקבוצה</th>
                   <th>עובדים</th>
-                  <th>לומדות</th>
+                  <th>תוכן למידה</th>
                   <th>פעולות</th>
                </tr>
             </thead>
@@ -57,7 +57,7 @@ export default async function renderAdminGroups(container) {
                 <h2 id="detail-group-name" class="m-0">שם הקבוצה</h2>
                 <button class="btn btn-ghost p-1 edit-detail-name-btn" title="ערוך שם קבוצה"><i class='bx bx-edit-alt'></i></button>
             </div>
-            <p class="text-muted m-0">ניהול עובדים ולומדות עבור קבוצה זו</p>
+            <p class="text-muted m-0">ניהול עובדים ותוכן למידה עבור קבוצה זו</p>
             </div>
         </div>
 
@@ -76,11 +76,11 @@ export default async function renderAdminGroups(container) {
             <!-- Courses Section -->
             <div class="card" style="background: hsl(var(--color-primary)/0.02); border: 1px solid hsla(var(--text-main), 0.05);">
                 <div class="flex justify-between items-center mb-4">
-                    <h4 class="m-0"><i class='bx bx-book-open'></i> לומדות שהוקצו</h4>
-                    <button class="btn btn-primary text-xs" id="assign-course-btn"><i class='bx bx-plus'></i> הקצה לומדה</button>
+                    <h4 class="m-0"><i class='bx bx-book-open'></i> תוכן שהוקצה</h4>
+                    <button class="btn btn-primary text-xs" id="assign-course-btn"><i class='bx bx-plus'></i> הקצה תוכן</button>
                 </div>
                  <ul id="group-courses-list" class="list-none p-0 m-0" style="max-height: 250px; overflow-y: auto;">
-                    <li class="p-2 border-b text-muted text-sm" style="text-align: center;">טוען לומדות...</li>
+                    <li class="p-2 border-b text-muted text-sm" style="text-align: center;">טוען תוכן...</li>
                  </ul>
             </div>
         </div>
@@ -105,7 +105,7 @@ export default async function renderAdminGroups(container) {
         <tr data-id="${g.id}">
            <td><div style="font-weight: 600; cursor:pointer;" class="group-select-link">${g.name}</div></td>
            <td><span class="badge badge-success">${g.user_count || 0} חברים</span></td>
-           <td><span class="badge badge-primary">${g.course_count || 0} לומדות</span></td>
+           <td><span class="badge badge-primary">${g.course_count || 0} פריטים</span></td>
            <td>
               <div class="flex gap-2">
                 <button class="btn btn-outline text-sm select-group-btn" data-id="${g.id}" data-name="${g.name}" title="נהל קבוצה"><i class='bx bx-cog'></i></button>
@@ -136,7 +136,7 @@ export default async function renderAdminGroups(container) {
                 <h2 id="detail-group-name" class="m-0">${groupName}</h2>
                 <button class="btn btn-ghost p-1 edit-detail-name-btn" title="ערוך שם קבוצה"><i class='bx bx-edit-alt'></i></button>
             </div>
-            <p class="text-muted m-0">ניהול עובדים ולומדות עבור קבוצה זו</p>
+            <p class="text-muted m-0">ניהול עובדים ותוכן למידה עבור קבוצה זו</p>
         `;
         // Re-attach listener
         headerContainer.querySelector('.edit-detail-name-btn').onclick = attachEditHeaderListener;
@@ -173,7 +173,7 @@ export default async function renderAdminGroups(container) {
 
         // Render Courses
         if (courses.length === 0) {
-            coursesList.innerHTML = `<li class="p-4 text-center text-muted text-sm">לא הוקצו לומדות לקבוצה זו</li>`;
+            coursesList.innerHTML = `<li class="p-4 text-center text-muted text-sm">לא הוקצה תוכן לקבוצה זו</li>`;
         } else {
             coursesList.innerHTML = courses.map(c => `
                 <li class="p-3 border-b flex justify-between items-center slide-up" style="border-color: hsla(var(--text-main), 0.05);">
@@ -406,12 +406,12 @@ export default async function renderAdminGroups(container) {
         const courses = await fetchCourses();
         
         showCustomModal({
-            title: 'הקצאת לומדה לקבוצה',
+            title: 'הקצאת תוכן לקבוצה',
             content: `
-                <p class="text-sm text-muted mb-4">הלומדה תוקצה לכל חברי '<strong>${currentGroup.name}</strong>'</p>
+                <p class="text-sm text-muted mb-4">התוכן יוקצה לכל חברי '<strong>${currentGroup.name}</strong>'</p>
                 <div class="form-group">
                     <select class="form-control" id="course-to-assign">
-                        <option value="">-- בחר לומדה --</option>
+                        <option value="">-- בחר תוכן למידה --</option>
                         ${courses.map(c => `<option value="${c.id}">${c.title}</option>`).join('')}
                     </select>
                 </div>
@@ -433,7 +433,7 @@ export default async function renderAdminGroups(container) {
 
                 try {
                     await assignCourseToGroup(currentGroup.id, cid);
-                    showToast('הלומדה הוקצתה לקבוצה');
+                    showToast('התוכן הוקצה לקבוצה');
                     document.querySelector('.modal-overlay')?.remove();
                     showGroupDetail(currentGroup.id, currentGroup.name);
                     renderTable();
@@ -454,11 +454,11 @@ export default async function renderAdminGroups(container) {
     const btn = e.target.closest('.remove-course-btn');
     if(!btn) return;
     const cid = btn.dataset.cid;
-    const courseTitle = btn.closest('li').querySelector('.font-bold')?.innerText || 'הלומדה';
+    const courseTitle = btn.closest('li').querySelector('.font-bold')?.innerText || 'התוכן';
 
     await showConfirmModal({
-        title: 'ביטול הקצאת לומדה',
-        message: `האם אתה בטוח שברצונך לבטל את הקצאת הלומדה <strong>${courseTitle}</strong> מהקבוצה <strong>${currentGroup.name}</strong>?`,
+        title: 'ביטול הקצאת תוכן',
+        message: `האם אתה בטוח שברצונך לבטל את הקצאת התוכן <strong>${courseTitle}</strong> מהקבוצה <strong>${currentGroup.name}</strong>?`,
         confirmText: 'בטל הקצאה',
         onConfirm: async () => {
             await unassignCourseFromGroup(currentGroup.id, cid);

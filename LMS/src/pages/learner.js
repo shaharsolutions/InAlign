@@ -9,7 +9,7 @@ export default async function renderLearnerDashboard(container) {
   container.innerHTML = `
     <div class="mb-4 fade-in">
       <h1 class="mb-2">לוח למידה אישי</h1>
-      <p class="text-muted">עקוב אחר ההתקדמות שלך והקפד להשלים משימות בזמן</p>
+      <p class="text-muted">עקוב אחר ההתקדמות והשימוש שלך בתכני הלמידה שהוקצו לך</p>
     </div>
 
     <div id="welcome-message-container"></div>
@@ -17,7 +17,7 @@ export default async function renderLearnerDashboard(container) {
     <div class="stats grid grid-cols-3 mb-4 slide-up" style="gap: var(--gap-standard);">
       <div class="card flex items-center justify-between">
          <div>
-            <h4 class="mb-1 text-muted">לומדות חובה לביצוע</h4>
+            <h4 class="mb-1 text-muted">תכנים חובה לביצוע</h4>
             <div id="stat-pending" style="font-size: 1.5rem; font-weight: 700;">--</div>
          </div>
          <i class='bx bx-task' style="font-size: 2.5rem; color: hsl(var(--color-warning));"></i>
@@ -40,7 +40,7 @@ export default async function renderLearnerDashboard(container) {
     
     <div id="learner-courses" class="grid grid-cols-3 slide-up" style="gap: var(--gap-standard);">
       <div class="text-center" style="grid-column: 1 / -1; padding: 3rem;">
-        <i class='bx bx-loader bx-spin' style="font-size: 2rem;"></i> במידה ויש לומדות מוקצות הן יטענו...
+        <i class='bx bx-loader bx-spin' style="font-size: 2rem;"></i> במידה ויש תכני למידה מוקצים הם יטענו...
       </div>
     </div>
   `
@@ -67,7 +67,7 @@ export default async function renderLearnerDashboard(container) {
     }
     
     if (assignments.length === 0) {
-      coursesContainer.innerHTML = `<div class="card" style="grid-column: 1 / -1; padding: 3rem; text-align: center;">בינתיים אין לומדות שצריך לבצע</div>`;
+      coursesContainer.innerHTML = `<div class="card" style="grid-column: 1 / -1; padding: 3rem; text-align: center;">בינתיים אין תכני למידה שצריך לבצע</div>`;
       document.getElementById('stat-pending').textContent = '0';
       document.getElementById('stat-progress').textContent = '0';
       document.getElementById('stat-done').textContent = '0';
@@ -86,8 +86,15 @@ export default async function renderLearnerDashboard(container) {
       const courseId = encodeURIComponent(course.id);
       const safeTitle = escapeHtml(course.title);
       const safeTitleAttr = escapeAttr(course.title);
-      const safeDescription = escapeHtml(course.desc || 'קורס העשרה לעובדים');
-      const safeImage = /^[a-z0-9-]+$/i.test(course.image || '') ? course.image : 'bx-book-open';
+      const safeDescription = escapeHtml(course.desc || 'תוכן למידה לעובדים');
+      const typeIcon = {
+        scorm: 'bx-package',
+        video: 'bx-video',
+        pdf: 'bxs-file-pdf',
+        presentation: 'bx-slideshow'
+      }[course.content_type || 'scorm'] || 'bx-book-open';
+      const safeImage = /^[a-z0-9-]+$/i.test(course.image || '') ? course.image : typeIcon;
+      const contentLabel = escapeHtml(course.content_label || 'תוכן למידה');
       const progressHtml = course.progressKnown ? `
           <div class="progress-section mb-3">
             <div class="flex justify-between text-sm mb-1">
@@ -112,6 +119,7 @@ export default async function renderLearnerDashboard(container) {
             </div>
             <div>
               <h3 style="margin: 0; font-size: ${course.title.length > 20 ? '0.95rem' : '1.1rem'}; line-height: 1.2; font-weight: 700;" title="${safeTitleAttr}">${safeTitle}</h3>
+              <span class="badge badge-primary text-xs" style="margin-top:.35rem">${contentLabel}</span>
               <p class="text-sm text-muted" style="max-height: 2.8em; overflow: hidden;">${safeDescription}</p>
             </div>
           </div>
@@ -137,6 +145,6 @@ export default async function renderLearnerDashboard(container) {
     document.getElementById('stat-done').textContent = done;
     
   } catch (err) {
-    coursesContainer.innerHTML = `<div class="card" style="grid-column: 1 / -1; text-align: center; color: hsl(var(--color-danger));">שגיאה בטעינת הקורסים: ${escapeHtml(err.message)}</div>`;
+    coursesContainer.innerHTML = `<div class="card" style="grid-column: 1 / -1; text-align: center; color: hsl(var(--color-danger));">שגיאה בטעינת תכני הלמידה: ${escapeHtml(err.message)}</div>`;
   }
 }

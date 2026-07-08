@@ -3,6 +3,17 @@ import { getCurrentUserSync } from './authApi.js'
 import { isManagementRole, isSuperAdminRole } from '../lib/roles.js'
 import { getDisplayProgress } from '../lib/progressUtils.js'
 
+const CONTENT_TYPE_LABELS = {
+  scorm: 'לומדה',
+  video: 'סרטון',
+  pdf: 'PDF',
+  presentation: 'מצגת'
+}
+
+function getContentLabel(contentType) {
+  return CONTENT_TYPE_LABELS[contentType] || CONTENT_TYPE_LABELS.scorm
+}
+
 let MOCK_RECORDS = [
   { id: '1', user_id: 'usr-3', user_name: 'ישראל הלומד ציבורי', course_id: 'c1', course_title: 'הדרכת אבטחת מידע בארגון - Q1', status: 'הושלם', progress_percent: 100, score: 95, time_spent_seconds: 1500, time: '25 דקות', date: '01/03/2026', org_id: 'org-2' },
   { id: '2', user_id: 'usr-2', user_name: 'דוד המנהל',   course_id: 'c2', course_title: 'הכרה ושימוש ב-AI בעבודה', status: 'בתהליך', progress_percent: 45, score: null, time_spent_seconds: 720, time: '12 דקות', date: '05/03/2026', org_id: 'org-2' },
@@ -35,7 +46,7 @@ export async function fetchOrgProgress(explicitOrgId = null) {
       .select(`
         id, user_id, course_id, status, progress_percent, score, time_spent_seconds, completed_at,
         profiles (full_name, role, phone, is_guest),
-        courses (title)
+        courses (title, content_type)
       `);
     
     // If an org is specified (either by org_admin or explicitly by super_admin), filter it
@@ -65,6 +76,8 @@ export async function fetchOrgProgress(explicitOrgId = null) {
           user_phone: r.profiles?.phone || '',
           is_guest: r.profiles?.is_guest === true,
           course_title: r.courses?.title,
+          content_type: r.courses?.content_type || 'scorm',
+          content_label: getContentLabel(r.courses?.content_type || 'scorm'),
           status,
           progress: displayProgress,
           progressKnown: displayProgress !== null,
@@ -104,7 +117,7 @@ export async function fetchLearnerAssignments() {
         // 1. Super Admin sees ALL published courses
         const { data, error } = await supabase
             .from('courses')
-            .select('id, title, description, category, published')
+            .select('id, title, description, category, published, content_type')
             .eq('published', true);
         if (error) throw new Error(error.message);
         courses = data;
@@ -144,7 +157,7 @@ export async function fetchLearnerAssignments() {
         // 3. Fetch course details
         const { data: cDetails, error: coursesError } = await supabase
             .from('courses')
-            .select('id, title, description, category, published')
+            .select('id, title, description, category, published, content_type')
             .in('id', courseIds)
             .eq('published', true);
 
@@ -173,6 +186,8 @@ export async function fetchLearnerAssignments() {
         id: course.id,
         title: course.title,
         desc: course.description || course.desc,
+        content_type: course.content_type || 'scorm',
+        content_label: getContentLabel(course.content_type || 'scorm'),
         status: status,
         progress,
         progressKnown: progress !== null,
@@ -192,6 +207,8 @@ export async function fetchLearnerAssignments() {
         id: c.id,
         title: c.title,
         desc: c.desc || c.description,
+        content_type: c.content_type || 'scorm',
+        content_label: getContentLabel(c.content_type || 'scorm'),
         status,
         progress,
         progressKnown: progress !== null,

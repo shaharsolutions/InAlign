@@ -37,7 +37,7 @@ export async function fetchCourseAssignments() {
             const org = orgs.find(o => o.id === asg.org_id) || {name: 'ארגון לא ידוע'};
             return {
                 id: asg.id,
-                course_title: course?.title || 'לומדה חסרה',
+                course_title: course?.title || 'תוכן חסר',
                 target_name: org.name,
                 assigned_at: '10/01/2026'
             }
@@ -57,13 +57,13 @@ export async function assignCourseToOrg(courseId, orgId) {
 
     // Handle "Already assigned" scenario gracefully (unique constraint)
     if (error) {
-       if (error.code === '23505') throw new Error('לומדה זו כבר מוקצית לארגון זה.');
+       if (error.code === '23505') throw new Error('תוכן זה כבר מוקצה לארגון זה.');
        throw new Error(error.message);
     }
   } else {
     // Mock
     if (MOCK_ASSIGNMENTS.find(a => a.course_id === courseId && a.org_id === orgId)) {
-        throw new Error('לומדה זו כבר מוקצית לארגון זה.');
+        throw new Error('תוכן זה כבר מוקצה לארגון זה.');
     }
     MOCK_ASSIGNMENTS.push({
       id: 'asg-' + Date.now().toString().slice(-4),

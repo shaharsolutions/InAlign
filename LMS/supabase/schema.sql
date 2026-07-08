@@ -2,7 +2,7 @@
 -- Run in Supabase SQL Editor for a fresh project.
 --
 -- This creates the database objects used by the current app:
--- organizations, profiles, courses, SCORM files, categories, groups,
+-- organizations, profiles, courses, learning content files, categories, groups,
 -- learner progress, guest access RPCs, RLS policies, and the private
 -- scorm_packages storage bucket.
 --
@@ -62,12 +62,14 @@ CREATE TABLE IF NOT EXISTS public.courses (
   title text NOT NULL,
   description text,
   category text NOT NULL DEFAULT 'כללי',
+  content_type text NOT NULL DEFAULT 'scorm',
   published boolean NOT NULL DEFAULT false,
   entry_point text NOT NULL DEFAULT 'index.html',
   guest_access_enabled boolean NOT NULL DEFAULT false,
   guest_access_token uuid NOT NULL DEFAULT gen_random_uuid(),
   created_at timestamptz NOT NULL DEFAULT timezone('utc'::text, now()),
-  updated_at timestamptz NOT NULL DEFAULT timezone('utc'::text, now())
+  updated_at timestamptz NOT NULL DEFAULT timezone('utc'::text, now()),
+  CONSTRAINT courses_content_type_check CHECK (content_type IN ('scorm', 'video', 'pdf', 'presentation'))
 );
 
 CREATE TABLE IF NOT EXISTS public.course_files (

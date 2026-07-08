@@ -6,8 +6,8 @@ export default async function renderAdminAssignments(container) {
   
   container.innerHTML = `
     <div class="mb-4 fade-in">
-      <h1 class="mb-1">הקצאת לומדות לארגונים</h1>
-      <p class="text-muted">שיוך לומדות מקטלוג המערכת לארגונים השונים</p>
+      <h1 class="mb-1">הקצאת תוכן למידה לארגונים</h1>
+      <p class="text-muted">שיוך לומדות, סרטונים, מצגות וקבצי PDF מקטלוג המערכת לארגונים השונים</p>
     </div>
 
     <div class="grid grid-cols-3 slide-up" style="gap: 2rem; align-items: start;">
@@ -22,14 +22,14 @@ export default async function renderAdminAssignments(container) {
                </select>
             </div>
             <div class="form-group" style="text-align: right;">
-               <label class="form-label" for="select-course">בחר לומדה להקצאה <span style="color: hsl(var(--color-danger));">*</span></label>
+               <label class="form-label" for="select-course">בחר תוכן להקצאה <span style="color: hsl(var(--color-danger));">*</span></label>
                <select class="form-control" id="select-course" required>
-                  <option value="">טוען לומדות...</option>
+                  <option value="">טוען תוכן למידה...</option>
                </select>
             </div>
             
             <button type="submit" class="btn btn-primary w-full justify-center mt-4">
-              <i class='bx bx-book-add'></i> הקצה לומדה לארגון
+              <i class='bx bx-book-add'></i> הקצה תוכן לארגון
             </button>
             <div id="assignment-msg" style="margin-top: 10px; text-align: center; font-weight: 500; min-height: 20px;" class="text-sm"></div>
          </form>
@@ -37,12 +37,12 @@ export default async function renderAdminAssignments(container) {
 
        <!-- Table Section -->
        <div class="card table-wrapper" style="grid-column: span 2;">
-         <h3 class="mb-3">לומדות שהוקצו לארגונים</h3>
+         <h3 class="mb-3">תוכן שהוקצה לארגונים</h3>
          <table class="table" id="assignments-table">
             <thead>
                <tr>
                   <th>שם הארגון</th>
-                  <th>לומדה</th>
+                  <th>תוכן</th>
                   <th>תאריך הקצאה</th>
                   <th>פעולות</th>
                </tr>
@@ -72,8 +72,8 @@ export default async function renderAdminAssignments(container) {
            : `<option value="">-- בחר ארגון יעד --</option>` + targets.map(l => `<option value="${l.id}">${l.name}</option>`).join('');
            
         selectCourse.innerHTML = courses.length === 0 
-           ? '<option value="">אין לומדות זמינות</option>'
-           : `<option value="">-- בחר הדרכה --</option>` + courses.map(c => `<option value="${c.id}">${c.title}</option>`).join('');
+           ? '<option value="">אין תוכן זמין</option>'
+           : `<option value="">-- בחר תוכן למידה --</option>` + courses.map(c => `<option value="${c.id}">${c.title}</option>`).join('');
 
     } catch(err) {
         selectTarget.innerHTML = `<option value="">שגיאה בטעינה</option>`;
@@ -164,14 +164,14 @@ export default async function renderAdminAssignments(container) {
     try {
         await assignCourseToOrg(courseId, targetId);
         msg.style.color = 'hsl(var(--color-success))';
-        msg.innerHTML = 'הלומדה שויכה לארגון בהצלחה!';
+        msg.innerHTML = 'התוכן שויך לארגון בהצלחה!';
         await renderTable();
     } catch(err) {
         msg.style.color = 'hsl(var(--color-danger))';
         msg.innerHTML = err.message;
     } finally {
         btn.disabled = false;
-        btn.innerHTML = `<i class='bx bx-book-add'></i> הקצה לומדה לארגון`;
+        btn.innerHTML = `<i class='bx bx-book-add'></i> הקצה תוכן לארגון`;
         setTimeout(() => msg.innerHTML='', 3000);
     }
   });

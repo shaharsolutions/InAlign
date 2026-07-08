@@ -339,7 +339,7 @@ export default async function renderAdminUsers(container) {
                    data-role="${safeRole}"
                    data-org="${safeOrgId}"
                    title="עריכת משתמש"><i class='bx bx-edit'></i></button>
-                 <button class="btn btn-outline text-sm view-courses-btn" data-id="${safeId}" data-name="${safeNameAttr}" data-courses="${safeCourses}" title="צפייה בלומדות משויכות"><i class='bx bx-book-open'></i></button>
+                 <button class="btn btn-outline text-sm view-courses-btn" data-id="${safeId}" data-name="${safeNameAttr}" data-courses="${safeCourses}" title="צפייה בתוכן למידה משויך"><i class='bx bx-book-open'></i></button>
                  ${u.id !== currentUser.id ? `<button class="btn btn-outline text-sm impersonate-btn" data-id="${safeId}" data-name="${safeNameAttr}" title="התחזות למשתמש"><i class='bx bx-glasses' style="color: hsl(var(--color-primary)); font-weight: bold;"></i></button>` : ''}
                  <button class="btn btn-outline text-sm reset-user-btn" data-id="${safeId}" data-name="${safeNameAttr}" title="איפוס נתוני למידה"><i class='bx bx-refresh' style="color: hsl(var(--color-warning));"></i></button>
                  ${u.id !== currentUser.id ? `<button class="btn btn-outline text-sm delete-btn" data-id="${safeId}" data-name="${safeNameAttr}" title="מחיקת חשבון"><i class='bx bx-trash' style="color: hsl(var(--color-danger));"></i></button>` : ''}
@@ -418,7 +418,7 @@ export default async function renderAdminUsers(container) {
         
         await showConfirmModal({
           title: 'אישור איפוס נתונים',
-          message: `האם אתה בטוח שברצונך לאפס את כל נתוני הלמידה עבור <strong>${escapeHtml(name)}</strong>? פעולה זו תמחוק את כל ציוני הלומדות שלו לצמיתות.`,
+          message: `האם אתה בטוח שברצונך לאפס את כל נתוני הלמידה עבור <strong>${escapeHtml(name)}</strong>? פעולה זו תמחק את כל ציוני ונתוני השימוש שלו לצמיתות.`,
           confirmText: 'אפס נתונים',
           onConfirm: async () => {
               await resetUserProgress(id);
@@ -447,10 +447,10 @@ export default async function renderAdminUsers(container) {
         }
 
         showCustomModal({
-            title: `לומדות משויכות - ${escapeHtml(name)}`,
+            title: `תוכן למידה משויך - ${escapeHtml(name)}`,
             content: `
                 <div class="mb-4">
-                    <p class="text-xs text-muted mb-4 font-medium">רשימת כל הלומדות המשויכות לעובד זה (באמצעות שיוך לקבוצה, שיוך ארגוני או שיוך ישיר):</p>
+                    <p class="text-xs text-muted mb-4 font-medium">רשימת כל תכני הלמידה המשויכים לעובד זה (באמצעות שיוך לקבוצה, שיוך ארגוני או שיוך ישיר):</p>
                     ${courses.length > 0 ? `
                         <ul class="list-none p-0 m-0 flex flex-col gap-2">
                             ${courses.map(c => `
@@ -469,7 +469,7 @@ export default async function renderAdminUsers(container) {
                                           style="border: none; color: hsl(var(--color-danger));" 
                                           data-course-id="${escapeAttr(c.id)}"
                                           data-course-title="${escapeAttr(c.title)}"
-                                          title="הסר שיוך לומדה">
+                                          title="הסר שיוך תוכן">
                                           <i class='bx bx-trash' style="font-size: 1.15rem;"></i>
                                         </button>
                                     ` : ''}
@@ -479,17 +479,17 @@ export default async function renderAdminUsers(container) {
                     ` : `
                         <div class="p-6 text-center text-muted" style="background: hsla(var(--text-main), 0.02); border-radius: var(--radius-lg); border: 1px dashed hsla(var(--text-main), 0.1);">
                             <i class='bx bx-info-circle' style="font-size: 2rem; display: block; margin-bottom: 0.5rem; opacity: 0.5;"></i>
-                            אין לומדות משויכות לעובד זה כרגע
+                            אין תכני למידה משויכים לעובד זה כרגע
                         </div>
                     `}
                 </div>
 
                 ${canManage ? `
                   <div style="margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px dashed hsla(var(--text-main), 0.1);">
-                    <h4 class="mb-3" style="font-size: 0.95rem;"><i class='bx bx-plus-circle'></i> שיוך לומדה חדשה באופן ישיר</h4>
+                    <h4 class="mb-3" style="font-size: 0.95rem;"><i class='bx bx-plus-circle'></i> שיוך תוכן למידה חדש באופן ישיר</h4>
                     <div class="flex gap-2">
                       <select class="form-control" id="modal-direct-assign-select" style="height: 48px; flex: 1;">
-                        <option value="">-- בחר לומדה לשיוך --</option>
+                        <option value="">-- בחר תוכן לשיוך --</option>
                         ${availableCourses.map(c => `
                           <option value="${escapeAttr(c.id)}" ${courses.some(ac => ac.id === c.id) ? 'disabled' : ''}>
                             ${escapeHtml(c.title)} ${courses.some(ac => ac.id === c.id) ? '(כבר משויך)' : ''}
@@ -517,14 +517,14 @@ export default async function renderAdminUsers(container) {
             assignBtn.onclick = async () => {
               const courseId = modalOverlay.querySelector('#modal-direct-assign-select').value;
               if (!courseId) {
-                showToast('עליך לבחור לומדה מהרשימה', 'warning');
+                showToast('עליך לבחור תוכן מהרשימה', 'warning');
                 return;
               }
               assignBtn.disabled = true;
               assignBtn.innerHTML = "<i class='bx bx-loader-alt bx-spin'></i>";
               try {
                 await bulkAssignCourses([userId], courseId);
-                showToast('הלומדה שוייכה בהצלחה');
+                showToast('התוכן שויך בהצלחה');
                 modalOverlay.querySelector('[data-close]').click();
                 await renderTable();
               } catch (err) {
@@ -541,8 +541,8 @@ export default async function renderAdminUsers(container) {
               const courseTitle = delBtn.dataset.courseTitle;
 
               await showConfirmModal({
-                title: 'הסרת שיוך לומדה',
-                message: `האם אתה בטוח שברצונך להסיר את השיוך של הלומדה <strong>${escapeHtml(courseTitle)}</strong> מהעובד <strong>${escapeHtml(name)}</strong>? פעולה זו תמחק גם את נתוני ההתקדמות שלו בלומדה זו לצמיתות.`,
+                title: 'הסרת שיוך תוכן',
+                message: `האם אתה בטוח שברצונך להסיר את השיוך של התוכן <strong>${escapeHtml(courseTitle)}</strong> מהעובד <strong>${escapeHtml(name)}</strong>? פעולה זו תמחק גם את נתוני ההתקדמות והשימוש שלו בתוכן זה לצמיתות.`,
                 confirmText: 'הסר שיוך',
                 onConfirm: async () => {
                   try {

@@ -14,7 +14,7 @@ export default async function renderSuperAdminSettings(container) {
   container.innerHTML = `
     <div class="mb-4 fade-in">
       <h1 class="mb-1">הגדרות מערכת</h1>
-      <p class="text-muted">${canManageSettings ? 'ניהול פרמטרים גלובליים, מיתוג וקטגוריות של לומדות.' : 'מדריכי שימוש והגדרות הזמינים לתפקיד שלך.'}</p>
+      <p class="text-muted">${canManageSettings ? 'ניהול פרמטרים גלובליים, מיתוג וקטגוריות של תוכן למידה.' : 'מדריכי שימוש והגדרות הזמינים לתפקיד שלך.'}</p>
     </div>
 
     <div class="grid grid-cols-1 gap-6 fade-in">
@@ -57,9 +57,9 @@ export default async function renderSuperAdminSettings(container) {
              <div class="form-group mt-4">
                 <label class="form-label">שיוך אוטומטי לעובד חדש</label>
                 <div id="branding-auto-enroll-container" class="form-control" style="height: auto; max-height: 200px; overflow-y: auto; padding: 1rem; display: flex; flex-direction: column; gap: 10px; background: hsl(var(--bg-body));">
-                   <div class="text-muted text-sm">טוען לומדות...</div>
+                   <div class="text-muted text-sm">טוען תוכן למידה...</div>
                 </div>
-                <p class="text-xs text-muted mt-1">בחר את כל הלומדות שיוקצו אוטומטית לכל עובד חדש שנוצר בארגון.</p>
+                <p class="text-xs text-muted mt-1">בחר את כל תכני הלמידה שיוקצו אוטומטית לכל עובד חדש שנוצר בארגון.</p>
              </div>
 
              <button type="submit" id="branding-save-btn" class="btn btn-primary mt-4 py-3 px-8">
@@ -73,7 +73,7 @@ export default async function renderSuperAdminSettings(container) {
           ${canManageSettings ? `
            <!-- Categories Management Section -->
            <div class="card" style="grid-column: 1 / -1;">
-            <h3 class="mb-3">ניהול קטגוריות לומדות</h3>
+            <h3 class="mb-3">ניהול קטגוריות תוכן למידה</h3>
             
             ${user?.role === 'super_admin' ? `
             <div class="form-group mb-6" style="background: hsl(var(--color-primary)/0.05); padding: 1rem; border-radius: 8px; border: 1px dashed hsl(var(--color-primary)/0.3);">
@@ -294,7 +294,7 @@ export default async function renderSuperAdminSettings(container) {
                    <span class="text-sm font-medium">${c.title}</span>
                 </label>
               `).join('') 
-            : '<div class="text-muted text-sm">לא נמצאו לומדות זמינות</div>';
+            : '<div class="text-muted text-sm">לא נמצא תוכן זמין</div>';
 
           form.classList.remove('hidden');
         } else {

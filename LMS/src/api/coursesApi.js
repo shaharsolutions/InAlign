@@ -4,10 +4,71 @@ import { isAdminRole, isManagementRole, isSuperAdminRole } from '../lib/roles.js
 import JSZip from 'jszip'
 
 let MOCK_COURSES = [
-  { id: 'c1', title: 'הדרכת אבטחת מידע בארגון - Q1', desc: 'לומדת חובה לכלל עובדי החברה', category: 'אבטחת מידע', status: 'completed', score: 100, progress: 100, image: 'bx-shield-quarter', created_at: '01/01/2026', published: true, org_id: 'org-2' },
-  { id: 'c2', title: 'הכרה ושימוש ב-AI בעבודה', desc: 'כלים מתקדמים לשיפור הפרודוקטיביות היומיומית', category: 'טכנולוגיה', status: 'in_progress', score: null, progress: 45, image: 'bx-brain', created_at: '15/02/2026', published: true, org_id: 'org-2' },
-  { id: 'c3', title: 'נהלי בטיחות ותקנון משרד (האב 2)', desc: 'רענון שנתי על נהלי הצטרפות למשרדים', category: 'משאבי אנוש', status: 'not_started', score: null, progress: 0, image: 'bx-buildings', created_at: '10/01/2026', published: true, org_id: 'org-2' }
+  { id: 'c1', title: 'הדרכת אבטחת מידע בארגון - Q1', desc: 'לומדת חובה לכלל עובדי החברה', category: 'אבטחת מידע', status: 'completed', score: 100, progress: 100, image: 'bx-shield-quarter', created_at: '01/01/2026', published: true, org_id: 'org-2', content_type: 'scorm' },
+  { id: 'c2', title: 'הכרה ושימוש ב-AI בעבודה', desc: 'כלים מתקדמים לשיפור הפרודוקטיביות היומיומית', category: 'טכנולוגיה', status: 'in_progress', score: null, progress: 45, image: 'bx-brain', created_at: '15/02/2026', published: true, org_id: 'org-2', content_type: 'scorm' },
+  { id: 'c3', title: 'נהלי בטיחות ותקנון משרד (האב 2)', desc: 'רענון שנתי על נהלי הצטרפות למשרדים', category: 'משאבי אנוש', status: 'not_started', score: null, progress: 0, image: 'bx-buildings', created_at: '10/01/2026', published: true, org_id: 'org-2', content_type: 'pdf' }
 ]
+
+const CONTENT_TYPES = {
+  scorm: {
+    label: 'לומדה',
+    icon: 'bx-package',
+    extensions: ['zip']
+  },
+  video: {
+    label: 'סרטון',
+    icon: 'bx-video',
+    extensions: ['mp4', 'webm', 'mov', 'm4v']
+  },
+  pdf: {
+    label: 'PDF',
+    icon: 'bxs-file-pdf',
+    extensions: ['pdf']
+  },
+  presentation: {
+    label: 'מצגת',
+    icon: 'bx-slideshow',
+    extensions: ['ppt', 'pptx', 'pps', 'ppsx', 'key']
+  }
+}
+
+export function getContentTypeMeta(type) {
+  return CONTENT_TYPES[type] || CONTENT_TYPES.scorm
+}
+
+export function getCourseContentType(course) {
+  return course?.content_type || course?.contentType || 'scorm'
+}
+
+export function getCourseContentLabel(course) {
+  return getContentTypeMeta(getCourseContentType(course)).label
+}
+
+function getFileExtension(fileName) {
+  return String(fileName || '').split('.').pop()?.toLowerCase() || ''
+}
+
+function detectContentTypeFromFile(file) {
+  const ext = getFileExtension(file?.name)
+  return Object.entries(CONTENT_TYPES).find(([, meta]) => meta.extensions.includes(ext))?.[0] || 'scorm'
+}
+
+function validateCourseFile(contentType, file) {
+  const meta = getContentTypeMeta(contentType)
+  const ext = getFileExtension(file?.name)
+  if (!file || !meta.extensions.includes(ext)) {
+    throw new Error(`סוג הקובץ אינו תואם ל${meta.label}. ניתן להעלות: ${meta.extensions.map(e => `.${e}`).join(', ')}`)
+  }
+}
+
+function safeStorageFileName(fileName) {
+  const fallback = `content-${Date.now()}`
+  return String(fileName || fallback)
+    .split('/')
+    .pop()
+    .replace(/[^a-zA-Z0-9._-]/g, '_')
+    .replace(/^_+/, '') || fallback
+}
 
 export async function fetchCourses() {
   const user = getCurrentUserSync();
@@ -48,6 +109,8 @@ export async function fetchCourses() {
 export async function uploadCourse(courseData, file) {
   const user = getCurrentUserSync();
   if (!user || !isManagementRole(user.role)) throw new Error("אין הרשאה");
+  const contentType = courseData.contentType || detectContentTypeFromFile(file);
+  validateCourseFile(contentType, file);
 
   if (supabase) {
     const courseId = crypto.randomUUID();
@@ -68,46 +131,53 @@ export async function uploadCourse(courseData, file) {
     const folderPath = `org_${effectiveOrgId}/courses/${courseId}`;
     let entryPoint = 'index.html';
 
-    // 1. Unzip the file
-    const zip = new JSZip();
-    const contents = await zip.loadAsync(file);
-    const files = Object.keys(contents.files);
-    
-    const fileMap = [];
-    files.forEach(name => {
-        if (contents.files[name].dir) return;
-        const safeName = name.split('/').map(part => part.replace(/[^a-zA-Z0-9._-]/g, '_')).join('/');
-        fileMap.push({ original: name, safe: safeName });
-    });
-
-    // 2. Upload files
-    const uploadPromises = fileMap.map(async (mapping) => {
-      const { original, safe } = mapping;
-      const fileObj = contents.files[original];
-      let blob = await fileObj.async('blob');
-      let contentType = getContentType(original);
+    if (contentType === 'scorm') {
+      // 1. Unzip the file
+      const zip = new JSZip();
+      const contents = await zip.loadAsync(file);
+      const files = Object.keys(contents.files);
       
-      if (['text/html', 'application/javascript', 'text/css', 'application/xml', 'application/json'].includes(contentType)) {
-          let text = await fileObj.async('text');
-          fileMap.forEach(m => {
-              if (m.original !== m.safe) {
-                 const baseOrig = m.original.split('/').pop();
-                 const baseSafe = m.safe.split('/').pop();
-                 text = text.split(m.original).join(m.safe);
-                 if (baseOrig !== baseSafe) text = text.split(baseOrig).join(baseSafe);
-              }
-          });
-          blob = new Blob([text], { type: contentType });
-      }
+      const fileMap = [];
+      files.forEach(name => {
+          if (contents.files[name].dir) return;
+          const safeName = name.split('/').map(part => part.replace(/[^a-zA-Z0-9._-]/g, '_')).join('/');
+          fileMap.push({ original: name, safe: safeName });
+      });
 
-      if (original.toLowerCase().endsWith('index.html') || original.toLowerCase().endsWith('story.html')) {
-          entryPoint = safe;
-      }
+      // 2. Upload SCORM package files
+      const uploadPromises = fileMap.map(async (mapping) => {
+        const { original, safe } = mapping;
+        const fileObj = contents.files[original];
+        let blob = await fileObj.async('blob');
+        const mimeType = getContentType(original);
 
-      await supabase.storage.from('scorm_packages').upload(`${folderPath}/${safe}`, blob, { contentType, upsert: true });
-    });
+        if (['text/html', 'application/javascript', 'text/css', 'application/xml', 'application/json'].includes(mimeType)) {
+            let text = await fileObj.async('text');
+            fileMap.forEach(m => {
+                if (m.original !== m.safe) {
+                   const baseOrig = m.original.split('/').pop();
+                   const baseSafe = m.safe.split('/').pop();
+                   text = text.split(m.original).join(m.safe);
+                   if (baseOrig !== baseSafe) text = text.split(baseOrig).join(baseSafe);
+                }
+            });
+            blob = new Blob([text], { type: mimeType });
+        }
 
-    await Promise.all(uploadPromises);
+        if (original.toLowerCase().endsWith('index.html') || original.toLowerCase().endsWith('story.html')) {
+            entryPoint = safe;
+        }
+
+        await supabase.storage.from('scorm_packages').upload(`${folderPath}/${safe}`, blob, { contentType: mimeType, upsert: true });
+      });
+
+      await Promise.all(uploadPromises);
+    } else {
+      entryPoint = safeStorageFileName(file.name);
+      await supabase.storage
+        .from('scorm_packages')
+        .upload(`${folderPath}/${entryPoint}`, file, { contentType: getContentType(file.name), upsert: true });
+    }
 
     // 3. Save Course Data
     // We try both 'desc' and 'description' to be extremely robust against schema variations
@@ -117,6 +187,7 @@ export async function uploadCourse(courseData, file) {
         title: courseData.title,
         category: courseData.category,
         published: true,
+        content_type: contentType,
         guest_access_enabled: courseData.guestAccessEnabled === true,
         entry_point: entryPoint
     };
@@ -161,6 +232,19 @@ export async function uploadCourse(courseData, file) {
 
     return course;
   }
+
+  const course = {
+    id: crypto.randomUUID(),
+    title: courseData.title,
+    desc: courseData.description || courseData.desc,
+    category: courseData.category,
+    published: true,
+    content_type: contentType,
+    created_at: new Date().toISOString(),
+    org_id: user.orgId || user.org_id
+  }
+  MOCK_COURSES.push(course)
+  return course
 }
 
 function getContentType(fileName) {
@@ -178,7 +262,15 @@ function getContentType(fileName) {
         'json': 'application/json',
         'xml': 'application/xml',
         'mp4': 'video/mp4',
-        'pdf': 'application/pdf'
+        'webm': 'video/webm',
+        'mov': 'video/quicktime',
+        'm4v': 'video/x-m4v',
+        'pdf': 'application/pdf',
+        'ppt': 'application/vnd.ms-powerpoint',
+        'pptx': 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+        'pps': 'application/vnd.ms-powerpoint',
+        'ppsx': 'application/vnd.openxmlformats-officedocument.presentationml.slideshow',
+        'key': 'application/vnd.apple.keynote'
     };
     return map[ext] || 'application/octet-stream';
 }
@@ -233,6 +325,7 @@ export async function fetchCourseById(id) {
       const entryPath = `${data.course_files[0].file_path}/${data.entry_point || 'index.html'}`;
       data.filePath = entryPath;
       data.fileUrl = `scorm-proxy/${entryPath}`;
+      data.content_type = getCourseContentType(data);
       console.log(`[LMS] Course proxy URL generated: ${data.fileUrl}`);
     } else {
       console.warn(`[LMS] No course_files found for course ${id}. Relation data:`, data.course_files);

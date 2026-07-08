@@ -30,7 +30,7 @@ export default async function renderAdminDashboard(container) {
           <i class='bx bx-group'></i> ניהול קבוצות
         </button>
         <button class="btn btn-primary" onclick="window.location.hash = '#/admin/scorm'">
-          <i class='bx bx-upload'></i> ניהול והעלאת SCORM
+          <i class='bx bx-upload'></i> ניהול תוכן למידה
         </button>
       </div>
     </div>
@@ -71,7 +71,7 @@ export default async function renderAdminDashboard(container) {
     
     <div class="card slide-up mb-4 table-wrapper">
       <div class="flex flex-wrap justify-between items-center mb-4 gap-4">
-         <h3 class="mb-0">מעקב ולומדות</h3>
+         <h3 class="mb-0">מעקב שימוש בתוכן למידה</h3>
          <div class="flex flex-wrap gap-2 items-center">
            <button class="btn btn-outline text-sm" id="btn-export-excel" title="ייצוא ל-Excel"><i class='bx bx-spreadsheet' style="color: #107c41;"></i> הורידו Excel</button>
            <button class="btn btn-outline text-sm" id="btn-export-csv" title="ייצוא ל-CSV"><i class='bx bx-file'></i> CSV</button>
@@ -84,7 +84,8 @@ export default async function renderAdminDashboard(container) {
           <tr>
             <th>שם הלומד</th>
             <th>טלפון</th>
-            <th>שם הלומדה</th>
+            <th>שם התוכן</th>
+            <th>סוג</th>
             <th>סטטוס</th>
             <th>התקדמות</th>
             <th>ציון</th>
@@ -94,7 +95,7 @@ export default async function renderAdminDashboard(container) {
           </tr>
         </thead>
         <tbody>
-          <tr><td colspan="9" style="text-align: center;"><i class='bx bx-loader bx-spin'></i> טוען נתונים...</td></tr>
+          <tr><td colspan="10" style="text-align: center;"><i class='bx bx-loader bx-spin'></i> טוען נתונים...</td></tr>
         </tbody>
       </table>
     </div>
@@ -104,12 +105,12 @@ export default async function renderAdminDashboard(container) {
   let currentRecords = [];
 
   async function loadData(orgId = null) {
-    tbody.innerHTML = `<tr><td colspan="9" style="text-align: center;"><i class='bx bx-loader bx-spin'></i> טוען נתונים...</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="10" style="text-align: center;"><i class='bx bx-loader bx-spin'></i> טוען נתונים...</td></tr>`;
     try {
       currentRecords = await fetchOrgProgress(orgId);
       
       if(currentRecords.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="9" style="text-align: center;" class="text-muted">לא נמצאו נתוני למידה תואמים.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="10" style="text-align: center;" class="text-muted">לא נמצאו נתוני למידה תואמים.</td></tr>`;
         updateStats(0, 0, 0, 0);
         return;
       }
@@ -123,7 +124,8 @@ export default async function renderAdminDashboard(container) {
             ${r.is_guest ? `<span class="badge badge-primary" style="margin-right:.4rem">אורח</span>` : ''}
           </td>
           <td dir="ltr">${escapeHtml(r.user_phone || '-')}</td>
-          <td style="font-weight: 500;">${escapeHtml(r.course_title || 'קורס שנמחק')}</td>
+          <td style="font-weight: 500;">${escapeHtml(r.course_title || 'תוכן שנמחק')}</td>
+          <td><span class="badge badge-primary">${escapeHtml(r.content_label || 'לומדה')}</span></td>
           <td>
             <span class="badge ${r.status === 'הושלם' ? 'badge-success' : r.status === 'בתהליך' ? 'badge-primary' : 'badge-warning'}">
               ${escapeHtml(r.status)}
@@ -175,7 +177,7 @@ export default async function renderAdminDashboard(container) {
       });
 
     } catch (err) {
-      tbody.innerHTML = `<tr><td colspan="9" style="text-align: center; color: hsl(var(--color-danger));">שגיאה: ${escapeHtml(err.message)}</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="10" style="text-align: center; color: hsl(var(--color-danger));">שגיאה: ${escapeHtml(err.message)}</td></tr>`;
     }
   }
 
@@ -233,7 +235,8 @@ export default async function renderAdminDashboard(container) {
           'שם הלומד': r.user_name || 'משתמש לא ידוע',
           'סוג משתמש': r.is_guest ? 'אורח' : 'משתמש רשום',
           'טלפון': r.user_phone || '',
-          'שם הלומדה': r.course_title || 'קורס שנמחק',
+          'שם התוכן': r.course_title || 'תוכן שנמחק',
+          'סוג תוכן': r.content_label || 'לומדה',
           'סטטוס': r.status,
           'התקדמות (%)': r.progressKnown ? r.progress : '',
           'ציון': r.score || '-',
