@@ -89,10 +89,18 @@ export function renderNavbar(user) {
       const exitBtn = document.getElementById('exit-impersonation-btn');
       if (exitBtn) {
         exitBtn.addEventListener('click', () => {
+          localStorage.removeItem('lms.impersonation');
           window.__APP_STATE.user.role = 'super_admin';
           window.__APP_STATE.user.originalRole = null;
           window.__APP_STATE.user.orgId = window.__APP_STATE.user.originalOrgId || null;
+          window.__APP_STATE.user.org_id = window.__APP_STATE.user.originalOrgId || null;
           window.__APP_STATE.user.orgName = 'ניהול ראשי';
+          window.__APP_STATE.user.orgColor = null;
+          window.__APP_STATE.user.org_color = null;
+          window.__APP_STATE.user.orgLogo = null;
+          window.__APP_STATE.user.logo_url = null;
+          window.__APP_STATE.user.isImpersonating = false;
+          document.getElementById('impersonation-banner')?.remove();
           applyOrganizationStyles(window.__APP_STATE.user);
           window.location.hash = '#/superadmin/orgs';
         });

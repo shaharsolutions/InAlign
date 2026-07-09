@@ -1,6 +1,7 @@
 import { fetchOrganizations, createOrganization, updateOrganization, deleteOrganization } from '../api/orgApi.js'
 import { resetOrgProgress } from '../api/progressApi.js'
 import { showConfirmModal, showToast, applyOrganizationStyles } from '../lib/ui.js'
+import { escapeAttr, escapeHtml } from '../lib/html.js'
 import { ROLE_ORG_ADMIN } from '../lib/roles.js'
 
 export default async function renderSuperAdminOrgs(container) {
@@ -87,13 +88,20 @@ export default async function renderSuperAdminOrgs(container) {
         return
       }
 
-      tableBody.innerHTML = orgs.map(o => `
-        <tr data-id="${o.id}">
+      tableBody.innerHTML = orgs.map(o => {
+        const safeId = escapeAttr(o.id)
+        const safeName = escapeHtml(o.name)
+        const safeNameAttr = escapeAttr(o.name)
+        const safeLogo = escapeAttr(o.logo_url || '')
+        const safeColor = escapeAttr(o.primary_color || '#0066FF')
+
+        return `
+        <tr data-id="${safeId}">
            <td style="width: 60px;">
-              ${o.logo_url ? `<img src="${o.logo_url}" alt="${o.name}" style="width: 40px; height: 40px; object-fit: contain; border-radius: 4px;">` : `<div style="width: 40px; height: 40px; background: hsl(var(--bg-surface-hover)); border-radius: 4px; display: flex; align-items: center; justify-content: center; color: hsl(var(--text-muted)); font-size: 1.25rem;"><i class='bx bx-image'></i></div>`}
+              ${o.logo_url ? `<img src="${safeLogo}" alt="${safeNameAttr}" style="width: 40px; height: 40px; object-fit: contain; border-radius: 4px;">` : `<div style="width: 40px; height: 40px; background: hsl(var(--bg-surface-hover)); border-radius: 4px; display: flex; align-items: center; justify-content: center; color: hsl(var(--text-muted)); font-size: 1.25rem;"><i class='bx bx-image'></i></div>`}
            </td>
            <td style="white-space: nowrap;">
-              <div style="font-weight: 600; color: hsl(var(--text-main));">${o.name}</div>
+              <div style="font-weight: 600; color: hsl(var(--text-main));">${safeName}</div>
            </td>
 
            <td>
@@ -106,24 +114,25 @@ export default async function renderSuperAdminOrgs(container) {
            <td>${o.created_at ? new Date(o.created_at).toLocaleDateString('he-IL') : '-'}</td>
            <td>
              <div class="flex gap-2">
-               <button class="btn btn-outline text-sm edit-org-btn" data-logo="${o.logo_url || ''}" 
-                 data-id="${o.id}" data-name="${o.name}" data-color="${o.primary_color || '#0066FF'}" 
+               <button class="btn btn-outline text-sm edit-org-btn" data-logo="${safeLogo}"
+                 data-id="${safeId}" data-name="${safeNameAttr}" data-color="${safeColor}"
                  title="עריכה">
                  <i class='bx bx-edit'></i>
                </button>
-                <button class="btn btn-outline text-sm reset-org-btn" data-id="${o.id}" data-name="${o.name}" title="איפוס נתונים">
+                <button class="btn btn-outline text-sm reset-org-btn" data-id="${safeId}" data-name="${safeNameAttr}" title="איפוס נתונים">
                   <i class='bx bx-refresh' style="color: hsl(var(--color-danger));"></i>
                 </button>
-               <button class="btn btn-primary text-sm enter-org-btn" data-id="${o.id}" data-name="${o.name}" title="למערכת">
+               <button class="btn btn-primary text-sm enter-org-btn" data-id="${safeId}" data-name="${safeNameAttr}" data-color="${safeColor}" data-logo="${safeLogo}" title="למערכת">
                  <i class='bx bx-door-open'></i> למערכת
                </button>
-               <button class="btn btn-outline text-sm delete-org-btn" data-id="${o.id}" data-name="${o.name}" title="מחיקת ארגון">
+               <button class="btn btn-outline text-sm delete-org-btn" data-id="${safeId}" data-name="${safeNameAttr}" title="מחיקת ארגון">
                  <i class='bx bx-trash' style="color: hsl(var(--color-danger));"></i>
                </button>
              </div>
            </td>
         </tr>
-      `).join('')
+      `
+      }).join('')
     } catch (err) {
       tableBody.innerHTML = `<tr><td colspan="5" style="color: hsl(var(--color-danger)); text-align: center;">שגיאה: ${err.message}</td></tr>`
     }
@@ -184,12 +193,23 @@ export default async function renderSuperAdminOrgs(container) {
     if (enterBtn) {
       const user = window.__APP_STATE?.user;
       if (!user) return;
-      user.originalRole = user.role;
-      user.originalOrgId = user.orgId;
-      user.role = ROLE_ORG_ADMIN;
-      user.orgId = enterBtn.dataset.id;
-      user.orgName = enterBtn.dataset.name;
-      applyOrganizationStyles(user);
+      const targetOrgUser = {
+        ...user,
+        originalRole: user.originalRole || user.role,
+        originalOrgId: user.originalOrgId || user.orgId || user.org_id || null,
+        role: ROLE_ORG_ADMIN,
+        orgId: enterBtn.dataset.id,
+        org_id: enterBtn.dataset.id,
+        orgName: enterBtn.dataset.name,
+        orgColor: enterBtn.dataset.color,
+        org_color: enterBtn.dataset.color,
+        orgLogo: enterBtn.dataset.logo || null,
+        logo_url: enterBtn.dataset.logo || null,
+        isImpersonating: true
+      };
+      localStorage.setItem('lms.impersonation', JSON.stringify(targetOrgUser));
+      window.__APP_STATE.user = targetOrgUser;
+      applyOrganizationStyles(targetOrgUser);
       window.location.hash = '#/admin';
     }
   });

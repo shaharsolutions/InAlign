@@ -23,6 +23,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Impersonation Banner logic
     if (user?.isImpersonating) {
         const banner = document.createElement('div');
+        banner.id = 'impersonation-banner';
         banner.style = `
             background: #fef3c7; border-bottom: 2px solid #fbbf24; 
             padding: 8px 16px; display: flex; align-items: center; 
