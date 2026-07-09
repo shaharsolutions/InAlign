@@ -6,6 +6,34 @@ import { parseScormTime, formatScorm12Time } from '../lib/scormUtils.js'
 import { clampProgress } from '../lib/progressUtils.js'
 import { escapeAttr, escapeHtml } from '../lib/html.js'
 
+let scormWorkerReady = null
+
+function ensureScormWorker() {
+  if (!('serviceWorker' in navigator)) return Promise.resolve(null)
+  if (!scormWorkerReady) {
+    scormWorkerReady = navigator.serviceWorker.register('./scorm-sw.js')
+      .then(() => navigator.serviceWorker.ready)
+      .catch((err) => {
+        console.error('[Align] SCORM worker registration failed:', err)
+        return null
+      })
+  }
+  return scormWorkerReady
+}
+
+async function prepareScormTransport(user) {
+  const [registration, sessionResult] = await Promise.all([
+    ensureScormWorker(),
+    supabase ? supabase.auth.getSession() : Promise.resolve({ data: { session: null } })
+  ])
+  const accessToken = sessionResult?.data?.session?.access_token || ''
+  const worker = navigator.serviceWorker?.controller || registration?.active
+  if (worker && accessToken) {
+    worker.postMessage({ type: 'SET_AUTH_TOKEN', token: accessToken, userId: user?.id })
+  }
+  return accessToken
+}
+
 function isScormDebugEnabled() {
   try {
     return typeof window !== 'undefined'
@@ -20,45 +48,20 @@ function scormDebug(...args) {
   if (isScormDebugEnabled()) console.debug(...args);
 }
 
-async function getAuthenticatedProxyUrl(fileUrl, user) {
+async function getAuthenticatedProxyUrl(fileUrl, accessTokenPromise) {
   let proxyUrl = fileUrl;
-
-  if ('serviceWorker' in navigator) {
-    try {
-      const registration = await navigator.serviceWorker.register('./scorm-sw.js');
-      await navigator.serviceWorker.ready;
-      if (supabase) {
-        const { data: { session } } = await supabase.auth.getSession();
-        const accessToken = session?.access_token;
-        const worker = registration.active || registration.waiting || registration.installing || navigator.serviceWorker.controller;
-        if (worker && accessToken) {
-          worker.postMessage({ type: 'SET_AUTH_TOKEN', token: accessToken, userId: user?.id });
-        }
-      }
-    } catch (err) {
-      console.error('[Align] SW registration failed:', err);
+  try {
+    const accessToken = await accessTokenPromise
+    if (accessToken) {
+      proxyUrl += `${proxyUrl.includes('?') ? '&' : '?'}lms_token=${encodeURIComponent(accessToken)}`;
     }
+  } catch (err) {
+    console.error('[Align] Failed to prepare content authorization:', err);
   }
-
-  if (supabase) {
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session?.access_token) {
-        proxyUrl += `${proxyUrl.includes('?') ? '&' : '?'}lms_token=${encodeURIComponent(session.access_token)}`;
-      }
-    } catch (err) {
-      console.error('[Align] Failed to attach content session token:', err);
-    }
-  }
-
-  if (window.navigator.serviceWorker) {
-    await window.navigator.serviceWorker.ready;
-  }
-
   return proxyUrl;
 }
 
-async function renderTrackedContentPlayer(container, { course, existingProgress, user }) {
+async function renderTrackedContentPlayer(container, { course, existingProgress, user, scormTransport }) {
   const courseId = course.id;
   const contentType = getCourseContentType(course);
   const contentLabel = getCourseContentLabel(course);
@@ -131,7 +134,7 @@ async function renderTrackedContentPlayer(container, { course, existingProgress,
     throw new Error("לא נמצאו קבצי תוכן עבור פריט זה. ייתכן שההעלאה נכשלה או שהקבצים נמחקו.");
   }
 
-  const proxyUrl = await getAuthenticatedProxyUrl(course.fileUrl, user);
+  const proxyUrl = await getAuthenticatedProxyUrl(course.fileUrl, scormTransport);
   const viewerHtml = contentType === 'video'
     ? `<video id="tracked-video" class="content-media-player" controls playsinline preload="metadata" src="${escapeAttr(proxyUrl)}"></video>`
     : `
@@ -219,6 +222,10 @@ export default async function renderPlayer(container) {
   // Update global tracking
   if (window._lmsHeartbeat) clearInterval(window._lmsHeartbeat);
   window._lmsActiveCourseId = courseId;
+  // Begin worker/session preparation alongside the two data requests below.
+  // This removes the former extra wait between opening the course and the
+  // iframe request, especially on a first visit.
+  const scormTransport = prepareScormTransport(user);
 
     container.innerHTML = `
       <div class="player-container items-center justify-center">
@@ -239,7 +246,7 @@ export default async function renderPlayer(container) {
     course.content_type = getCourseContentType(course);
 
     if (course.content_type !== 'scorm') {
-      await renderTrackedContentPlayer(container, { course, existingProgress, user });
+      await renderTrackedContentPlayer(container, { course, existingProgress, user, scormTransport });
       return;
     }
 
@@ -495,8 +502,6 @@ export default async function renderPlayer(container) {
     const loaderStatus = document.getElementById('iframe-loader-status');
     let loaderHidden = false;
     let iframeLoaded = false;
-    let scormReady = false;
-    let fallbackTimer = null;
 
     const setLoaderStatus = (text) => {
       if (loaderStatus) loaderStatus.textContent = text;
@@ -505,7 +510,6 @@ export default async function renderPlayer(container) {
     const hideLoader = () => {
       if (loaderHidden) return;
       loaderHidden = true;
-      if (fallbackTimer) clearTimeout(fallbackTimer);
       setLoaderStatus('הלומדה מוכנה');
       iframe.style.opacity = '1';
       if (loader) {
@@ -515,35 +519,15 @@ export default async function renderPlayer(container) {
       }
     };
 
-    const waitForIframeDocument = async () => {
-      const maxAttempts = 40;
-      for (let attempt = 0; attempt < maxAttempts; attempt++) {
-        try {
-          const doc = iframe.contentDocument;
-          if (doc?.readyState === 'complete' && doc.body?.children?.length > 0) return true;
-        } catch (e) {
-          return true;
-        }
-        await new Promise(resolve => setTimeout(resolve, 150));
-      }
-      return false;
-    };
-
     const maybeHideLoader = () => {
       if (!iframeLoaded) return;
-      if (scormReady || runtime.scormInitialized) {
-        hideLoader();
-        return;
-      }
-
-      fallbackTimer = setTimeout(() => {
-        if (!loaderHidden && iframeLoaded) hideLoader();
-      }, 3500);
+      // iframe.onload means its document is available. Waiting for a second
+      // SCORM signal here used to keep a fully loaded course hidden for 3.5s.
+      hideLoader();
     };
 
     const onScormReady = (event) => {
       if (event.detail?.courseId !== runtime.courseId) return;
-      scormReady = true;
       setLoaderStatus('מחבר את הלומדה למערכת...');
       maybeHideLoader();
     };
@@ -554,13 +538,12 @@ export default async function renderPlayer(container) {
         throw new Error("לא נמצאו קבצי לומדה עבור קורס זה. ייתכן שההעלאה נכשלה או שהקבצים נמחקו.");
     }
 
-    const proxyUrl = await getAuthenticatedProxyUrl(course.fileUrl, user);
+    const proxyUrl = await getAuthenticatedProxyUrl(course.fileUrl, scormTransport);
 
-    iframe.onload = async () => {
+    iframe.onload = () => {
         setLoaderStatus('מסיים טעינה...');
-        await waitForIframeDocument();
         iframeLoaded = true;
-        maybeHideLoader();
+        requestAnimationFrame(maybeHideLoader);
     };
 
     iframe.onerror = () => {

@@ -1,7 +1,6 @@
 import { supabase } from '../lib/supabase.js'
 import { getCurrentUserSync } from './authApi.js'
 import { isAdminRole, isManagementRole, isSuperAdminRole } from '../lib/roles.js'
-import JSZip from 'jszip'
 
 let MOCK_COURSES = [
   { id: 'c1', title: 'הדרכת אבטחת מידע בארגון - Q1', desc: 'לומדת חובה לכלל עובדי החברה', category: 'אבטחת מידע', status: 'completed', score: 100, progress: 100, image: 'bx-shield-quarter', created_at: '01/01/2026', published: true, org_id: 'org-2', content_type: 'scorm' },
@@ -133,6 +132,9 @@ export async function uploadCourse(courseData, file) {
 
     if (contentType === 'scorm') {
       // 1. Unzip the file
+      // Only administrators uploading a package need this sizable dependency;
+      // learners opening a course should not download it with the player.
+      const { default: JSZip } = await import('jszip');
       const zip = new JSZip();
       const contents = await zip.loadAsync(file);
       const files = Object.keys(contents.files);

@@ -1,15 +1,23 @@
-import renderLogin from './pages/login.js'
-import renderAdminDashboard from './pages/admin.js'
-import renderAdminScorm from './pages/admin-scorm.js'
-import renderAdminAssignments from './pages/admin-assignments.js'
-import renderAdminUsers from './pages/admin-users.js'
-import renderAdminGroups from './pages/admin-groups.js'
-import renderLearnerDashboard from './pages/learner.js'
-import renderPlayer from './pages/player.js'
-import renderSuperAdminOrgs from './pages/superadmin-orgs.js'
-import renderSuperAdminSettings from './pages/superadmin-settings.js'
-import renderGuestEntry from './pages/guest-entry.js'
-import renderSuperAdminActivityLog from './pages/superadmin-activity-log.js'
+// Pages are loaded only when their route is opened. This keeps login and the
+// first dashboard paint responsive instead of downloading every admin screen
+// and the SCORM player up front.
+const lazyPage = (load) => async (container) => {
+  const { default: render } = await load()
+  return render(container)
+}
+
+const renderLogin = lazyPage(() => import('./pages/login.js'))
+const renderAdminDashboard = lazyPage(() => import('./pages/admin.js'))
+const renderAdminScorm = lazyPage(() => import('./pages/admin-scorm.js'))
+const renderAdminAssignments = lazyPage(() => import('./pages/admin-assignments.js'))
+const renderAdminUsers = lazyPage(() => import('./pages/admin-users.js'))
+const renderAdminGroups = lazyPage(() => import('./pages/admin-groups.js'))
+const renderLearnerDashboard = lazyPage(() => import('./pages/learner.js'))
+const renderPlayer = lazyPage(() => import('./pages/player.js'))
+const renderSuperAdminOrgs = lazyPage(() => import('./pages/superadmin-orgs.js'))
+const renderSuperAdminSettings = lazyPage(() => import('./pages/superadmin-settings.js'))
+const renderGuestEntry = lazyPage(() => import('./pages/guest-entry.js'))
+const renderSuperAdminActivityLog = lazyPage(() => import('./pages/superadmin-activity-log.js'))
 
 /**
  * Route Configuration

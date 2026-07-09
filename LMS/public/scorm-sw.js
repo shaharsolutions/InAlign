@@ -145,6 +145,10 @@ function shouldCacheAsset(proxyPath, response) {
     if (!response || !response.ok) return false;
     if (response.status === 206) return false;
     const ext = proxyPath.split('?')[0].split('.').pop().toLowerCase();
+    const contentLength = Number(response.headers.get('Content-Length') || 0);
+    // Keep repeat launches fast without filling memory/storage with large
+    // videos. Range requests remain streamed directly by the Edge Function.
+    if (Number.isFinite(contentLength) && contentLength > 12 * 1024 * 1024) return false;
     return ['html', 'htm', 'js', 'css', 'json', 'xml', 'png', 'jpg', 'jpeg', 'gif', 'svg', 'webp', 'mp4', 'webm', 'mov', 'm4v', 'mp3', 'wav', 'pdf', 'ppt', 'pptx', 'pps', 'ppsx', 'key', 'woff', 'woff2', 'ttf', 'otf'].includes(ext);
 }
 

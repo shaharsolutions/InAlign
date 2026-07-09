@@ -1,8 +1,28 @@
 import { initRouter } from './src/router.js'
-import { checkAuth, onAuthStatusChange } from './src/auth.js'
+import { checkAuth, onAuthStatusChange, stopImpersonating } from './src/auth.js'
 import { escapeHtml } from './src/lib/html.js'
+import { supabase } from './src/lib/supabase.js'
 import { applyOrganizationStyles, showAlert, showConfirmModal, showPrompt } from './src/lib/ui.js'
 import { roleLabel } from './src/lib/roles.js'
+
+function primeScormWorker(user) {
+  if (!('serviceWorker' in navigator)) return
+
+  // Do this in the background while the application renders. The player can
+  // then use an active, authenticated worker immediately instead of creating
+  // it after the learner presses "start".
+  navigator.serviceWorker.register('./scorm-sw.js')
+    .then(() => navigator.serviceWorker.ready)
+    .then(async (registration) => {
+      if (!supabase) return
+      const { data: { session } } = await supabase.auth.getSession()
+      const worker = navigator.serviceWorker.controller || registration.active
+      if (worker && session?.access_token) {
+        worker.postMessage({ type: 'SET_AUTH_TOKEN', token: session.access_token, userId: user?.id })
+      }
+    })
+    .catch(err => console.error('[Align] SCORM worker pre-registration failed:', err))
+}
 
 document.addEventListener('DOMContentLoaded', async () => {
   const appContainer = document.getElementById('app')
@@ -38,19 +58,13 @@ document.addEventListener('DOMContentLoaded', async () => {
         document.body.prepend(banner);
         
         banner.querySelector('#stop-impersonation-btn').onclick = async () => {
-             const { stopImpersonating } = await import('./src/auth.js');
              await stopImpersonating();
         };
     }
 
     initRouter(appContainer)
 
-    // Pre-register SCORM Service Worker for faster course loading
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('./scorm-sw.js').catch(err => {
-        console.error('[Align] SW pre-registration failed:', err);
-      });
-    }
+    primeScormWorker(user)
     
   } catch (err) {
     console.error("Initialization Failed", err)
