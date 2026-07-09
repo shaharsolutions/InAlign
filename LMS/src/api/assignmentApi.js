@@ -16,7 +16,8 @@ export async function fetchCourseAssignments() {
             .from('course_assignments')
             .select(`
                 id, assigned_at,
-                courses (id, title),
+                course_id, org_id,
+                courses (id, title, content_type),
                 organizations (id, name)
             `);
         
@@ -24,7 +25,10 @@ export async function fetchCourseAssignments() {
         
         return data.map(record => ({
             id: record.id,
+            course_id: record.course_id || record.courses?.id,
+            org_id: record.org_id || record.organizations?.id,
             course_title: record.courses?.title,
+            content_type: record.courses?.content_type || 'scorm',
             target_name: record.organizations?.name,
             assigned_at: new Date(record.assigned_at).toLocaleDateString('he-IL')
         }));
@@ -37,7 +41,10 @@ export async function fetchCourseAssignments() {
             const org = orgs.find(o => o.id === asg.org_id) || {name: 'ארגון לא ידוע'};
             return {
                 id: asg.id,
+                course_id: asg.course_id,
+                org_id: asg.org_id,
                 course_title: course?.title || 'תוכן חסר',
+                content_type: course?.content_type || 'scorm',
                 target_name: org.name,
                 assigned_at: '10/01/2026'
             }
