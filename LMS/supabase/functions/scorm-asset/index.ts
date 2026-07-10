@@ -132,17 +132,31 @@ async function assertCanAccessPath(
     .from('courses')
     .select('id, org_id, published')
     .eq('id', courseId)
-    .eq('org_id', orgId)
     .single()
 
-  if (courseError || !course) throw new Error('Course not found')
+  // The storage path is always rooted at the owning organization. A course
+  // may also be shared with another organization through course_assignments.
+  if (courseError || !course || course.org_id !== orgId) throw new Error('Course not found')
 
   if (profile.role === SUPER_ADMIN_ROLE) {
     cacheAccess(profile, orgId, courseId)
     return
   }
 
-  if (profile.org_id !== orgId) {
+  const isOwningOrganization = profile.org_id === course.org_id
+  let isAssignedToOrganization = false
+  if (!isOwningOrganization && profile.org_id) {
+    const { data: assignment } = await supabaseAdmin
+      .from('course_assignments')
+      .select('id')
+      .eq('course_id', courseId)
+      .eq('org_id', profile.org_id)
+      .limit(1)
+
+    isAssignedToOrganization = !!assignment?.length
+  }
+
+  if (!isOwningOrganization && !isAssignedToOrganization) {
     throw new Error('Unauthorized organization access')
   }
 

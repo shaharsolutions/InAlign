@@ -69,6 +69,36 @@ function safeStorageFileName(fileName) {
     .replace(/^_+/, '') || fallback
 }
 
+async function fetchCoursesForOrganization(orgId, { publishedOnly = false } = {}) {
+  let ownedQuery = supabase.from('courses').select('*').eq('org_id', orgId)
+  if (publishedOnly) ownedQuery = ownedQuery.eq('published', true)
+
+  const [{ data: ownedCourses, error: ownedError }, { data: assignments, error: assignmentsError }] = await Promise.all([
+    ownedQuery,
+    supabase.from('course_assignments').select('course_id').eq('org_id', orgId)
+  ])
+
+  if (ownedError) throw new Error(ownedError.message)
+  if (assignmentsError) throw new Error(assignmentsError.message)
+
+  const sharedCourseIds = (assignments || [])
+    .map(assignment => assignment.course_id)
+    .filter(Boolean)
+
+  if (sharedCourseIds.length === 0) return ownedCourses || []
+
+  let sharedQuery = supabase.from('courses').select('*').in('id', sharedCourseIds)
+  if (publishedOnly) sharedQuery = sharedQuery.eq('published', true)
+
+  const { data: sharedCourses, error: sharedError } = await sharedQuery
+  if (sharedError) throw new Error(sharedError.message)
+
+  // A course can be both owned by and explicitly assigned to the same org.
+  // Keep a single record in that case so it appears only once in management lists.
+  return [...(ownedCourses || []), ...(sharedCourses || [])]
+    .filter((course, index, courses) => courses.findIndex(candidate => candidate.id === course.id) === index)
+}
+
 export async function fetchCourses() {
   const user = getCurrentUserSync();
   if (!user) throw new Error("לא מחובר");
@@ -87,17 +117,11 @@ export async function fetchCourses() {
         return [];
     }
 
-    if (isAdminRole(user.role)) {
-      const { data, error } = await supabase.from('courses').select('*').eq('org_id', effectiveOrgId);
-      if (error) throw new Error(error.message);
-      return data;
-    } else {
-      // Learner fetches from assignments, handled via progress/assignments API usually
-      // For simplicity, fetch published
-      const { data, error } = await supabase.from('courses').select('*').eq('org_id', effectiveOrgId).eq('published', true);
-      if (error) throw new Error(error.message);
-      return data;
-    }
+    return fetchCoursesForOrganization(effectiveOrgId, {
+      // Managers must be able to configure automatic enrollment before a
+      // course is published. Learners only receive published content.
+      publishedOnly: !isAdminRole(user.role)
+    })
   } else {
     const effectiveOrgId = user.orgId || user.org_id;
     if (isSuperAdminRole(user.role)) return [...MOCK_COURSES];
