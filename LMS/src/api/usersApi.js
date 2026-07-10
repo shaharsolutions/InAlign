@@ -51,8 +51,9 @@ export async function fetchUsers(targetOrgId = null, { includeAllRoles = false }
       
     // Managers are limited to their own organization. A super admin may
     // intentionally select one organization when assigning group members.
+    // With includeAllRoles, this deliberately includes the current user too.
     if (isSuperAdminRole(currentUser.role) && targetOrgId) {
-        query = query.eq('org_id', targetOrgId).neq('role', 'super_admin');
+        query = query.eq('org_id', targetOrgId);
     } else if (!isSuperAdminRole(currentUser.role)) {
         if (currentUser.orgId) {
             query = query.eq('org_id', currentUser.orgId);

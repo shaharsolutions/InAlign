@@ -30,3 +30,10 @@ test('group membership permits every organization role but blocks other organiza
   assert.match(migration, /p\.org_id = g\.org_id/)
   assert.doesNotMatch(migration, /p\.role =/)
 })
+
+test('super admins see every role from the selected organization in group membership', async () => {
+  const usersApi = await read('src/api/usersApi.js')
+
+  assert.match(usersApi, /query = query\.eq\('org_id', targetOrgId\);/)
+  assert.doesNotMatch(usersApi, /eq\('org_id', targetOrgId\)\.neq\('role', 'super_admin'\)/)
+})
