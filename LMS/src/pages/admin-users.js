@@ -874,10 +874,7 @@ export default async function renderAdminUsers(container) {
         templateDownloadUrl = null;
       }
 
-      const roleHeader = isSuperAdmin
-        ? 'תפקיד (learner/org_admin/admin)'
-        : (canCreateTrainingManagers ? 'תפקיד (learner/org_admin)' : 'תפקיד (learner)');
-      const headers = [['שם מלא', 'אימייל', 'טלפון', 'סיסמה', roleHeader, 'שיוך לקבוצה']];
+      const headers = [['שם מלא', 'אימייל', 'טלפון', 'סיסמה', 'שיוך לקבוצה']];
       if (isSuperAdmin) {
         headers[0].push('מזהה ארגון (Org ID)');
       }
@@ -948,7 +945,6 @@ export default async function renderAdminUsers(container) {
           const email = (row['אימייל'] || row['Email'])?.toString().trim().toLowerCase();
           const phone = row['טלפון'] || row['Phone'];
           const password = (row['סיסמה'] || row['Password'])?.toString().trim(); 
-          const role = row['תפקיד (learner/org_admin/admin)'] || row['תפקיד (learner/admin)'] || row['תפקיד (learner/org_admin)'] || row['Role'] || ROLE_LEARNER;
           const orgId = row['מזהה ארגון (Org ID)'] || row['Org ID'];
           const groupName = (row['שיוך לקבוצה'] || row['Group Name'])?.toString().trim();
 
@@ -958,7 +954,7 @@ export default async function renderAdminUsers(container) {
               email,
               phone: phone ? phone.toString() : '',
               password,
-              role,
+              role: ROLE_LEARNER,
               orgId: isSuperAdmin ? orgId : currentUser.orgId,
               groupName
             });
