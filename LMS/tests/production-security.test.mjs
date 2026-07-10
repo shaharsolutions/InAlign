@@ -37,3 +37,9 @@ test('super admins see every role from the selected organization in group member
   assert.match(usersApi, /query = query\.eq\('org_id', targetOrgId\);/)
   assert.doesNotMatch(usersApi, /eq\('org_id', targetOrgId\)\.neq\('role', 'super_admin'\)/)
 })
+
+test('organization user management includes every role in the active roster', async () => {
+  const adminUsers = await read('src/pages/admin-users.js')
+
+  assert.match(adminUsers, /fetchUsers\(null, \{ includeAllRoles: true \}\)/)
+})

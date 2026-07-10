@@ -247,7 +247,9 @@ export default async function renderAdminUsers(container) {
 
   async function renderTable() {
     try {
-      allUsers = await fetchUsers();
+      // The organization roster is an identity view, so it must include the
+      // connected manager and every other role assigned to the organization.
+      allUsers = await fetchUsers(null, { includeAllRoles: true });
       console.log(`[LMS] renderTable - Users fetched:`, allUsers.length);
       
       const checkUser = getCurrentUserSync();
