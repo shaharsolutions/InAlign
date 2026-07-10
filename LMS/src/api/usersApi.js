@@ -36,7 +36,7 @@ function canCreateUserRole(currentRole, targetRole) {
   return role === ROLE_LEARNER;
 }
 
-export async function fetchUsers(targetOrgId = null) {
+export async function fetchUsers(targetOrgId = null, { includeAllRoles = false } = {}) {
   const currentUser = getCurrentUserSync();
   console.log(`[LMS] fetchUsers - Current User:`, currentUser);
   if (!currentUser || !isManagementRole(currentUser.role)) throw new Error("אין הרשאה");
@@ -50,8 +50,7 @@ export async function fetchUsers(targetOrgId = null) {
       `);
       
     // Managers are limited to their own organization. A super admin may
-    // intentionally select one organization when assigning group members,
-    // including that organization's training managers and admins.
+    // intentionally select one organization when assigning group members.
     if (isSuperAdminRole(currentUser.role) && targetOrgId) {
         query = query.eq('org_id', targetOrgId).neq('role', 'super_admin');
     } else if (!isSuperAdminRole(currentUser.role)) {
@@ -62,12 +61,12 @@ export async function fetchUsers(targetOrgId = null) {
         }
     }
     
-    if (!isSuperAdminRole(currentUser.role)) {
+    if (!isSuperAdminRole(currentUser.role) && !includeAllRoles) {
         const hiddenRoles = isSystemAdminRole(currentUser.role)
             ? '(super_admin,admin)'
             : '(super_admin,admin,org_admin)';
         query = query.not('role', 'in', hiddenRoles);
-    } else {
+    } else if (isSuperAdminRole(currentUser.role) && !includeAllRoles) {
         // Even for Super Admin, hide the main one
         query = query.neq('email', 'shaharsolutions@gmail.com');
     }

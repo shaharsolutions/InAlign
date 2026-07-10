@@ -7,7 +7,7 @@ import { fetchCourses } from '../api/coursesApi.js'
 import { fetchUsers } from '../api/usersApi.js'
 import { fetchOrganizations } from '../api/orgApi.js'
 import { getCurrentUserSync } from '../api/authApi.js'
-import { isSuperAdminRole } from '../lib/roles.js'
+import { isSuperAdminRole, roleLabel } from '../lib/roles.js'
 import { showConfirmModal, showToast, showCustomModal } from '../lib/ui.js'
 
 export default async function renderAdminGroups(container) {
@@ -360,7 +360,7 @@ export default async function renderAdminGroups(container) {
   container.querySelector('#add-member-btn').onclick = async () => {
     if(!currentGroup) return;
     try {
-        const allUsers = await fetchUsers(currentGroup.orgId);
+        const allUsers = await fetchUsers(currentGroup.orgId, { includeAllRoles: true });
         
         showCustomModal({
             title: 'הוספת עובד לקבוצה',
@@ -369,7 +369,7 @@ export default async function renderAdminGroups(container) {
                     <label class="form-label">בחר עובד מהרשימה</label>
                     <select class="form-control" id="member-to-add">
                         <option value="">-- בחר --</option>
-                        ${allUsers.map(u => `<option value="${u.id}">${u.full_name}</option>`).join('')}
+                        ${allUsers.map(u => `<option value="${u.id}">${u.full_name} (${roleLabel(u.role)})</option>`).join('')}
                     </select>
                 </div>
             `,
