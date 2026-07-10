@@ -1,5 +1,5 @@
 import { fetchOrgProgress, adminUpdateLearnerProgress, resetUserProgress } from '../api/progressApi.js'
-import { exportToCSV, exportToPDF } from '../lib/exportUtils.js'
+import { exportToCSV, printReportAsPdf } from '../lib/exportUtils.js'
 import { fetchOrganizations, fetchOrganizationById } from '../api/orgApi.js'
 import { getCurrentUserSync } from '../api/authApi.js'
 import { clampPercent, escapeAttr, escapeHtml } from '../lib/html.js'
@@ -227,8 +227,9 @@ export default async function renderAdminDashboard(container) {
     try {
       let blob, filename;
       if (type === 'pdf') {
-        filename = 'Align_Learners_Report.pdf';
-        blob = await exportToPDF('progress-table'); 
+        printReportAsPdf('progress-table');
+        showToast('נפתח חלון הדפסה. בחר "שמור כ-PDF" כדי להוריד את הדוח.', 'success');
+        return;
       } else {
         filename = 'Align_Learners_Report.csv';
         const formattedRecords = currentRecords.map(r => ({

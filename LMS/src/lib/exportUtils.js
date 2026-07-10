@@ -24,23 +24,29 @@ export function exportToCSV(rows) {
   return new Blob([bom + csvContent], { type: 'text/csv;charset=utf-8' });
 }
 
-export async function exportToPDF(elementId) {
+export function printReportAsPdf(elementId) {
   const element = document.getElementById(elementId);
-  if (!element) return null;
+  if (!element) throw new Error('לא נמצאו נתונים להדפסה');
 
   const clonedElement = element.cloneNode(true);
-  clonedElement.style.direction = 'rtl';
-  clonedElement.style.fontFamily = 'Heebo, sans-serif';
-  clonedElement.style.padding = '20px';
+  const printWindow = window.open('', '_blank');
+  if (!printWindow) throw new Error('הדפדפן חסם את חלון ההדפסה. אפשר חלונות קופצים ונסה שוב.');
 
-  const opt = {
-    margin:       10,
-    filename:     'report.pdf',
-    image:        { type: 'jpeg', quality: 0.98 },
-    html2canvas:  { scale: 2, useCORS: true },
-    jsPDF:        { unit: 'mm', format: 'a4', orientation: 'landscape' }
-  };
-
-  const { default: html2pdf } = await import('html2pdf.js');
-  return await html2pdf().set(opt).from(clonedElement).output('blob');
+  printWindow.opener = null;
+  printWindow.document.title = 'דוח לומדים - Align';
+  const style = printWindow.document.createElement('style');
+  style.textContent = `
+    @page { size: A4 landscape; margin: 12mm; }
+    body { direction: rtl; font-family: Arial, sans-serif; color: #111827; }
+    table { width: 100%; border-collapse: collapse; font-size: 11px; }
+    th, td { border: 1px solid #d1d5db; padding: 6px; text-align: right; }
+    th { background: #f3f4f6; }
+  `;
+  printWindow.document.head.append(style);
+  printWindow.document.body.append(clonedElement);
+  printWindow.addEventListener('load', () => {
+    printWindow.focus();
+    printWindow.print();
+  }, { once: true });
+  printWindow.document.close();
 }

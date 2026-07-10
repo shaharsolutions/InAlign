@@ -436,29 +436,22 @@ export async function bulkUpdateUsersOrg(userIds, newOrgId) {
 
     if (supabase) {
         console.log(`[LMS] Bulk moving ${userIds.length} users to org ${newOrgId}`);
-        
-        // 1. Update Profile (Primary Source)
-        const { error: pError, count: pCount } = await supabase
-            .from('profiles')
-            .update({ org_id: newOrgId }, { count: 'exact' })
-            .in('id', userIds);
-            
-        if (pError) throw new Error(pError.message);
-        console.log(`[LMS] Profile move completed. Rows updated: ${pCount}`);
 
-        if (pCount === 0) {
-            console.warn(`[LMS] No rows were updated in 'profiles'. This may be an RLS issue.`);
-            throw new Error("לא נמצאו רשומות לעדכון או שההרשאות לא מאפשרות עדכון (RLS).");
+        // Organization changes are privileged mutations. Route every move
+        // through the Edge Function, which verifies the caller from the JWT
+        // and uses the service role only after that check.
+        const results = await Promise.allSettled(userIds.map(userId =>
+            supabase.functions.invoke('update-user', {
+                body: { userId, orgId: newOrgId }
+            })
+        ));
+
+        const failures = results.filter(result =>
+            result.status === 'rejected' || result.value?.error || result.value?.data?.error
+        );
+        if (failures.length > 0) {
+            throw new Error(`${failures.length} העברות בין ארגונים נכשלו`);
         }
-
-        // 2. Denormalized Update: Learner Progress
-        // This ensures historical progress appears in the NEW org's reports.
-        const { error: prError } = await supabase
-            .from('learner_progress')
-            .update({ org_id: newOrgId })
-            .in('user_id', userIds);
-            
-        if (prError) console.warn("[LMS] Learner progress move failed (non-critical):", prError.message);
 
         console.log(`[LMS] Bulk move operation finished successfully.`);
     } else {

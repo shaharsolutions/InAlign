@@ -10,7 +10,7 @@ import { escapeAttr, escapeHtml } from '../lib/html.js'
 import { ROLE_ADMIN, ROLE_LEARNER, ROLE_ORG_ADMIN, isAdminRole, isSuperAdminRole, isSystemAdminRole, roleLabel } from '../lib/roles.js'
 
 async function loadXlsx() {
-  return await import('xlsx')
+  return await import('@e965/xlsx')
 }
 
 export default async function renderAdminUsers(container) {
