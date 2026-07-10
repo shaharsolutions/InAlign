@@ -300,7 +300,13 @@ AS $$
       JOIN public.profiles p ON p.id = target_user_id
       WHERE g.id = target_group_id
         AND p.org_id = g.org_id
-        AND p.role = 'learner'
+        AND (
+          p.role = 'learner'
+          OR (
+            public.current_profile_role() = 'super_admin'
+            AND p.role IN ('admin', 'org_admin')
+          )
+        )
     );
 $$;
 

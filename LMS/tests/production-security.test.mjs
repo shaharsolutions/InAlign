@@ -24,10 +24,10 @@ test('storage reads are tenant-scoped and no longer grant every manager access',
   assert.doesNotMatch(policy, /OR p\.role IN \('admin', 'org_admin'\)\s+OR/)
 })
 
-test('group memberships are restricted to learners in the group organization', async () => {
-  const migration = await read('supabase/migrations/20260710120002_scope_group_members_to_organization.sql')
+test('super admins can group organization admins without allowing cross-organization membership', async () => {
+  const migration = await read('supabase/migrations/20260710120003_allow_super_admins_to_group_org_admins.sql')
 
   assert.match(migration, /p\.org_id = g\.org_id/)
-  assert.match(migration, /p\.role = 'learner'/)
-  assert.match(migration, /WITH CHECK \(public\.can_assign_user_to_group\(group_id, user_id\)\)/)
+  assert.match(migration, /public\.current_profile_role\(\) = 'super_admin'/)
+  assert.match(migration, /p\.role IN \('admin', 'org_admin'\)/)
 })

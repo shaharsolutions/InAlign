@@ -50,9 +50,10 @@ export async function fetchUsers(targetOrgId = null) {
       `);
       
     // Managers are limited to their own organization. A super admin may
-    // intentionally select one organization when assigning group members.
+    // intentionally select one organization when assigning group members,
+    // including that organization's training managers and admins.
     if (isSuperAdminRole(currentUser.role) && targetOrgId) {
-        query = query.eq('org_id', targetOrgId).eq('role', ROLE_LEARNER);
+        query = query.eq('org_id', targetOrgId).neq('role', 'super_admin');
     } else if (!isSuperAdminRole(currentUser.role)) {
         if (currentUser.orgId) {
             query = query.eq('org_id', currentUser.orgId);
