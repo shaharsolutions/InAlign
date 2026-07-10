@@ -5,14 +5,33 @@ import {
 } from '../api/groupsApi.js'
 import { fetchCourses } from '../api/coursesApi.js'
 import { fetchUsers } from '../api/usersApi.js'
+import { fetchOrganizations } from '../api/orgApi.js'
+import { getCurrentUserSync } from '../api/authApi.js'
+import { isSuperAdminRole } from '../lib/roles.js'
 import { showConfirmModal, showToast, showCustomModal } from '../lib/ui.js'
 
 export default async function renderAdminGroups(container) {
+  const currentUser = getCurrentUserSync()
+  const isSuperAdmin = isSuperAdminRole(currentUser?.role)
+  const organizations = isSuperAdmin ? await fetchOrganizations() : []
+  let selectedOrgId = currentUser?.orgId || ''
+
   container.innerHTML = `
     <div class="mb-4 fade-in">
       <h1 class="mb-1">ניהול קבוצות למידה</h1>
       <p class="text-muted">יצירת קבוצות, שיוך עובדים והקצאת תוכן למידה לפי מחלקות או תפקידים.</p>
     </div>
+
+    ${isSuperAdmin ? `
+    <div class="card mb-4">
+      <div class="form-group m-0">
+        <label class="form-label" for="groups-org-filter">ארגון לניהול קבוצות</label>
+        <select class="form-control" id="groups-org-filter">
+          <option value="">-- בחר ארגון --</option>
+          ${organizations.map(org => `<option value="${org.id}" ${org.id === selectedOrgId ? 'selected' : ''}>${org.name}</option>`).join('')}
+        </select>
+      </div>
+    </div>` : ''}
 
     <div class="grid grid-cols-3 slide-up" style="gap: var(--gap-standard); align-items: start;">
        <!-- Add Group Form Section -->
@@ -91,18 +110,25 @@ export default async function renderAdminGroups(container) {
   const form = container.querySelector('#group-create-form')
   const detailView = container.querySelector('#group-detail-view')
   let currentGroup = null;
+  const getSelectedOrgId = () => isSuperAdmin ? selectedOrgId : currentUser?.orgId
 
   async function renderTable() {
     try {
       tableBody.innerHTML = `<tr><td colspan="4" style="text-align: center;"><i class='bx bx-loader bx-spin'></i> טוען...</td></tr>`
-      const groups = await fetchGroups()
+      const activeOrgId = getSelectedOrgId()
+      if (!activeOrgId) {
+        tableBody.innerHTML = `<tr><td colspan="4" style="text-align: center;" class="text-muted">בחר ארגון כדי לנהל את הקבוצות והעובדים שלו</td></tr>`
+        return
+      }
+
+      const groups = await fetchGroups(activeOrgId)
       if (groups.length === 0) {
         tableBody.innerHTML = `<tr><td colspan="4" style="text-align: center;" class="text-muted">אין קבוצות בארגון</td></tr>`
         return
       }
 
       tableBody.innerHTML = groups.map(g => `
-        <tr data-id="${g.id}">
+        <tr data-id="${g.id}" data-org-id="${g.org_id}">
            <td><div style="font-weight: 600; cursor:pointer;" class="group-select-link">${g.name}</div></td>
            <td><span class="badge badge-success">${g.user_count || 0} חברים</span></td>
            <td><span class="badge badge-primary">${g.course_count || 0} פריטים</span></td>
@@ -120,8 +146,8 @@ export default async function renderAdminGroups(container) {
     }
   }
 
-  async function showGroupDetail(groupId, groupName) {
-    currentGroup = { id: groupId, name: groupName };
+  async function showGroupDetail(groupId, groupName, groupOrgId = currentGroup?.orgId || getSelectedOrgId()) {
+    currentGroup = { id: groupId, name: groupName, orgId: groupOrgId };
     detailView.classList.remove('hidden');
     
     // Ensure header structure is correct (in case it was replaced by an input)
@@ -208,7 +234,7 @@ export default async function renderAdminGroups(container) {
     if(selectBtn) {
         const gid = row.dataset.id;
         const gname = row.querySelector('.group-select-link').innerText;
-        await showGroupDetail(gid, gname);
+        await showGroupDetail(gid, gname, row.dataset.orgId);
     }
 
     if(deleteBtn) {
@@ -334,7 +360,7 @@ export default async function renderAdminGroups(container) {
   container.querySelector('#add-member-btn').onclick = async () => {
     if(!currentGroup) return;
     try {
-        const allUsers = await fetchUsers();
+        const allUsers = await fetchUsers(currentGroup.orgId);
         
         showCustomModal({
             title: 'הוספת עובד לקבוצה',
@@ -475,7 +501,7 @@ export default async function renderAdminGroups(container) {
     const btn = container.querySelector('#group-submit-btn');
     btn.disabled = true;
     try {
-        await createGroup(name);
+        await createGroup(name, getSelectedOrgId());
         showToast('הקבוצה נוצרה בהצלחה');
         form.reset();
         renderTable();
@@ -485,6 +511,16 @@ export default async function renderAdminGroups(container) {
         btn.disabled = false;
     }
   };
+
+  const organizationFilter = container.querySelector('#groups-org-filter')
+  if (organizationFilter) {
+    organizationFilter.addEventListener('change', event => {
+      selectedOrgId = event.target.value
+      currentGroup = null
+      detailView.classList.add('hidden')
+      renderTable()
+    })
+  }
 
   await renderTable()
 }

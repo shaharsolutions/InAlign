@@ -10,24 +10,24 @@ let MOCK_GROUPS = [
 let MOCK_GROUP_MEMBERS = [];
 let MOCK_GROUP_COURSES = [];
 
-export async function fetchGroups() {
+export async function fetchGroups(targetOrgId = null) {
   const user = getCurrentUserSync();
   if (!user) throw new Error("לא מחובר");
+
+  const organizationId = isSuperAdminRole(user.role)
+    ? targetOrgId
+    : user.orgId;
+  if (!organizationId) return [];
 
   if (supabase) {
     let query = supabase
       .from('groups')
       .select(`
-        id, name, created_at,
+        id, name, org_id, created_at,
         members:group_members(count),
         courses:group_assignments(count)
-      `);
-    
-    if (user.orgId) {
-      query = query.eq('org_id', user.orgId);
-    } else if (!isSuperAdminRole(user.role)) {
-      throw new Error("לא נמצא מזהה ארגון עבור המשתמש");
-    }
+      `)
+      .eq('org_id', organizationId);
 
     const { data, error } = await query;
     
@@ -39,24 +39,28 @@ export async function fetchGroups() {
       course_count: g.courses?.[0]?.count || 0
     }));
   } else {
-    return MOCK_GROUPS.filter(g => g.org_id === user.orgId);
+    return MOCK_GROUPS.filter(g => g.org_id === organizationId);
   }
 }
 
-export async function createGroup(name) {
+export async function createGroup(name, targetOrgId = null) {
   const user = getCurrentUserSync();
   if (!user || !isManagementRole(user.role)) throw new Error("אין הרשאה");
+  const organizationId = isSuperAdminRole(user.role)
+    ? targetOrgId
+    : user.orgId;
+  if (!organizationId) throw new Error("יש לבחור ארגון לפני יצירת קבוצה");
 
   if (supabase) {
     const { data, error } = await supabase
       .from('groups')
-      .insert([{ name, org_id: user.orgId }])
+      .insert([{ name, org_id: organizationId }])
       .select()
       .single();
     if (error) throw new Error(error.message);
     return data;
   } else {
-    const newGrp = { id: 'grp-' + Date.now(), name, org_id: user.orgId, user_count: 0, course_count: 0 };
+    const newGrp = { id: 'grp-' + Date.now(), name, org_id: organizationId, user_count: 0, course_count: 0 };
     MOCK_GROUPS.push(newGrp);
     return newGrp;
   }

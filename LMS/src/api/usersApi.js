@@ -36,7 +36,7 @@ function canCreateUserRole(currentRole, targetRole) {
   return role === ROLE_LEARNER;
 }
 
-export async function fetchUsers() {
+export async function fetchUsers(targetOrgId = null) {
   const currentUser = getCurrentUserSync();
   console.log(`[LMS] fetchUsers - Current User:`, currentUser);
   if (!currentUser || !isManagementRole(currentUser.role)) throw new Error("אין הרשאה");
@@ -49,8 +49,11 @@ export async function fetchUsers() {
         organizations (name, auto_enroll_course_ids, primary_color, logo_url)
       `);
       
-    // Filter by org ONLY for non-super admins
-    if (!isSuperAdminRole(currentUser.role)) {
+    // Managers are limited to their own organization. A super admin may
+    // intentionally select one organization when assigning group members.
+    if (isSuperAdminRole(currentUser.role) && targetOrgId) {
+        query = query.eq('org_id', targetOrgId).eq('role', ROLE_LEARNER);
+    } else if (!isSuperAdminRole(currentUser.role)) {
         if (currentUser.orgId) {
             query = query.eq('org_id', currentUser.orgId);
         } else {

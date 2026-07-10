@@ -283,6 +283,27 @@ AS $$
   SELECT public.can_manage_org(public.group_org_id(target_group_id));
 $$;
 
+CREATE OR REPLACE FUNCTION public.can_assign_user_to_group(
+  target_group_id uuid,
+  target_user_id uuid
+)
+RETURNS boolean
+LANGUAGE sql
+SECURITY DEFINER
+STABLE
+SET search_path = public
+AS $$
+  SELECT public.can_manage_group(target_group_id)
+    AND EXISTS (
+      SELECT 1
+      FROM public.groups g
+      JOIN public.profiles p ON p.id = target_user_id
+      WHERE g.id = target_group_id
+        AND p.org_id = g.org_id
+        AND p.role = 'learner'
+    );
+$$;
+
 CREATE OR REPLACE FUNCTION public.activity_log_changed_fields(v_old_data jsonb, v_new_data jsonb)
 RETURNS text[]
 LANGUAGE sql
@@ -926,7 +947,7 @@ CREATE POLICY "group_members_manage"
 ON public.group_members FOR ALL
 TO authenticated
 USING (public.can_manage_group(group_id))
-WITH CHECK (public.can_manage_group(group_id));
+WITH CHECK (public.can_assign_user_to_group(group_id, user_id));
 
 DROP POLICY IF EXISTS "group_assignments_select" ON public.group_assignments;
 CREATE POLICY "group_assignments_select"
@@ -1042,6 +1063,8 @@ REVOKE ALL ON FUNCTION public.register_course_guest_impl(uuid, uuid, text, text)
 REVOKE ALL ON FUNCTION public.register_course_guest(uuid, uuid, text, text) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.get_guest_course(uuid) TO anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.register_course_guest(uuid, uuid, text, text) TO authenticated;
+REVOKE ALL ON FUNCTION public.can_assign_user_to_group(uuid, uuid) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.can_assign_user_to_group(uuid, uuid) TO authenticated;
 
 COMMIT;
 
