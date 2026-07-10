@@ -62,7 +62,7 @@ export default async function renderSuperAdminOrgs(container) {
                   <th style="width: 60px;"></th>
                   <th style="min-width: 180px;">שם הארגון</th>
                   <th>משתמשים</th>
-                  <th>לומדות</th>
+                  <th>תכני למידה</th>
                   <th>תאריך הקמה</th>
                   <th style="text-align: left;">פעולות</th>
                </tr>
@@ -110,7 +110,7 @@ export default async function renderSuperAdminOrgs(container) {
                 <span style="font-size: 0.7rem; opacity: 0.9;">פעילים</span>
               </div>
            </td>
-           <td><span class="badge badge-primary">${o.total_courses || 0} חבילות</span></td>
+           <td><span class="badge badge-primary">${o.total_courses || 0} תכני למידה</span></td>
            <td>${o.created_at ? new Date(o.created_at).toLocaleDateString('he-IL') : '-'}</td>
            <td>
              <div class="flex gap-2">

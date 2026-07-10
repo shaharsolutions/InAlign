@@ -8,22 +8,41 @@ let mockOrgs = [
 
 export async function fetchOrganizations() {
     if (supabase) {
-      // Requires super_admin
-      const { data: orgs, error } = await supabase
-        .from('organizations')
-        .select(`
-          id, name, primary_color, created_at, logo_url,
-          profiles:profiles(count),
-          courses:courses(count)
-        `);
-      
-      if (error) throw new Error(error.message);
-      
-      return orgs.map(o => ({
-        ...o,
-        total_users: o.profiles?.[0]?.count || 0,
-        total_courses: o.courses?.[0]?.count || 0
-      }));
+      // Requires super_admin. Content can be owned by an organization or
+      // explicitly shared with it, so a relation count on courses alone is
+      // not enough for the number shown in the organizations table.
+      const [orgsResult, coursesResult, assignmentsResult] = await Promise.all([
+        supabase
+          .from('organizations')
+          .select(`
+            id, name, primary_color, created_at, logo_url,
+            profiles:profiles(count)
+          `),
+        supabase.from('courses').select('id, org_id'),
+        supabase.from('course_assignments').select('org_id, course_id')
+      ])
+
+      if (orgsResult.error) throw new Error(orgsResult.error.message)
+      if (coursesResult.error) throw new Error(coursesResult.error.message)
+      if (assignmentsResult.error) throw new Error(assignmentsResult.error.message)
+
+      const accessibleCourseIdsByOrg = new Map(
+        (orgsResult.data || []).map(org => [org.id, new Set()])
+      )
+
+      for (const course of coursesResult.data || []) {
+        accessibleCourseIdsByOrg.get(course.org_id)?.add(course.id)
+      }
+
+      for (const assignment of assignmentsResult.data || []) {
+        accessibleCourseIdsByOrg.get(assignment.org_id)?.add(assignment.course_id)
+      }
+
+      return (orgsResult.data || []).map(org => ({
+        ...org,
+        total_users: org.profiles?.[0]?.count || 0,
+        total_courses: accessibleCourseIdsByOrg.get(org.id)?.size || 0
+      }))
     } else {
     return [...mockOrgs];
   }
