@@ -1,9 +1,15 @@
-name: Verify release
+name: Verify LMS release
 
 on:
   pull_request:
+    paths:
+      - 'LMS/**'
+      - '.github/workflows/ci.yml'
   push:
     branches: [main]
+    paths:
+      - 'LMS/**'
+      - '.github/workflows/ci.yml'
 
 permissions:
   contents: read
@@ -11,12 +17,16 @@ permissions:
 jobs:
   verify:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: LMS
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
+          cache-dependency-path: LMS/package-lock.json
       - run: npm ci
       - run: npm run test
       - run: npm run build
